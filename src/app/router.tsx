@@ -15,6 +15,7 @@ import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
 import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { AiChatPage } from '@/ai/pages/AiChatPage'
+import { TodayPage } from '@/today/pages/TodayPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
@@ -43,6 +44,14 @@ export function AppRouter() {
         }
       >
         <Route index element={<RootRedirect />} />
+        <Route
+          path="/today"
+          element={
+            <AccessGate section="today">
+              <TodayPage />
+            </AccessGate>
+          }
+        />
         <Route
           path="/clients"
           element={

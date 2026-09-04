@@ -1,5 +1,6 @@
 import {
   Boxes,
+  CalendarDays,
   ClipboardList,
   Factory,
   Megaphone,
@@ -13,11 +14,15 @@ import {
 
 /**
  * Единый реестр разделов системы — используется матрицей доступа (auth/)
- * и боковым меню (app/Sidebar). Значения (кроме 'admin') совпадают буква
- * в букву с enum Module на бэкенде — это то, что реально приходит в
+ * и боковым меню (app/Sidebar). Значения (кроме 'admin' и 'today') совпадают
+ * буква в букву с enum Module на бэкенде — это то, что реально приходит в
  * module_access и в Task.link_type, так что переименовывать их нельзя.
  * 'admin' — чисто фронтовое значение для пункта меню «Доступ», бэкенд его
  * не знает: администраторская страница гейтится по role==='admin'.
+ * 'today' — тоже чисто фронтовое значение (эндпоинт GET /api/dashboard/today
+ * гейтится на бэкенде модулем AI), hasAccess('today') в auth/store.ts
+ * проксируется на доступ к 'ai', поэтому в матрицу назначаемых модулей
+ * (ASSIGNABLE_SECTIONS) 'today' не попадает — им нельзя управлять отдельно.
  */
 export type SectionId =
   | 'clients'
@@ -29,6 +34,7 @@ export type SectionId =
   | 'tasks'
   | 'admin'
   | 'ai'
+  | 'today'
 
 export interface SectionMeta {
   id: SectionId
@@ -37,9 +43,12 @@ export interface SectionMeta {
   icon: LucideIcon
   /** Разделы, которые не входят в матрицу доступа рабочих (управляются только ролью) */
   adminOnly?: boolean
+  /** Разделы, которыми нельзя управлять по отдельности в матрице доступа (доступ выводится из другого раздела) */
+  notAssignable?: boolean
 }
 
 export const SECTIONS: SectionMeta[] = [
+  { id: 'today', label: 'Сегодня', path: '/today', icon: CalendarDays, notAssignable: true },
   { id: 'cycle', label: 'Цикл клиента', path: '/cycles', icon: Repeat },
   { id: 'clients', label: 'Клиенты', path: '/clients', icon: Users },
   { id: 'production', label: 'Производство', path: '/production', icon: Factory },
@@ -51,7 +60,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
 
-export const ASSIGNABLE_SECTIONS = SECTIONS.filter((s) => !s.adminOnly)
+export const ASSIGNABLE_SECTIONS = SECTIONS.filter((s) => !s.adminOnly && !s.notAssignable)
 
 export function sectionById(id: SectionId): SectionMeta {
   const section = SECTIONS.find((s) => s.id === id)
