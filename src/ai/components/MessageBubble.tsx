@@ -1,4 +1,5 @@
 import { Wrench } from 'lucide-react'
+import { Markdown } from '@/shared/ui/Markdown'
 import { MessageOut, PendingActionOut } from '../types'
 import { PendingActionCard } from './PendingActionCard'
 
@@ -24,13 +25,12 @@ export function MessageBubble({
   return (
     <div className={`flex min-w-0 flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
       {text && (
-        <div
-          className={`max-w-[85%] whitespace-pre-wrap break-words rounded-md px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-md ${
+        <Markdown
+          text={text}
+          className={`max-w-[85%] break-words rounded-md px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-md ${
             isUser ? 'bg-brand text-white' : 'bg-surface-muted text-ink'
           }`}
-        >
-          {text}
-        </div>
+        />
       )}
       {!isUser &&
         toolBlocks.map(

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { AlertCircle, CalendarDays, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { Markdown } from '@/shared/ui/Markdown'
 import { StatWidget } from '@/shared/ui/StatWidget'
 import { useTodayStore } from '../store'
 
@@ -72,7 +73,7 @@ export function TodayPage() {
       {!loading && !error && data && (
         <div className="flex flex-col gap-6">
           <div className="rounded-md border border-border bg-surface p-4 text-[14px] text-ink">
-            {data.summary || 'Сводка пуста.'}
+            {data.summary ? <Markdown text={data.summary} /> : 'Сводка пуста.'}
           </div>
 
           {sections.length === 0 && (

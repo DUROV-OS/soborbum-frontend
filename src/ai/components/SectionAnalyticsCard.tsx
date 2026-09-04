@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { Chip, ChipTone } from '@/shared/ui/Chip'
+import { Markdown } from '@/shared/ui/Markdown'
 import { getSectionAnalytics } from '../api'
 import { AnalyticsSection, SectionAnalyticsOut, SectionAnalyticsStatus } from '../types'
 
@@ -84,7 +85,7 @@ export function SectionAnalyticsCard({ section }: { section: AnalyticsSection })
             {error}
           </span>
         )}
-        {!loading && !error && data && data.summary}
+        {!loading && !error && data && <Markdown text={data.summary} />}
       </div>
     </div>
   )
