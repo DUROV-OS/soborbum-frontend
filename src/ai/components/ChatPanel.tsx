@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { useAiStore } from '../store'
@@ -15,18 +15,22 @@ export function ChatPanel({
   contextPrefix,
   onDeleted,
   onChatCreated,
+  onBack,
 }: {
   contextLabel?: string
   contextPrefix?: string
   onDeleted?: () => void
   /** Зовётся, когда первое сообщение только что создало чат — нужно, чтобы страница отразила id в URL. */
   onChatCreated?: (chatId: number) => void
+  /** Кнопка "назад к списку", видна только на мобильной ширине — список и переписка не помещаются рядом. */
+  onBack?: () => void
 }) {
   const chat = useAiStore((s) => s.activeChat)
   const draftDomain = useAiStore((s) => s.draftDomain)
   const draftMode = useAiStore((s) => s.draftMode)
   const pendingActions = useAiStore((s) => s.pendingActions)
   const sending = useAiStore((s) => s.sending)
+  const optimisticMessage = useAiStore((s) => s.optimisticMessage)
   const loadingChat = useAiStore((s) => s.loadingChat)
   const error = useAiStore((s) => s.error)
   const send = useAiStore((s) => s.send)
@@ -79,6 +83,16 @@ export function ChatPanel({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="К списку чатов"
+              className="-ml-1 rounded-pill p-1 text-muted hover:bg-surface-muted hover:text-ink sm:hidden"
+            >
+              <ArrowLeft size={16} />
+            </button>
+          )}
           <Chip tone="brand">{DOMAIN_LABEL[domain]}</Chip>
           {contextLabel && <Chip tone="neutral">{contextLabel}</Chip>}
           {chat && <ChatTitleEditor title={chat.title} onRename={(title) => renameChat(chat.id, title)} />}
@@ -113,6 +127,13 @@ export function ChatPanel({
             ))}
             {(!chat || chat.messages.length === 0) && !sending && (
               <p className="text-[13px] text-muted">Начните диалог — задайте вопрос или попросите что-то сделать.</p>
+            )}
+            {optimisticMessage && (
+              <div className="flex flex-col items-end">
+                <div className="max-w-md whitespace-pre-wrap rounded-md bg-brand px-3.5 py-2.5 text-[13px] leading-relaxed text-white opacity-70">
+                  {optimisticMessage}
+                </div>
+              </div>
             )}
             {sending && (
               <div className="flex items-center gap-1.5 rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] text-muted">

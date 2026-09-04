@@ -16,6 +16,8 @@ interface AiState {
   draftMode: ChatMode
   pendingActions: PendingActionOut[]
   sending: boolean
+  /** Только что отправленное сообщение, пока ответ ещё не пришёл — рисуется как временный пузырь. */
+  optimisticMessage: string | null
   error: string | null
 
   loadChats: (domain?: ChatDomain) => Promise<void>
@@ -51,6 +53,7 @@ export const useAiStore = create<AiState>((set, get) => {
     draftMode: 'require_approval',
     pendingActions: [],
     sending: false,
+    optimisticMessage: null,
     error: null,
 
     loadChats: async (domain) => {
@@ -64,7 +67,7 @@ export const useAiStore = create<AiState>((set, get) => {
     },
 
     openChat: async (id) => {
-      set({ loadingChat: true, draftDomain: null })
+      set({ loadingChat: true, draftDomain: null, optimisticMessage: null })
       try {
         await refreshChat(id)
         set({ loadingChat: false })
@@ -74,7 +77,7 @@ export const useAiStore = create<AiState>((set, get) => {
     },
 
     startDraft: (domain, mode = 'require_approval') => {
-      set({ activeChat: null, pendingActions: [], draftDomain: domain, draftMode: mode })
+      set({ activeChat: null, pendingActions: [], draftDomain: domain, draftMode: mode, optimisticMessage: null })
     },
 
     send: async (message) => {
@@ -82,7 +85,7 @@ export const useAiStore = create<AiState>((set, get) => {
       const domain = activeChat?.domain ?? draftDomain
       if (!domain) return null
       const mode = activeChat?.mode ?? draftMode
-      set({ sending: true, error: null })
+      set({ sending: true, error: null, optimisticMessage: message })
       try {
         const response = await aiApi.askDomain(domain, {
           chat_id: activeChat?.id ?? null,
@@ -90,10 +93,17 @@ export const useAiStore = create<AiState>((set, get) => {
           mode,
         })
         await refreshChat(response.chat_id)
-        set({ sending: false, draftDomain: null })
+        set({ sending: false, draftDomain: null, optimisticMessage: null })
         return response
       } catch (error) {
         set({ sending: false, error: reasonOf(error) })
+        // Сообщение пользователя (и всё, что успело сохраниться на сервере до сбоя) уже
+        // могло быть закоммичено бэкендом раньше самого падения — подтягиваем реальное
+        // состояние чата вместо того, чтобы оставить на экране только текст ошибки.
+        const chatId = get().activeChat?.id
+        if (chatId) await refreshChat(chatId).catch(() => {})
+        else get().loadChats().catch(() => {})
+        set({ optimisticMessage: null })
         return null
       }
     },

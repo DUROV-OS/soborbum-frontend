@@ -18,10 +18,14 @@ export function AiChatPage() {
   const chats = useAiStore((s) => s.chats)
   const chatsLoading = useAiStore((s) => s.chatsLoading)
   const activeChat = useAiStore((s) => s.activeChat)
+  const draftDomain = useAiStore((s) => s.draftDomain)
   const loadChats = useAiStore((s) => s.loadChats)
   const openChat = useAiStore((s) => s.openChat)
   const startDraft = useAiStore((s) => s.startDraft)
   const removeChat = useAiStore((s) => s.removeChat)
+
+  // На мобильной ширине список чатов и переписка не помещаются рядом — показываем одно за раз.
+  const showChatPanel = Boolean(chatId) || draftDomain !== null
 
   const domains = ALL_DOMAINS.filter((d) => d === 'general' || hasAccess(DOMAIN_TO_SECTION[d]))
   const [domain, setDomain] = useState<ChatDomain>('general')
@@ -55,7 +59,11 @@ export function AiChatPage() {
 
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-4">
-      <div className="flex w-72 shrink-0 flex-col rounded-md border border-border bg-surface">
+      <div
+        className={`w-full flex-col rounded-md border border-border bg-surface sm:flex sm:w-72 sm:shrink-0 ${
+          showChatPanel ? 'hidden' : 'flex'
+        }`}
+      >
         <div className="flex flex-col gap-2 border-b border-border p-3">
           <div className="flex flex-wrap gap-1">
             {domains.map((d) => (
@@ -112,8 +120,19 @@ export function AiChatPage() {
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 rounded-md border border-border bg-surface">
-        <ChatPanel onDeleted={() => navigate('/ai')} onChatCreated={(id) => navigate(`/ai/${id}`, { replace: true })} />
+      <div
+        className={`min-w-0 flex-1 rounded-md border border-border bg-surface sm:flex ${
+          showChatPanel ? 'flex' : 'hidden'
+        }`}
+      >
+        <ChatPanel
+          onDeleted={() => navigate('/ai')}
+          onChatCreated={(id) => navigate(`/ai/${id}`, { replace: true })}
+          onBack={() => {
+            navigate('/ai')
+            useAiStore.setState({ draftDomain: null })
+          }}
+        />
       </div>
     </div>
   )
