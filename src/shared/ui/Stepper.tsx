@@ -15,7 +15,7 @@ export function Stepper({
   const currentIndex = steps.findIndex((s) => s.key === currentKey)
 
   return (
-    <ol className="flex items-stretch">
+    <ol className="flex items-stretch overflow-x-auto">
       {steps.map((step, index) => {
         const isDone = index < currentIndex
         const isCurrent = index === currentIndex

@@ -52,35 +52,37 @@ export function CalendarView({ items, onSelect }: { items: ContentItem[]; onSele
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-border bg-border">
-        {WEEKDAYS.map((day) => (
-          <div key={day} className="bg-surface-muted px-2 py-1.5 text-[11px] font-medium text-muted">
-            {day}
-          </div>
-        ))}
-        {days.map((day) => {
-          const dayItems = itemsOn(day)
-          return (
-            <div
-              key={day.toISOString()}
-              className={`min-h-24 bg-surface p-1.5 ${isSameMonth(day, month) ? '' : 'opacity-40'}`}
-            >
-              <div className="mb-1 text-[11px] text-muted">{format(day, 'd')}</div>
-              <div className="flex flex-col gap-1">
-                {dayItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onSelect(item)}
-                    className="truncate rounded-sm bg-brand/10 px-1.5 py-0.5 text-left text-[11px] text-brand-dark hover:bg-brand/20"
-                  >
-                    {item.title}
-                  </button>
-                ))}
-              </div>
+      <div className="overflow-x-auto rounded-md border border-border bg-border">
+        <div className="grid min-w-[560px] grid-cols-7 gap-px">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="bg-surface-muted px-2 py-1.5 text-[11px] font-medium text-muted">
+              {day}
             </div>
-          )
-        })}
+          ))}
+          {days.map((day) => {
+            const dayItems = itemsOn(day)
+            return (
+              <div
+                key={day.toISOString()}
+                className={`min-h-24 bg-surface p-1.5 ${isSameMonth(day, month) ? '' : 'opacity-40'}`}
+              >
+                <div className="mb-1 text-[11px] text-muted">{format(day, 'd')}</div>
+                <div className="flex flex-col gap-1">
+                  {dayItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onSelect(item)}
+                      className="truncate rounded-sm bg-brand/10 px-1.5 py-0.5 text-left text-[11px] text-brand-dark hover:bg-brand/20"
+                    >
+                      {item.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

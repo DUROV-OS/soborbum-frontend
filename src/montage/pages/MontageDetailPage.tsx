@@ -67,7 +67,7 @@ export function MontageDetailPage() {
       </Link>
 
       <div className="mb-6 rounded-md border border-border bg-surface p-5">
-        <div className="mb-4 flex items-start justify-between">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
           <h1 className="text-[18px] font-medium text-ink">Монтаж №{installation.id}</h1>
           <Button size="sm" onClick={handleAdvance} disabled={advancing}>
             {advancing ? 'Переход…' : installation.stage === 'followup' ? 'Завершить цикл' : 'Следующая стадия'}

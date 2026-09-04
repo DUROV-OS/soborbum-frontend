@@ -47,7 +47,7 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
       }
     >
       <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-4 text-[13px]">
+        <div className="grid grid-cols-1 gap-4 text-[13px] sm:grid-cols-2">
           <Row label="На складе" value={`${material.quantity_in_stock} ${material.unit}`} />
           <Row label="Суммарно запрошено" value={`${material.total_requested} ${material.unit}`} />
           <Row label="Поставщик" value={material.supplier_name ?? '—'} />

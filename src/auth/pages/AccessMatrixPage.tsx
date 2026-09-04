@@ -31,14 +31,14 @@ export function AccessMatrixPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Матрица доступа</h1>
           <p className="mt-1 text-[13px] text-muted">
             Доступ к разделу — либо есть, либо нет. Администраторы видят всё всегда.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button className="self-start" onClick={() => setCreating(true)}>
           <Plus size={16} />
           Новый сотрудник
         </Button>

@@ -42,7 +42,7 @@ export function MontageOverviewPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {ready.map((cycle) => (
-            <div key={cycle.id} className="flex items-center justify-between rounded-md border border-border bg-surface p-4">
+            <div key={cycle.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface p-4">
               <div>
                 <div className="text-[14px] font-medium text-ink">{cycle.client?.full_name ?? `Цикл №${cycle.id}`}</div>
                 {cycle.installation && (

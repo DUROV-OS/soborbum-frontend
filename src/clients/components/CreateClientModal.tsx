@@ -77,7 +77,7 @@ export function CreateClientModal({ open, onClose }: { open: boolean; onClose: (
         <Field label="ФИО" required>
           <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Иванов Иван Иванович" />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Телефон" required>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 900 000-00-00" />
           </Field>
