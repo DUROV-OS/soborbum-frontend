@@ -5,14 +5,15 @@ import { useAuthStore } from '@/auth/store'
 import { ClientDetailPage } from '@/clients/pages/ClientDetailPage'
 import { ClientsBoardPage } from '@/clients/pages/ClientsBoardPage'
 import { TasksPage } from '@/tasks/pages/TasksPage'
+import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
 import { Placeholder } from './Placeholder'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const currentAccountId = useAuthStore((s) => s.currentAccountId)
-  if (!currentAccountId) return <Navigate to="/login" replace />
+  const current = useAuthStore((s) => s.current)
+  if (!current) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -61,7 +62,7 @@ export function AppRouter() {
         <Route
           path="/montage/*"
           element={
-            <AccessGate section="montage">
+            <AccessGate section="installation">
               <Placeholder title="Монтаж" />
             </AccessGate>
           }
@@ -69,16 +70,16 @@ export function AppRouter() {
         <Route
           path="/cycles/*"
           element={
-            <AccessGate section="cycles">
+            <AccessGate section="cycle">
               <Placeholder title="Цикл клиента" />
             </AccessGate>
           }
         />
         <Route
-          path="/warehouse/*"
+          path="/warehouse"
           element={
             <AccessGate section="warehouse">
-              <Placeholder title="Склад" />
+              <WarehousePage />
             </AccessGate>
           }
         />

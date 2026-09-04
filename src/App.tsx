@@ -4,14 +4,14 @@ import { useAuthStore } from '@/auth/store'
 import { AppRouter } from '@/app/router'
 
 export function App() {
-  const loadAccounts = useAuthStore((s) => s.loadAccounts)
-  const accountsLoaded = useAuthStore((s) => s.accounts.length > 0)
+  const bootstrap = useAuthStore((s) => s.bootstrap)
+  const booting = useAuthStore((s) => s.booting)
 
   useEffect(() => {
-    loadAccounts()
-  }, [loadAccounts])
+    bootstrap()
+  }, [bootstrap])
 
-  if (!accountsLoaded) {
+  if (booting) {
     return <div className="flex h-screen items-center justify-center text-[13px] text-muted">Загрузка…</div>
   }
 

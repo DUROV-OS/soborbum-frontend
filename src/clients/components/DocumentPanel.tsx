@@ -1,24 +1,30 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Paperclip } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
-import { FileDrop } from '@/shared/ui/FileDrop'
 import { useClientsStore } from '../store'
 import { isGroupEditable, isGroupVisible } from '../rules'
-import { Client } from '../types'
+import { Client, FileAsset } from '../types'
 import { ReadRow, Section } from './ProjectPanel'
 
 export function DocumentPanel({ client }: { client: Client }) {
-  const updateDocument = useClientsStore((s) => s.updateDocument)
-  const editable = isGroupEditable(client, 'document')
-  const [draft, setDraft] = useState(client.document)
+  const updateDocuments = useClientsStore((s) => s.updateDocuments)
+  const editable = isGroupEditable(client, 'documents')
+  const [finalPrice, setFinalPrice] = useState(client.final_price ?? '')
+  const [address, setAddress] = useState(client.installation_address ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  if (!isGroupVisible(client, 'document')) return null
+  if (!isGroupVisible(client, 'documents')) return null
 
   async function save() {
     setSaving(true)
-    await updateDocument(client.id, draft)
+    const result = await updateDocuments(client.id, {
+      final_price: finalPrice === '' ? undefined : Number(finalPrice),
+      installation_address: address || undefined,
+    })
     setSaving(false)
+    setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
   }
 
   if (!editable) {
@@ -26,11 +32,11 @@ export function DocumentPanel({ client }: { client: Client }) {
       <Section title="Документы и договор">
         <ReadRow
           label="Итоговая цена"
-          value={client.document.finalPrice ? `${client.document.finalPrice.toLocaleString('ru-RU')} ₽` : undefined}
+          value={client.final_price ? `${client.final_price.toLocaleString('ru-RU')} ₽` : undefined}
         />
-        <ReadRow label="Адрес установки" value={client.document.installAddress} />
-        <ReadRow label="Проект дома" value={client.document.projectFile?.name} />
-        <ReadRow label="Договор" value={client.document.contractFile?.name} />
+        <ReadRow label="Адрес установки" value={client.installation_address ?? undefined} />
+        <ReadRow label="Проект дома" value={client.house_project_file?.filename} />
+        <ReadRow label="Договор" value={client.contract_file?.filename} />
       </Section>
     )
   }
@@ -39,40 +45,80 @@ export function DocumentPanel({ client }: { client: Client }) {
     <Section title="Документы и договор">
       <div className="grid grid-cols-2 gap-4">
         <Field label="Итоговая цена, ₽" required>
-          <Input
-            type="number"
-            value={draft.finalPrice ?? ''}
-            onChange={(e) => setDraft({ ...draft, finalPrice: Number(e.target.value) })}
-          />
+          <Input type="number" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>
         <Field label="Адрес установки" required>
-          <Input
-            value={draft.installAddress ?? ''}
-            onChange={(e) => setDraft({ ...draft, installAddress: e.target.value })}
-          />
+          <Input value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
         <Field label="Проект дома" required>
-          <FileDrop
-            label="Прикрепить проект дома"
-            attachment={draft.projectFile ?? null}
-            onAttach={(file) => setDraft({ ...draft, projectFile: file })}
-            onRemove={() => setDraft({ ...draft, projectFile: undefined })}
+          <FileUploadButton
+            asset={client.house_project_file}
+            onUpload={(file) => useClientsStore.getState().uploadHouseProjectFile(client.id, file)}
           />
         </Field>
         <Field label="Договор" required>
-          <FileDrop
-            label="Прикрепить договор"
-            attachment={draft.contractFile ?? null}
-            onAttach={(file) => setDraft({ ...draft, contractFile: file })}
-            onRemove={() => setDraft({ ...draft, contractFile: undefined })}
+          <FileUploadButton
+            asset={client.contract_file}
+            onUpload={(file) => useClientsStore.getState().uploadContractFile(client.id, file)}
           />
         </Field>
       </div>
+      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
       <div className="mt-4">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? 'Сохранение…' : 'Сохранить'}
         </Button>
       </div>
     </Section>
+  )
+}
+
+function FileUploadButton({
+  asset,
+  onUpload,
+}: {
+  asset: FileAsset | null
+  onUpload: (file: File) => Promise<{ ok: boolean; reason?: string }>
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (asset) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2 text-[13px] text-ink">
+        <Paperclip size={14} className="text-muted" />
+        {asset.filename}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          setUploading(true)
+          const result = await onUpload(file)
+          setUploading(false)
+          setError(result.ok ? null : result.reason ?? 'Не удалось загрузить файл')
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-[13px] text-muted hover:border-brand/40 hover:text-brand disabled:opacity-50"
+      >
+        <Paperclip size={14} />
+        {uploading ? 'Загрузка…' : 'Прикрепить файл'}
+      </button>
+      {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
+    </div>
   )
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Chip } from '@/shared/ui/Chip'
 import { useClientsStore } from '../store'
 import { isGroupEditable, isGroupVisible } from '../rules'
@@ -7,14 +8,20 @@ import { Section } from './ProjectPanel'
 export function PaymentPanel({ client }: { client: Client }) {
   const updatePayment = useClientsStore((s) => s.updatePayment)
   const editable = isGroupEditable(client, 'payment')
+  const [error, setError] = useState<string | null>(null)
 
   if (!isGroupVisible(client, 'payment')) return null
+
+  async function set(value: boolean) {
+    const result = await updatePayment(client.id, value)
+    setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
+  }
 
   if (!editable) {
     return (
       <Section title="Оплата">
-        <Chip tone={client.payment.received ? 'success' : 'warning'}>
-          {client.payment.received ? 'Оплата поступила' : 'Оплата не поступила'}
+        <Chip tone={client.is_paid ? 'success' : 'warning'}>
+          {client.is_paid ? 'Оплата поступила' : 'Оплата не поступила'}
         </Chip>
       </Section>
     )
@@ -25,27 +32,24 @@ export function PaymentPanel({ client }: { client: Client }) {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => updatePayment(client.id, { received: true })}
+          onClick={() => set(true)}
           className={`rounded-pill px-4 py-2 text-[13px] font-medium transition-colors ${
-            client.payment.received === true
-              ? 'bg-success text-white'
-              : 'border border-border text-ink hover:border-success'
+            client.is_paid === true ? 'bg-success text-white' : 'border border-border text-ink hover:border-success'
           }`}
         >
           Оплата поступила
         </button>
         <button
           type="button"
-          onClick={() => updatePayment(client.id, { received: false })}
+          onClick={() => set(false)}
           className={`rounded-pill px-4 py-2 text-[13px] font-medium transition-colors ${
-            client.payment.received === false
-              ? 'bg-warning text-white'
-              : 'border border-border text-ink hover:border-warning'
+            client.is_paid === false ? 'bg-warning text-white' : 'border border-border text-ink hover:border-warning'
           }`}
         >
           Оплата не поступила
         </button>
       </div>
+      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
     </Section>
   )
 }

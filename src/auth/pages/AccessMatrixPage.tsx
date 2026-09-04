@@ -12,19 +12,20 @@ export function AccessMatrixPage() {
   const updateAccess = useAuthStore((s) => s.updateAccess)
   const addAccount = useAuthStore((s) => s.addAccount)
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (accounts.length === 0) loadAccounts()
-  }, [accounts.length, loadAccounts])
+    loadAccounts().catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить сотрудников'))
+  }, [loadAccounts])
 
   const workers = accounts.filter((a) => a.role === 'worker')
 
-  function toggle(accountId: string, section: SectionId, hasIt: boolean) {
+  function toggle(accountId: number, section: SectionId, hasIt: boolean) {
     const account = accounts.find((a) => a.id === accountId)
     if (!account) return
     const next = hasIt
-      ? account.sectionAccess.filter((s) => s !== section)
-      : [...account.sectionAccess, section]
+      ? account.module_access.filter((s) => s !== section)
+      : [...account.module_access, section]
     updateAccess(accountId, next)
   }
 
@@ -43,6 +44,8 @@ export function AccessMatrixPage() {
         </Button>
       </div>
 
+      {error && <p className="mb-4 text-[13px] text-danger">{error}</p>}
+
       <div className="overflow-x-auto rounded-md border border-border bg-surface">
         <table className="w-full text-left text-[13px]">
           <thead>
@@ -59,11 +62,11 @@ export function AccessMatrixPage() {
             {workers.map((account) => (
               <tr key={account.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-ink">{account.name}</div>
-                  <div className="text-[12px] text-muted">{account.title}</div>
+                  <div className="font-medium text-ink">{account.full_name}</div>
+                  <div className="text-[12px] text-muted">{account.email}</div>
                 </td>
                 {ASSIGNABLE_SECTIONS.map((section) => {
-                  const hasIt = account.sectionAccess.includes(section.id)
+                  const hasIt = account.module_access.includes(section.id)
                   return (
                     <td key={section.id} className="px-3 py-3 text-center">
                       <input
@@ -93,26 +96,35 @@ function CreateAccountModal({
 }: {
   open: boolean
   onClose: () => void
-  onCreate: (input: { name: string; title: string; sectionAccess: SectionId[] }) => Promise<void>
+  onCreate: (input: { email: string; password: string; full_name: string; module_access: SectionId[] }) => Promise<void>
 }) {
-  const [name, setName] = useState('')
-  const [title, setTitle] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [sections, setSections] = useState<SectionId[]>([])
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function reset() {
-    setName('')
-    setTitle('')
+    setFullName('')
+    setEmail('')
+    setPassword('')
     setSections([])
+    setError(null)
   }
 
   async function handleSubmit() {
-    if (!name || !title) return
+    if (!fullName || !email || !password) return
     setSaving(true)
-    await onCreate({ name, title, sectionAccess: sections })
-    setSaving(false)
-    reset()
-    onClose()
+    try {
+      await onCreate({ email, password, full_name: fullName, module_access: sections })
+      reset()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось создать сотрудника')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -128,7 +140,7 @@ function CreateAccountModal({
           <Button variant="ghost" onClick={onClose}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!name || !title || saving}>
+          <Button onClick={handleSubmit} disabled={!fullName || !email || !password || saving}>
             {saving ? 'Сохранение…' : 'Создать'}
           </Button>
         </>
@@ -136,10 +148,13 @@ function CreateAccountModal({
     >
       <div className="flex flex-col gap-4">
         <Field label="ФИО" required>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иванов Иван" />
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Иванов Иван" />
         </Field>
-        <Field label="Должность" required>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Менеджер по продажам" />
+        <Field label="Почта" required>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mail@example.com" />
+        </Field>
+        <Field label="Пароль" required>
+          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Field label="Доступ к разделам">
           <div className="flex flex-col gap-2">
@@ -162,6 +177,7 @@ function CreateAccountModal({
             ))}
           </div>
         </Field>
+        {error && <p className="text-[12px] text-danger">{error}</p>}
       </div>
     </Modal>
   )

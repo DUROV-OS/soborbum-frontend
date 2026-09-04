@@ -1,68 +1,82 @@
 import { create } from 'zustand'
-import { requestCloseSyncedTask } from '@/shared/lib/taskSync'
+import { ApiError } from '@/shared/lib/httpClient'
 import * as clientsApi from './api'
-import {
-  Client,
-  ClientBasicInfo,
-  ClientDocumentInfo,
-  ClientPaymentInfo,
-  ClientProjectInfo,
-} from './types'
+import { Client, ClientCreateInput } from './types'
+
+export interface ActionResult {
+  ok: boolean
+  reason?: string
+}
 
 interface ClientsState {
   clients: Client[]
   loading: boolean
   load: () => Promise<void>
-  create: (basic: ClientBasicInfo) => Promise<Client>
-  updateProject: (id: string, patch: Partial<ClientProjectInfo>) => Promise<void>
-  updateDocument: (id: string, patch: Partial<ClientDocumentInfo>) => Promise<void>
-  updatePayment: (id: string, patch: Partial<ClientPaymentInfo>) => Promise<void>
-  updateNotes: (id: string, notes: string) => Promise<void>
-  advance: (id: string) => Promise<clientsApi.AdvanceResult>
+  create: (input: ClientCreateInput) => Promise<Client>
+  updateProject: (id: number, patch: clientsApi.ProjectUpdateInput) => Promise<ActionResult>
+  updateDocuments: (id: number, patch: clientsApi.DocumentsUpdateInput) => Promise<ActionResult>
+  updatePayment: (id: number, isPaid: boolean) => Promise<ActionResult>
+  uploadContractFile: (id: number, file: File) => Promise<ActionResult>
+  uploadHouseProjectFile: (id: number, file: File) => Promise<ActionResult>
+  addNote: (id: number, text: string) => Promise<ActionResult>
+  updateNote: (id: number, noteId: number, text: string) => Promise<ActionResult>
+  deleteNote: (id: number, noteId: number) => Promise<ActionResult>
+  advance: (id: number) => Promise<ActionResult>
 }
 
-export const useClientsStore = create<ClientsState>((set, get) => ({
-  clients: [],
-  loading: true,
+function reasonOf(error: unknown): string {
+  return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось выполнить действие'
+}
 
-  load: async () => {
-    const clients = await clientsApi.listClients()
-    set({ clients, loading: false })
-  },
+export const useClientsStore = create<ClientsState>((set, get) => {
+  function replace(client: Client) {
+    set({ clients: get().clients.map((c) => (c.id === client.id ? client : c)) })
+  }
 
-  create: async (basic) => {
-    const client = await clientsApi.createClient(basic)
-    set({ clients: [client, ...get().clients] })
-    return client
-  },
-
-  updateProject: async (id, patch) => {
-    const updated = await clientsApi.updateProjectInfo(id, patch)
-    set({ clients: get().clients.map((c) => (c.id === id ? updated : c)) })
-  },
-
-  updateDocument: async (id, patch) => {
-    const updated = await clientsApi.updateDocumentInfo(id, patch)
-    set({ clients: get().clients.map((c) => (c.id === id ? updated : c)) })
-  },
-
-  updatePayment: async (id, patch) => {
-    const updated = await clientsApi.updatePaymentInfo(id, patch)
-    set({ clients: get().clients.map((c) => (c.id === id ? updated : c)) })
-  },
-
-  updateNotes: async (id, notes) => {
-    const updated = await clientsApi.updateNotes(id, notes)
-    set({ clients: get().clients.map((c) => (c.id === id ? updated : c)) })
-  },
-
-  advance: async (id) => {
-    const result = clientsApi.advanceStage(id)
-    if (result.ok) {
-      requestCloseSyncedTask('clients', id)
-      const client = await clientsApi.getClient(id)
-      if (client) set({ clients: get().clients.map((c) => (c.id === id ? client : c)) })
+  async function applyClientMutation(mutation: () => Promise<Client>): Promise<ActionResult> {
+    try {
+      replace(await mutation())
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
     }
-    return result
-  },
-}))
+  }
+
+  async function applyNoteMutation(id: number, mutation: () => Promise<unknown>): Promise<ActionResult> {
+    try {
+      await mutation()
+      const client = await clientsApi.getClient(id)
+      replace(client)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  }
+
+  return {
+    clients: [],
+    loading: true,
+
+    load: async () => {
+      const clients = await clientsApi.listClients()
+      set({ clients, loading: false })
+    },
+
+    create: async (input) => {
+      const client = await clientsApi.createClient(input)
+      set({ clients: [client, ...get().clients] })
+      return client
+    },
+
+    updateProject: (id, patch) => applyClientMutation(() => clientsApi.updateProject(id, patch)),
+    updateDocuments: (id, patch) => applyClientMutation(() => clientsApi.updateDocuments(id, patch)),
+    updatePayment: (id, isPaid) => applyClientMutation(() => clientsApi.updatePayment(id, isPaid)),
+    uploadContractFile: (id, file) => applyClientMutation(() => clientsApi.uploadContractFile(id, file)),
+    uploadHouseProjectFile: (id, file) => applyClientMutation(() => clientsApi.uploadHouseProjectFile(id, file)),
+    advance: (id) => applyClientMutation(() => clientsApi.advanceStage(id)),
+
+    addNote: (id, text) => applyNoteMutation(id, () => clientsApi.addNote(id, text)),
+    updateNote: (id, noteId, text) => applyNoteMutation(id, () => clientsApi.updateNote(id, noteId, text)),
+    deleteNote: (id, noteId) => applyNoteMutation(id, () => clientsApi.deleteNote(id, noteId)),
+  }
+})
