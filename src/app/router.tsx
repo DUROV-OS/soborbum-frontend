@@ -4,6 +4,7 @@ import { AccessMatrixPage } from '@/auth/pages/AccessMatrixPage'
 import { useAuthStore } from '@/auth/store'
 import { ClientDetailPage } from '@/clients/pages/ClientDetailPage'
 import { ClientsBoardPage } from '@/clients/pages/ClientsBoardPage'
+import { TasksPage } from '@/tasks/pages/TasksPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
@@ -90,10 +91,10 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/tasks/*"
+          path="/tasks"
           element={
             <AccessGate section="tasks">
-              <Placeholder title="Задачи" />
+              <TasksPage />
             </AccessGate>
           }
         />
