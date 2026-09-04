@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { useTasksStore } from '@/tasks/store'
 import { TaskDetailDrawer } from '@/tasks/components/TaskDetailDrawer'
 import { CreateTaskModal } from '@/tasks/components/CreateTaskModal'
@@ -55,13 +56,20 @@ export function ModuleDetailPage() {
         К производству
       </Link>
 
-      <div className="mb-6">
-        <h1 className="text-[18px] font-medium text-ink">{module.name}</h1>
-        {module.description && <p className="mt-1 text-[13px] text-muted">{module.description}</p>}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[18px] font-medium text-ink">{module.name}</h1>
+          {module.description && <p className="mt-1 text-[13px] text-muted">{module.description}</p>}
+        </div>
+        <AskAiButton
+          domain="production"
+          contextLabel={`Модуль: ${module.name}`}
+          contextPrefix={`[module_id=${module.id}, production_id=${module.production_id}, ${module.name}] `}
+        />
       </div>
 
       <section className="mb-6">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[14px] font-medium text-ink">Материалы</h2>
           <Button size="sm" variant="secondary" onClick={() => setAddingMaterial(true)}>
             <Plus size={14} />
@@ -91,7 +99,7 @@ export function ModuleDetailPage() {
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[14px] font-medium text-ink">Задачи модуля</h2>
           <Button size="sm" variant="secondary" onClick={() => setCreatingTask(true)}>
             <Plus size={14} />

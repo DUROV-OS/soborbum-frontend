@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Button } from '@/shared/ui/Button'
 import { Stepper } from '@/shared/ui/Stepper'
 import { useClientsStore } from '../store'
@@ -48,20 +49,25 @@ export function ClientDetailPage() {
       </Link>
 
       <div className="mb-6 rounded-md border border-border bg-surface p-5">
-        <div className="mb-4 flex items-start justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-[18px] font-medium text-ink">{client.full_name}</h1>
             <p className="mt-1 text-[13px] text-muted">
               Клиент с {new Date(client.created_at).toLocaleDateString('ru-RU')}
             </p>
           </div>
-          {next && (
-            <div className="text-right">
+          <div className="flex items-center gap-2 sm:text-right">
+            <AskAiButton
+              domain="clients"
+              contextLabel={`Клиент: ${client.full_name}`}
+              contextPrefix={`[client_id=${client.id}, ${client.full_name}] `}
+            />
+            {next && (
               <Button size="sm" onClick={handleAdvance} disabled={advancing}>
                 {advancing ? 'Переход…' : `Перевести на «${stageLabel(next)}»`}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <Stepper steps={CLIENT_STAGES} currentKey={client.stage} />
         {error && <p className="mt-3 text-[12px] text-danger">{error}</p>}

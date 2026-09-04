@@ -8,6 +8,7 @@ export function Drawer({
   subtitle,
   children,
   width = 'max-w-xl',
+  bodyClassName = 'flex-1 overflow-y-auto px-6 py-5',
 }: {
   open: boolean
   onClose: () => void
@@ -15,6 +16,7 @@ export function Drawer({
   subtitle?: ReactNode
   children: ReactNode
   width?: string
+  bodyClassName?: string
 }) {
   if (!open) return null
 
@@ -40,7 +42,7 @@ export function Drawer({
             <X size={18} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className={bodyClassName}>{children}</div>
       </div>
     </div>
   )

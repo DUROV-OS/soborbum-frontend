@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input, Textarea } from '@/shared/ui/Field'
 import { Modal } from '@/shared/ui/Modal'
@@ -29,12 +30,15 @@ export function ProductionDetailPage() {
         Все производства
       </Link>
 
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-[18px] font-medium text-ink">Производство №{production.id}</h1>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Модуль
-        </Button>
+        <div className="flex gap-2 self-start">
+          <AskAiButton domain="production" contextLabel={`Производство №${production.id}`} contextPrefix={`[production_id=${production.id}] `} />
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Модуль
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">

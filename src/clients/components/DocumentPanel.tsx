@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Paperclip } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
+import { FileLink } from '@/shared/ui/FileLink'
 import { useClientsStore } from '../store'
 import { isGroupEditable, isGroupVisible } from '../rules'
 import { Client, FileAsset } from '../types'
@@ -35,15 +36,21 @@ export function DocumentPanel({ client }: { client: Client }) {
           value={client.final_price ? `${client.final_price.toLocaleString('ru-RU')} ₽` : undefined}
         />
         <ReadRow label="Адрес установки" value={client.installation_address ?? undefined} />
-        <ReadRow label="Проект дома" value={client.house_project_file?.filename} />
-        <ReadRow label="Договор" value={client.contract_file?.filename} />
+        <ReadRow
+          label="Проект дома"
+          value={client.house_project_file && <FileLink id={client.house_project_file.id} filename={client.house_project_file.filename} />}
+        />
+        <ReadRow
+          label="Договор"
+          value={client.contract_file && <FileLink id={client.contract_file.id} filename={client.contract_file.filename} />}
+        />
       </Section>
     )
   }
 
   return (
     <Section title="Документы и договор">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Итоговая цена, ₽" required>
           <Input type="number" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>
@@ -86,9 +93,8 @@ function FileUploadButton({
 
   if (asset) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2 text-[13px] text-ink">
-        <Paperclip size={14} className="text-muted" />
-        {asset.filename}
+      <div className="flex items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2">
+        <FileLink id={asset.id} filename={asset.filename} />
       </div>
     )
   }

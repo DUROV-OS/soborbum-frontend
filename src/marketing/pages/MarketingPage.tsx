@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Button } from '@/shared/ui/Button'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Tabs } from '@/shared/ui/Tabs'
@@ -24,15 +25,18 @@ export function MarketingPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Маркетинг</h1>
           <p className="mt-1 text-[13px] text-muted">Календарь выпуска контента</p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Новый контент
-        </Button>
+        <div className="flex gap-2 self-start">
+          <AskAiButton domain="marketing" />
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Новый контент
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Truck } from 'lucide-react'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { DataTable } from '@/shared/ui/DataTable'
@@ -28,12 +29,13 @@ export function WarehousePage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Склад</h1>
           <p className="mt-1 text-[13px] text-muted">Материалы, заявки от производства и история движения</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <AskAiButton domain="warehouse" />
           <Button variant="secondary" onClick={() => setCreatingMaterial(true)}>
             <Plus size={16} />
             Материал

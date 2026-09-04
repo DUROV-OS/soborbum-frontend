@@ -5,6 +5,7 @@ import {
   Megaphone,
   Repeat,
   ShieldCheck,
+  Sparkles,
   Truck,
   Users,
   type LucideIcon,
@@ -27,6 +28,7 @@ export type SectionId =
   | 'marketing'
   | 'tasks'
   | 'admin'
+  | 'ai'
 
 export interface SectionMeta {
   id: SectionId
@@ -35,6 +37,8 @@ export interface SectionMeta {
   icon: LucideIcon
   /** Разделы, которые не входят в матрицу доступа рабочих (управляются только ролью) */
   adminOnly?: boolean
+  /** Видно всем авторизованным независимо от module_access — раздел не гейтится бэкендом */
+  alwaysVisible?: boolean
 }
 
 export const SECTIONS: SectionMeta[] = [
@@ -45,6 +49,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'warehouse', label: 'Склад', path: '/warehouse', icon: Boxes },
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
+  { id: 'ai', label: 'ИИ-ассистент', path: '/ai', icon: Sparkles, alwaysVisible: true },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
 

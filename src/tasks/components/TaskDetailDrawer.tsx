@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Chip } from '@/shared/ui/Chip'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
+import { FileLink } from '@/shared/ui/FileLink'
 import { useTasksStore } from '../store'
 import { Task, TASK_STATES, TaskStatus } from '../types'
 import { stateTone } from './stateTone'
@@ -41,9 +42,7 @@ export function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose
             <div className="mb-1.5 text-[13px] text-muted">Изображения</div>
             <div className="flex flex-col gap-1">
               {task.images.map((img) => (
-                <div key={img.id} className="text-[13px] text-ink">
-                  {img.filename}
-                </div>
+                <FileLink key={img.id} id={img.id} filename={img.filename} />
               ))}
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
@@ -43,19 +44,20 @@ export function TasksPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Задачи</h1>
           <p className="mt-1 text-[13px] text-muted">Общий борд, включая задачи из других разделов</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-44">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-full sm:w-44">
             {Object.entries(SOURCE_LABEL).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
               </option>
             ))}
           </Select>
+          <AskAiButton domain="tasks" />
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} />
             Новая задача

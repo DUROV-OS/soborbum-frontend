@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
 import { Textarea } from '@/shared/ui/Field'
+import { FileLink } from '@/shared/ui/FileLink'
 import { Stepper } from '@/shared/ui/Stepper'
 import { useMarketingStore } from '../store'
 import { isGroupEditable, isGroupVisible, nextStageOf, stageLabel } from '../rules'
@@ -155,9 +156,11 @@ function FileListNote({ files }: { files: { id: number; filename: string }[] }) 
   return (
     <div className="mt-2">
       {files.length > 0 && (
-        <ul className="mb-1 text-[13px] text-ink">
+        <ul className="mb-1 flex flex-col gap-1">
           {files.map((f) => (
-            <li key={f.id}>{f.filename}</li>
+            <li key={f.id}>
+              <FileLink id={f.id} filename={f.filename} />
+            </li>
           ))}
         </ul>
       )}

@@ -45,8 +45,8 @@ export function ProjectPanel({ client }: { client: Client }) {
 
   return (
     <Section title="Проектная информация">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <Field label="Пожелания по проекту" required>
             <Textarea rows={3} value={wishes} onChange={(e) => setWishes(e.target.value)} />
           </Field>
@@ -82,7 +82,7 @@ export function Section({ title, children }: { title: string; children: React.Re
   )
 }
 
-export function ReadRow({ label, value }: { label: string; value?: string }) {
+export function ReadRow({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between border-b border-border py-2 text-[13px] last:border-0">
       <span className="text-muted">{label}</span>

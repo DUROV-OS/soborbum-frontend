@@ -14,6 +14,7 @@ import { MarketingPage } from '@/marketing/pages/MarketingPage'
 import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
 import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
+import { AiChatPage } from '@/ai/pages/AiChatPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
@@ -138,6 +139,8 @@ export function AppRouter() {
             </AccessGate>
           }
         />
+        <Route path="/ai" element={<AiChatPage />} />
+        <Route path="/ai/:chatId" element={<AiChatPage />} />
         <Route path="/admin" element={<AccessMatrixPage />} />
         <Route path="*" element={<RootRedirect />} />
       </Route>

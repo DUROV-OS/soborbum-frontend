@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AskAiButton } from '@/ai/components/AskAiButton'
 import { Stepper } from '@/shared/ui/Stepper'
 import { Chip } from '@/shared/ui/Chip'
 import * as cyclesApi from '../api'
@@ -27,7 +28,14 @@ export function CycleDetailPage() {
       </Link>
 
       <div className="mb-6 rounded-md border border-border bg-surface p-5">
-        <h1 className="mb-4 text-[18px] font-medium text-ink">{cycle.client?.full_name ?? `Цикл №${cycle.id}`}</h1>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <h1 className="text-[18px] font-medium text-ink">{cycle.client?.full_name ?? `Цикл №${cycle.id}`}</h1>
+          <AskAiButton
+            domain="cycle"
+            contextLabel={cycle.client ? `Клиент: ${cycle.client.full_name}` : `Цикл №${cycle.id}`}
+            contextPrefix={`[cycle_id=${cycle.id}${cycle.client ? `, client_id=${cycle.client.id}` : ''}] `}
+          />
+        </div>
         <Stepper steps={CYCLE_STAGES} currentKey={cycle.status} />
       </div>
 
