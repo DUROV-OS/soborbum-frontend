@@ -9,6 +9,7 @@ import {
   ChatOut,
   PendingActionOut,
   SectionAnalyticsOut,
+  TaskPrioritiesOut,
 } from './types'
 
 const SECTION = 'ai'
@@ -25,6 +26,11 @@ export function askDomain(domain: ChatDomain, request: AskRequest): Promise<AskR
 /** GET /api/ai/{section}/analytics */
 export function getSectionAnalytics(section: AnalyticsSection): Promise<SectionAnalyticsOut> {
   return apiRequest<SectionAnalyticsOut>({ section: SECTION, path: `/${section}/analytics` })
+}
+
+/** GET /api/ai/tasks/priorities */
+export function getTaskPriorities(): Promise<TaskPrioritiesOut> {
+  return apiRequest<TaskPrioritiesOut>({ section: SECTION, path: '/tasks/priorities' })
 }
 
 /** GET /api/ai/chats */

@@ -1,4 +1,5 @@
 import { SectionId } from '@/shared/sections'
+import { Task } from '@/tasks/types'
 
 export type ChatDomain = 'clients' | 'production' | 'cycle' | 'warehouse' | 'marketing' | 'tasks' | 'general'
 
@@ -103,4 +104,15 @@ export interface SectionAnalyticsOut {
   generated_at: string
   summary: string
   status: SectionAnalyticsStatus
+}
+
+/** GET /api/ai/tasks/priorities — 2-3 открытые задачи сотрудника, к которым ИИ советует присмотреться в первую очередь. */
+export interface PriorityTaskOut {
+  task: Task
+  reason: string
+}
+
+export interface TaskPrioritiesOut {
+  generated_at: string
+  priorities: PriorityTaskOut[]
 }
