@@ -6,7 +6,16 @@ import { Modal } from '@/shared/ui/Modal'
 import { useTasksStore } from '../store'
 import { Task } from '../types'
 
-export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CreateTaskModal({
+  open,
+  onClose,
+  moduleId,
+}: {
+  open: boolean
+  onClose: () => void
+  /** Если задача создаётся из модуля производства — привязывает её к нему. */
+  moduleId?: number
+}) {
   const accounts = useAuthStore((s) => s.accounts)
   const tasks = useTasksStore((s) => s.tasks)
   const create = useTasksStore((s) => s.create)
@@ -46,6 +55,7 @@ export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () 
       assignee_ids: assigneeIds,
       reviewer_ids: reviewerIds,
       depends_on_ids: dependsOn,
+      module_id: moduleId,
     })
     setSaving(false)
     if (result.ok) {

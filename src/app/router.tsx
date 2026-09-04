@@ -5,6 +5,9 @@ import { useAuthStore } from '@/auth/store'
 import { ClientDetailPage } from '@/clients/pages/ClientDetailPage'
 import { ClientsBoardPage } from '@/clients/pages/ClientsBoardPage'
 import { TasksPage } from '@/tasks/pages/TasksPage'
+import { ModuleDetailPage } from '@/production/pages/ModuleDetailPage'
+import { ProductionDetailPage } from '@/production/pages/ProductionDetailPage'
+import { ProductionOverviewPage } from '@/production/pages/ProductionOverviewPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -52,10 +55,26 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/production/*"
+          path="/production"
           element={
             <AccessGate section="production">
-              <Placeholder title="Производство" />
+              <ProductionOverviewPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/production/modules/:id"
+          element={
+            <AccessGate section="production">
+              <ModuleDetailPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/production/:id"
+          element={
+            <AccessGate section="production">
+              <ProductionDetailPage />
             </AccessGate>
           }
         />
