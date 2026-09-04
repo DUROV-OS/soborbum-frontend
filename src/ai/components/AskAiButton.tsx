@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { ChatDomain } from '../types'
 import { AskAiDrawer } from './AskAiDrawer'
@@ -13,7 +14,10 @@ export function AskAiButton({
   contextLabel?: string
   contextPrefix?: string
 }) {
+  const hasAccess = useAuthStore((s) => s.hasAccess)
   const [open, setOpen] = useState(false)
+
+  if (!hasAccess('ai')) return null
 
   return (
     <>

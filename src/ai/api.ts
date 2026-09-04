@@ -32,6 +32,11 @@ export function updateChatMode(id: number, mode: ChatMode): Promise<ChatOut> {
   return apiRequest<ChatOut>({ section: SECTION, path: `/chats/${id}/mode`, method: 'PATCH', body: { mode } })
 }
 
+/** PATCH /api/ai/chats/:id/title */
+export function updateChatTitle(id: number, title: string | null): Promise<ChatOut> {
+  return apiRequest<ChatOut>({ section: SECTION, path: `/chats/${id}/title`, method: 'PATCH', body: { title } })
+}
+
 /** GET /api/ai/pending-actions */
 export function listPendingActions(chatId?: number): Promise<PendingActionOut[]> {
   return apiRequest<PendingActionOut[]>({ section: SECTION, path: '/pending-actions', query: { chat_id: chatId } })

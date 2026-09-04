@@ -139,8 +139,22 @@ export function AppRouter() {
             </AccessGate>
           }
         />
-        <Route path="/ai" element={<AiChatPage />} />
-        <Route path="/ai/:chatId" element={<AiChatPage />} />
+        <Route
+          path="/ai"
+          element={
+            <AccessGate section="ai">
+              <AiChatPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/ai/:chatId"
+          element={
+            <AccessGate section="ai">
+              <AiChatPage />
+            </AccessGate>
+          }
+        />
         <Route path="/admin" element={<AccessMatrixPage />} />
         <Route path="*" element={<RootRedirect />} />
       </Route>

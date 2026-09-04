@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { Paperclip } from 'lucide-react'
-import { openFile } from '@/shared/lib/httpClient'
+import { Download } from 'lucide-react'
+import { downloadFileById } from '@/shared/lib/httpClient'
 
 export function FileLink({ id, filename }: { id: number; filename: string }) {
-  const [opening, setOpening] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   async function handleClick() {
-    setOpening(true)
+    setDownloading(true)
     try {
-      await openFile(id, filename)
+      await downloadFileById(id, filename)
     } finally {
-      setOpening(false)
+      setDownloading(false)
     }
   }
 
@@ -18,11 +18,11 @@ export function FileLink({ id, filename }: { id: number; filename: string }) {
     <button
       type="button"
       onClick={handleClick}
-      disabled={opening}
+      disabled={downloading}
       className="inline-flex items-center gap-1.5 text-[13px] text-brand-dark hover:underline disabled:opacity-50"
     >
-      <Paperclip size={13} />
-      {opening ? 'Открываем…' : filename}
+      <Download size={13} />
+      {downloading ? 'Скачиваем…' : filename}
     </button>
   )
 }

@@ -6,6 +6,7 @@ import { useAiStore } from '../store'
 import { DOMAIN_LABEL, PendingActionOut } from '../types'
 import { ChatComposer } from './ChatComposer'
 import { ChatModeSelector } from './ChatModeSelector'
+import { ChatTitleEditor } from './ChatTitleEditor'
 import { MessageBubble } from './MessageBubble'
 import { PendingActionModal } from './PendingActionModal'
 
@@ -30,6 +31,7 @@ export function ChatPanel({
   const error = useAiStore((s) => s.error)
   const send = useAiStore((s) => s.send)
   const setMode = useAiStore((s) => s.setMode)
+  const renameChat = useAiStore((s) => s.renameChat)
   const resolveAction = useAiStore((s) => s.resolveAction)
   const removeChat = useAiStore((s) => s.removeChat)
 
@@ -43,7 +45,7 @@ export function ChatPanel({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [chat?.messages.length])
+  }, [chat?.messages.length, sending])
 
   if (!domain) {
     return <EmptyState icon={<Sparkles size={28} />} title="Выберите чат или начните новый" />
@@ -79,6 +81,7 @@ export function ChatPanel({
         <div className="flex flex-wrap items-center gap-2">
           <Chip tone="brand">{DOMAIN_LABEL[domain]}</Chip>
           {contextLabel && <Chip tone="neutral">{contextLabel}</Chip>}
+          {chat && <ChatTitleEditor title={chat.title} onRename={(title) => renameChat(chat.id, title)} />}
         </div>
         <div className="flex items-center gap-2">
           <ChatModeSelector mode={mode} onChange={setMode} />
@@ -108,8 +111,18 @@ export function ChatPanel({
                 onResolve={handleResolve}
               />
             ))}
-            {(!chat || chat.messages.length === 0) && (
+            {(!chat || chat.messages.length === 0) && !sending && (
               <p className="text-[13px] text-muted">Начните диалог — задайте вопрос или попросите что-то сделать.</p>
+            )}
+            {sending && (
+              <div className="flex items-center gap-1.5 rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] text-muted">
+                <span className="flex gap-0.5">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
+                </span>
+                ИИ думает — это может занять до минуты, обновлять страницу не нужно
+              </div>
             )}
             <div ref={bottomRef} />
           </div>

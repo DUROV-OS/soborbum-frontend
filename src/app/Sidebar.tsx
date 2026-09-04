@@ -6,7 +6,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const hasAccess = useAuthStore((s) => s.hasAccess)
   const current = useAuthStore((s) => s.current)
   const visibleSections = SECTIONS.filter((section) => {
-    if (section.alwaysVisible) return true
     if (section.adminOnly) return current?.role === 'admin'
     return hasAccess(section.id)
   })

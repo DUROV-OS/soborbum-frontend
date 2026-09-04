@@ -23,6 +23,7 @@ interface AiState {
   startDraft: (domain: ChatDomain, mode?: ChatMode) => void
   send: (message: string) => Promise<AskResponse | null>
   setMode: (mode: ChatMode) => Promise<void>
+  renameChat: (id: number, title: string | null) => Promise<void>
   resolveAction: (id: number, decision: 'approve' | 'reject') => Promise<AskResponse | null>
   removeChat: (id: number) => Promise<void>
 }
@@ -108,6 +109,18 @@ export const useAiStore = create<AiState>((set, get) => {
         set((state) => ({
           activeChat: state.activeChat ? { ...state.activeChat, mode: updated.mode } : state.activeChat,
           chats: state.chats.map((c) => (c.id === updated.id ? { ...c, mode: updated.mode } : c)),
+        }))
+      } catch (error) {
+        set({ error: reasonOf(error) })
+      }
+    },
+
+    renameChat: async (id, title) => {
+      try {
+        const updated = await aiApi.updateChatTitle(id, title)
+        set((state) => ({
+          activeChat: state.activeChat?.id === id ? { ...state.activeChat, title: updated.title } : state.activeChat,
+          chats: state.chats.map((c) => (c.id === id ? { ...c, title: updated.title } : c)),
         }))
       } catch (error) {
         set({ error: reasonOf(error) })

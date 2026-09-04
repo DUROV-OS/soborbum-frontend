@@ -91,30 +91,41 @@ function FileUploadButton({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const result = await onUpload(file)
+    setUploading(false)
+    setError(result.ok ? null : result.reason ?? 'Не удалось загрузить файл')
+  }
+
+  const input = <input ref={inputRef} type="file" className="hidden" onChange={handleFile} />
+
   if (asset) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2">
-        <FileLink id={asset.id} filename={asset.filename} />
+      <div>
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface-muted px-3 py-2">
+          <FileLink id={asset.id} filename={asset.filename} />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="shrink-0 text-[12px] text-muted hover:text-brand disabled:opacity-50"
+          >
+            {uploading ? 'Загрузка…' : 'Заменить'}
+          </button>
+        </div>
+        {input}
+        {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
       </div>
     )
   }
 
   return (
     <div>
-      <input
-        ref={inputRef}
-        type="file"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ''
-          if (!file) return
-          setUploading(true)
-          const result = await onUpload(file)
-          setUploading(false)
-          setError(result.ok ? null : result.reason ?? 'Не удалось загрузить файл')
-        }}
-      />
+      {input}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}

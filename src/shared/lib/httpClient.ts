@@ -114,26 +114,20 @@ export async function downloadFile(section: string, path: string, filename: stri
  */
 const API_ROOT = API_BASE.replace(/\/api$/, '')
 
-/** Открывает файл по id в новой вкладке (скачивается, если браузер не умеет отрисовать тип). */
-export async function openFile(fileId: number, filename: string): Promise<void> {
-  const win = window.open('', '_blank')
-  try {
-    const headers: Record<string, string> = {}
-    if (token) headers.Authorization = `Bearer ${token}`
-    const response = await fetch(`${API_ROOT}/files/${fileId}`, { headers })
-    if (!response.ok) throw new ApiError(response.status, await extractErrorMessage(response))
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    if (win) {
-      win.location.href = url
-    } else {
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      link.click()
-    }
-  } catch (error) {
-    win?.close()
-    throw error
-  }
+/**
+ * Скачивает прикреплённый файл по id (а не открывает во вкладке — рендеринг текстовых
+ * файлов браузером не учитывает исходную кодировку и превращает кириллицу в кракозябры).
+ */
+export async function downloadFileById(fileId: number, filename: string): Promise<void> {
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  const response = await fetch(`${API_ROOT}/files/${fileId}`, { headers })
+  if (!response.ok) throw new ApiError(response.status, await extractErrorMessage(response))
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
