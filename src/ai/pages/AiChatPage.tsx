@@ -58,9 +58,9 @@ export function AiChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <div className="flex h-[calc(100vh-8rem)] min-w-0 gap-4">
       <div
-        className={`w-full flex-col rounded-md border border-border bg-surface sm:flex sm:w-72 sm:shrink-0 ${
+        className={`w-full min-w-0 flex-col rounded-md border border-border bg-surface sm:flex sm:w-72 sm:shrink-0 ${
           showChatPanel ? 'hidden' : 'flex'
         }`}
       >

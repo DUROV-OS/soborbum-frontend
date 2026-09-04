@@ -22,10 +22,10 @@ export function MessageBubble({
   if (!text && toolBlocks.length === 0 && relatedActions.length === 0) return null
 
   return (
-    <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
+    <div className={`flex min-w-0 flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
       {text && (
         <div
-          className={`max-w-md whitespace-pre-wrap rounded-md px-3.5 py-2.5 text-[13px] leading-relaxed ${
+          className={`max-w-[85%] whitespace-pre-wrap break-words rounded-md px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-md ${
             isUser ? 'bg-brand text-white' : 'bg-surface-muted text-ink'
           }`}
         >

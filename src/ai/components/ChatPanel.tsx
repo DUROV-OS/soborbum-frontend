@@ -80,7 +80,7 @@ export function ChatPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-w-0 min-h-0 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {onBack && (
@@ -112,11 +112,11 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-w-0 flex-1 overflow-y-auto px-4 py-4">
         {loadingChat ? (
           <p className="text-[13px] text-muted">Загрузка…</p>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             {chat?.messages.map((message) => (
               <MessageBubble
                 key={message.id}
@@ -129,8 +129,8 @@ export function ChatPanel({
               <p className="text-[13px] text-muted">Начните диалог — задайте вопрос или попросите что-то сделать.</p>
             )}
             {optimisticMessage && (
-              <div className="flex flex-col items-end">
-                <div className="max-w-md whitespace-pre-wrap rounded-md bg-brand px-3.5 py-2.5 text-[13px] leading-relaxed text-white opacity-70">
+              <div className="flex min-w-0 flex-col items-end">
+                <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-md bg-brand px-3.5 py-2.5 text-[13px] leading-relaxed text-white opacity-70 sm:max-w-md">
                   {optimisticMessage}
                 </div>
               </div>

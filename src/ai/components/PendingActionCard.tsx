@@ -28,7 +28,7 @@ export function PendingActionCard({
   }
 
   return (
-    <div className="w-full max-w-md rounded-md border border-border bg-surface-muted p-3">
+    <div className="w-full max-w-[85%] rounded-md border border-border bg-surface-muted p-3 sm:max-w-md">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-[13px] font-medium text-ink">{action.tool_name}</span>
         {action.status === 'pending' ? (
@@ -42,9 +42,9 @@ export function PendingActionCard({
       {fields.length > 0 && (
         <dl className="mb-2 flex flex-col gap-1">
           {fields.map(({ key, value }) => (
-            <div key={key} className="flex gap-2 text-[12px]">
+            <div key={key} className="flex min-w-0 gap-2 text-[12px]">
               <dt className="shrink-0 text-muted">{key}:</dt>
-              <dd className="truncate text-ink">{value}</dd>
+              <dd className="min-w-0 truncate text-ink">{value}</dd>
             </div>
           ))}
         </dl>
