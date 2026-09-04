@@ -10,6 +10,7 @@ import { ProductionDetailPage } from '@/production/pages/ProductionDetailPage'
 import { ProductionOverviewPage } from '@/production/pages/ProductionOverviewPage'
 import { MontageDetailPage } from '@/montage/pages/MontageDetailPage'
 import { MontageOverviewPage } from '@/montage/pages/MontageOverviewPage'
+import { MarketingPage } from '@/marketing/pages/MarketingPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -113,10 +114,10 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/marketing/*"
+          path="/marketing"
           element={
             <AccessGate section="marketing">
-              <Placeholder title="Маркетинг" />
+              <MarketingPage />
             </AccessGate>
           }
         />
