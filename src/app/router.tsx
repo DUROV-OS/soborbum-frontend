@@ -15,6 +15,7 @@ import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
 import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { AiChatPage } from '@/ai/pages/AiChatPage'
+import { BoardPage } from '@/board/pages/BoardPage'
 import { TodayPage } from '@/today/pages/TodayPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -145,6 +146,14 @@ export function AppRouter() {
           element={
             <AccessGate section="tasks">
               <TasksPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/board"
+          element={
+            <AccessGate section="board">
+              <BoardPage />
             </AccessGate>
           }
         />

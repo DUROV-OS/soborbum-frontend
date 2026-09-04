@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ClipboardList,
   Factory,
+  Landmark,
   Megaphone,
   Repeat,
   ShieldCheck,
@@ -35,6 +36,7 @@ export type SectionId =
   | 'admin'
   | 'ai'
   | 'today'
+  | 'board'
 
 export interface SectionMeta {
   id: SectionId
@@ -56,6 +58,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'warehouse', label: 'Склад', path: '/warehouse', icon: Boxes },
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
+  { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
   { id: 'ai', label: 'ИИ-ассистент', path: '/ai', icon: Sparkles },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
