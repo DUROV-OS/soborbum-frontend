@@ -14,6 +14,7 @@ export function KanbanBoard<T, K extends string>({
   keyOf,
   renderCard,
   onCardClick,
+  loading = false,
 }: {
   columns: KanbanColumn<K>[]
   items: T[]
@@ -21,6 +22,7 @@ export function KanbanBoard<T, K extends string>({
   keyOf: (item: T) => string
   renderCard: (item: T) => ReactNode
   onCardClick?: (item: T) => void
+  loading?: boolean
 }) {
   const [openKey, setOpenKey] = useState<K | null>(columns[0]?.key ?? null)
 
@@ -43,7 +45,7 @@ export function KanbanBoard<T, K extends string>({
       ))}
       {columnItems.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-3 text-center text-[12px] text-muted">
-          Пусто
+          {loading ? 'Загрузка…' : 'Пусто'}
         </div>
       )}
     </>

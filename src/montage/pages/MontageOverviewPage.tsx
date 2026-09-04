@@ -5,11 +5,13 @@ import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { LoadingState } from '@/shared/ui/LoadingState'
 import { useMontageStore } from '../store'
 import { INSTALLATION_STAGES } from '../types'
 
 export function MontageOverviewPage() {
   const cycles = useMontageStore((s) => s.cycles)
+  const loading = useMontageStore((s) => s.loading)
   const loadCycles = useMontageStore((s) => s.loadCycles)
   const start = useMontageStore((s) => s.start)
   const navigate = useNavigate()
@@ -40,7 +42,9 @@ export function MontageOverviewPage() {
 
       {error && <p className="mb-4 text-[13px] text-danger">{error}</p>}
 
-      {ready.length === 0 ? (
+      {loading && cycles.length === 0 ? (
+        <LoadingState label="Загружаем производства для монтажа…" />
+      ) : ready.length === 0 ? (
         <EmptyState icon={<Truck size={28} />} title="Пока нет производств для монтажа" />
       ) : (
         <div className="flex flex-col gap-3">

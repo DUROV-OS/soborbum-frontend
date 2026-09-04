@@ -10,6 +10,7 @@ import { CreateClientModal } from '../components/CreateClientModal'
 
 export function ClientsBoardPage() {
   const clients = useClientsStore((s) => s.clients)
+  const loading = useClientsStore((s) => s.loading)
   const load = useClientsStore((s) => s.load)
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
@@ -39,6 +40,7 @@ export function ClientsBoardPage() {
         keyOf={(c) => String(c.id)}
         columnOf={(c) => c.stage}
         onCardClick={(c) => navigate(`/clients/${c.id}`)}
+        loading={loading}
         renderCard={(client) => (
           <div>
             <div className="text-[13px] font-medium text-ink">{client.full_name}</div>

@@ -15,6 +15,7 @@ const STATUS_TONE: Record<CycleStatus, ChipTone> = {
 
 export function CyclesListPage() {
   const cycles = useCyclesStore((s) => s.cycles)
+  const loading = useCyclesStore((s) => s.loading)
   const load = useCyclesStore((s) => s.load)
   const navigate = useNavigate()
 
@@ -42,6 +43,7 @@ export function CyclesListPage() {
         rows={cycles}
         keyOf={(c) => String(c.id)}
         onRowClick={(c) => navigate(`/cycles/${c.id}`)}
+        loading={loading}
       />
     </div>
   )

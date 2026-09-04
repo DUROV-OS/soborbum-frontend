@@ -12,13 +12,17 @@ export function DataTable<T>({
   rows,
   keyOf,
   onRowClick,
+  loading = false,
   emptyLabel = 'Нет данных',
+  loadingLabel = 'Загрузка…',
 }: {
   columns: DataTableColumn<T>[]
   rows: T[]
   keyOf: (row: T) => string
   onRowClick?: (row: T) => void
+  loading?: boolean
   emptyLabel?: string
+  loadingLabel?: string
 }) {
   return (
     <div className="overflow-x-auto rounded-md border border-border bg-surface">
@@ -55,7 +59,7 @@ export function DataTable<T>({
           {rows.length === 0 && (
             <tr>
               <td colSpan={columns.length} className="px-4 py-8 text-center text-muted">
-                {emptyLabel}
+                {loading ? loadingLabel : emptyLabel}
               </td>
             </tr>
           )}

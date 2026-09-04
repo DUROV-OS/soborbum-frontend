@@ -3,10 +3,12 @@ import { Check, X } from 'lucide-react'
 import { useTasksStore } from '@/tasks/store'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { LoadingState } from '@/shared/ui/LoadingState'
 import { useWarehouseStore } from '../store'
 
 export function RequestApprovalQueue() {
   const tasks = useTasksStore((s) => s.tasks)
+  const tasksLoading = useTasksStore((s) => s.loading)
   const loadTasks = useTasksStore((s) => s.load)
   const approveRequest = useWarehouseStore((s) => s.approveRequest)
   const rejectRequest = useWarehouseStore((s) => s.rejectRequest)
@@ -25,6 +27,10 @@ export function RequestApprovalQueue() {
     setBusyId(null)
     setError(result.ok ? null : result.reason ?? 'Не удалось обработать заявку')
     if (result.ok) loadTasks({ link_type: 'warehouse_request' })
+  }
+
+  if (tasksLoading && tasks.length === 0) {
+    return <LoadingState label="Загружаем заявки…" />
   }
 
   if (pending.length === 0) {

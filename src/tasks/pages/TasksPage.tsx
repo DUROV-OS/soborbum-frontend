@@ -66,6 +66,7 @@ function matchesDate(task: Task, range: [Date, Date] | null): boolean {
 
 export function TasksPage() {
   const tasks = useTasksStore((s) => s.tasks)
+  const loading = useTasksStore((s) => s.loading)
   const load = useTasksStore((s) => s.load)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
@@ -133,6 +134,7 @@ export function TasksPage() {
         keyOf={(t) => String(t.id)}
         columnOf={(t) => t.status}
         onCardClick={setSelected}
+        loading={loading}
         renderCard={(task) => (
           <div>
             <div className="text-[13px] font-medium text-ink">{task.title}</div>

@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { LoadingState } from '@/shared/ui/LoadingState'
 import { Factory } from 'lucide-react'
 import { useProductionStore } from '../store'
 
 export function ProductionOverviewPage() {
   const cycles = useProductionStore((s) => s.cycles)
+  const loading = useProductionStore((s) => s.loading)
   const loadCycles = useProductionStore((s) => s.loadCycles)
   const navigate = useNavigate()
 
@@ -25,7 +27,9 @@ export function ProductionOverviewPage() {
         <p className="mt-1 text-[13px] text-muted">Модули и материалы по каждому запущенному производству</p>
       </div>
 
-      {active.length === 0 ? (
+      {loading && cycles.length === 0 ? (
+        <LoadingState label="Загружаем производства…" />
+      ) : active.length === 0 ? (
         <EmptyState
           icon={<Factory size={28} />}
           title="Производств пока нет"

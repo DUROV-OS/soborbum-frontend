@@ -28,6 +28,7 @@ const SORT_LABEL: Record<SortKey, string> = {
 
 export function WarehousePage() {
   const materials = useWarehouseStore((s) => s.materials)
+  const loading = useWarehouseStore((s) => s.loading)
   const load = useWarehouseStore((s) => s.load)
   const [tab, setTab] = useState<Tab>('materials')
   const [creatingMaterial, setCreatingMaterial] = useState(false)
@@ -132,6 +133,7 @@ export function WarehousePage() {
             rows={visibleMaterials}
             keyOf={(m) => String(m.id)}
             onRowClick={setSelected}
+            loading={loading}
           />
         </>
       )}
