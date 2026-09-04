@@ -85,3 +85,22 @@ export const MODE_LABEL: Record<ChatMode, string> = {
   require_approval: 'Одобрение',
   auto_approve: 'Автоматически',
 }
+
+/** Разделы, для которых бэкенд отдаёт GET /api/ai/{section}/analytics — включает «Монтаж», в отличие от ChatDomain. */
+export type AnalyticsSection =
+  | 'clients'
+  | 'production'
+  | 'installation'
+  | 'cycle'
+  | 'warehouse'
+  | 'marketing'
+  | 'tasks'
+
+export type SectionAnalyticsStatus = 'red' | 'yellow' | 'green'
+
+export interface SectionAnalyticsOut {
+  section: string
+  generated_at: string
+  summary: string
+  status: SectionAnalyticsStatus
+}

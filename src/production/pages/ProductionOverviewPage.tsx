@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Factory } from 'lucide-react'
 import { useProductionStore } from '../store'
@@ -17,6 +18,8 @@ export function ProductionOverviewPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="production" />
+
       <div className="mb-5">
         <h1 className="text-[20px] font-medium text-ink">Производство</h1>
         <p className="mt-1 text-[13px] text-muted">Модули и материалы по каждому запущенному производству</p>

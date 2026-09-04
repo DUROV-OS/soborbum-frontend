@@ -1,5 +1,15 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { AskRequest, AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, PendingActionOut } from './types'
+import {
+  AnalyticsSection,
+  AskRequest,
+  AskResponse,
+  ChatDetailOut,
+  ChatDomain,
+  ChatMode,
+  ChatOut,
+  PendingActionOut,
+  SectionAnalyticsOut,
+} from './types'
 
 const SECTION = 'ai'
 
@@ -10,6 +20,11 @@ function askPath(domain: ChatDomain): string {
 /** POST /api/ai/{domain}/ask (or /api/ai/chat/ask for domain "general") */
 export function askDomain(domain: ChatDomain, request: AskRequest): Promise<AskResponse> {
   return apiRequest<AskResponse>({ section: SECTION, path: askPath(domain), method: 'POST', body: request })
+}
+
+/** GET /api/ai/{section}/analytics */
+export function getSectionAnalytics(section: AnalyticsSection): Promise<SectionAnalyticsOut> {
+  return apiRequest<SectionAnalyticsOut>({ section: SECTION, path: `/${section}/analytics` })
 }
 
 /** GET /api/ai/chats */

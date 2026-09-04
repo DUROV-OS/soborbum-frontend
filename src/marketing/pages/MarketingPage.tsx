@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Tabs } from '@/shared/ui/Tabs'
@@ -25,6 +26,8 @@ export function MarketingPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="marketing" />
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Маркетинг</h1>

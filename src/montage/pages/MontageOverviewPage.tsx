@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Truck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -30,6 +31,8 @@ export function MontageOverviewPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="installation" />
+
       <div className="mb-5">
         <h1 className="text-[20px] font-medium text-ink">Монтаж</h1>
         <p className="mt-1 text-[13px] text-muted">Доставка, установка и проработка на объекте клиента</p>

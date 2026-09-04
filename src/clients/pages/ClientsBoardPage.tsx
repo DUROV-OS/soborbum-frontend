@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { useClientsStore } from '../store'
@@ -19,6 +20,8 @@ export function ClientsBoardPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="clients" />
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Клиенты</h1>

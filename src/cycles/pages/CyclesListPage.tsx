@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { DataTable } from '@/shared/ui/DataTable'
 import { Chip, ChipTone } from '@/shared/ui/Chip'
 import { useCyclesStore } from '../store'
@@ -23,6 +24,8 @@ export function CyclesListPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="cycle" />
+
       <div className="mb-5">
         <h1 className="text-[20px] font-medium text-ink">Цикл клиента</h1>
         <p className="mt-1 text-[13px] text-muted">Клиент, производство и монтаж — всё сделанное по циклу в одном месте</p>

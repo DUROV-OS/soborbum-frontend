@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
@@ -44,6 +45,8 @@ export function TasksPage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="tasks" />
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Задачи</h1>

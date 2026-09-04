@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Truck } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { DataTable } from '@/shared/ui/DataTable'
@@ -60,6 +61,8 @@ export function WarehousePage() {
 
   return (
     <div>
+      <SectionAnalyticsCard section="warehouse" />
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Склад</h1>
