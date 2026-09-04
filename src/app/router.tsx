@@ -8,6 +8,8 @@ import { TasksPage } from '@/tasks/pages/TasksPage'
 import { ModuleDetailPage } from '@/production/pages/ModuleDetailPage'
 import { ProductionDetailPage } from '@/production/pages/ProductionDetailPage'
 import { ProductionOverviewPage } from '@/production/pages/ProductionOverviewPage'
+import { MontageDetailPage } from '@/montage/pages/MontageDetailPage'
+import { MontageOverviewPage } from '@/montage/pages/MontageOverviewPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -79,10 +81,18 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/montage/*"
+          path="/montage"
           element={
             <AccessGate section="installation">
-              <Placeholder title="Монтаж" />
+              <MontageOverviewPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/montage/:id"
+          element={
+            <AccessGate section="installation">
+              <MontageDetailPage />
             </AccessGate>
           }
         />
