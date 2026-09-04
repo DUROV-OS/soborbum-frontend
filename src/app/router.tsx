@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '@/auth/pages/LoginPage'
 import { AccessMatrixPage } from '@/auth/pages/AccessMatrixPage'
 import { useAuthStore } from '@/auth/store'
+import { ClientDetailPage } from '@/clients/pages/ClientDetailPage'
+import { ClientsBoardPage } from '@/clients/pages/ClientsBoardPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
@@ -32,10 +34,18 @@ export function AppRouter() {
       >
         <Route index element={<RootRedirect />} />
         <Route
-          path="/clients/*"
+          path="/clients"
           element={
             <AccessGate section="clients">
-              <Placeholder title="Клиенты" />
+              <ClientsBoardPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/clients/:id"
+          element={
+            <AccessGate section="clients">
+              <ClientDetailPage />
             </AccessGate>
           }
         />
