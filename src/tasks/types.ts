@@ -1,9 +1,9 @@
-import { Attachment } from '@/shared/ui/FileDrop'
-import { SyncSection } from '@/shared/lib/taskSync'
+import { Account } from '@/auth/types'
+import { FileAsset } from '@/clients/types'
 
-export type TaskState = 'not_ready' | 'ready' | 'in_progress' | 'in_review' | 'done'
+export type TaskStatus = 'not_ready' | 'ready' | 'in_progress' | 'in_review' | 'done'
 
-export const TASK_STATES: { key: TaskState; label: string }[] = [
+export const TASK_STATES: { key: TaskStatus; label: string }[] = [
   { key: 'not_ready', label: 'Не готова к работе' },
   { key: 'ready', label: 'Готова к работе' },
   { key: 'in_progress', label: 'В работе' },
@@ -11,29 +11,26 @@ export const TASK_STATES: { key: TaskState; label: string }[] = [
   { key: 'done', label: 'Выполнена' },
 ]
 
-export type TaskSource = 'manual' | SyncSection | 'production'
-
-export interface SyncRef {
-  source: SyncSection
-  sourceRefId: string
-}
+export type TaskLinkType =
+  | 'none'
+  | 'client_stage'
+  | 'content_stage'
+  | 'warehouse_request'
+  | 'warehouse_shortage'
 
 export interface Task {
-  id: string
+  id: number
   title: string
-  description?: string
-  dueDate?: string
-  images: Attachment[]
-  dependsOn: string[]
-  state: TaskState
-  /** Конкретные исполнители — для ручных задач и задач производства */
-  assigneeIds: string[]
-  /** Конкретные проверяющие (опционально) */
-  checkerIds: string[]
-  /** Для синк-задач: пул исполнителей — любой сотрудник с доступом к разделу, а не конкретные люди */
-  assigneeAccessSection?: SyncSection
-  source: TaskSource
-  moduleId?: string
-  syncRef?: SyncRef
-  createdAt: string
+  description: string | null
+  deadline: string | null
+  status: TaskStatus
+  created_at: string
+  module_id: number | null
+  link_type: TaskLinkType
+  link_id: number | null
+  link_meta: Record<string, unknown> | null
+  assignees: Account[]
+  reviewers: Account[]
+  images: FileAsset[]
+  depends_on_ids: number[]
 }

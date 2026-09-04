@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/Button'
 import { Stepper } from '@/shared/ui/Stepper'
 import { useClientsStore } from '../store'
 import { CLIENT_STAGES } from '../types'
-import { blockersForAdvance, nextStageOf, stageLabel } from '../rules'
+import { nextStageOf, stageLabel } from '../rules'
 import { ReadRow, Section } from '../components/ProjectPanel'
 import { DocumentPanel } from '../components/DocumentPanel'
 import { PaymentPanel } from '../components/PaymentPanel'
@@ -14,6 +14,7 @@ import { ProjectPanel } from '../components/ProjectPanel'
 
 export function ClientDetailPage() {
   const { id = '' } = useParams()
+  const clientId = Number(id)
   const clients = useClientsStore((s) => s.clients)
   const load = useClientsStore((s) => s.load)
   const advance = useClientsStore((s) => s.advance)
@@ -24,15 +25,13 @@ export function ClientDetailPage() {
     if (clients.length === 0) load()
   }, [clients.length, load])
 
-  const client = clients.find((c) => c.id === id)
+  const client = clients.find((c) => c.id === clientId)
 
   if (!client) {
     return <p className="text-[13px] text-muted">Загрузка…</p>
   }
 
-  const blockers = blockersForAdvance(client)
   const next = nextStageOf(client.stage)
-  const clientId = client.id
 
   async function handleAdvance() {
     setAdvancing(true)
@@ -51,19 +50,16 @@ export function ClientDetailPage() {
       <div className="mb-6 rounded-md border border-border bg-surface p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h1 className="text-[18px] font-medium text-ink">{client.basic.fullName}</h1>
+            <h1 className="text-[18px] font-medium text-ink">{client.full_name}</h1>
             <p className="mt-1 text-[13px] text-muted">
-              Клиент с {new Date(client.createdAt).toLocaleDateString('ru-RU')}
+              Клиент с {new Date(client.created_at).toLocaleDateString('ru-RU')}
             </p>
           </div>
           {next && (
             <div className="text-right">
-              <Button size="sm" onClick={handleAdvance} disabled={blockers.length > 0 || advancing}>
+              <Button size="sm" onClick={handleAdvance} disabled={advancing}>
                 {advancing ? 'Переход…' : `Перевести на «${stageLabel(next)}»`}
               </Button>
-              {blockers.length > 0 && (
-                <p className="mt-1.5 max-w-xs text-[12px] text-warning">Не заполнено: {blockers.join(', ')}</p>
-              )}
             </div>
           )}
         </div>
@@ -73,9 +69,11 @@ export function ClientDetailPage() {
 
       <div className="flex flex-col gap-4">
         <Section title="Базовые данные">
-          <ReadRow label="Телефон" value={client.basic.phone} />
-          <ReadRow label="Почта" value={client.basic.email} />
-          <ReadRow label="ИНН" value={client.basic.inn} />
+          <ReadRow label="Телефон" value={client.phone} />
+          <ReadRow label="Почта" value={client.email} />
+          <ReadRow label="ИНН" value={client.inn} />
+          <ReadRow label="Паспорт" value={client.passport_number} />
+          <ReadRow label="Дата рождения" value={new Date(client.birth_date).toLocaleDateString('ru-RU')} />
         </Section>
 
         <ProjectPanel client={client} />

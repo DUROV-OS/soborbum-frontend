@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { useAuthStore, useCurrentAccount } from '@/auth/store'
+import { useAuthStore } from '@/auth/store'
 import { SECTIONS } from '@/shared/sections'
 
 export function Sidebar() {
   const hasAccess = useAuthStore((s) => s.hasAccess)
-  const account = useCurrentAccount()
+  const current = useAuthStore((s) => s.current)
   const visibleSections = SECTIONS.filter((section) => {
-    if (section.adminOnly) return account?.role === 'admin'
+    if (section.adminOnly) return current?.role === 'admin'
     return hasAccess(section.id)
   })
 

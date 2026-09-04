@@ -8,27 +8,37 @@ import { Client } from '../types'
 export function ProjectPanel({ client }: { client: Client }) {
   const updateProject = useClientsStore((s) => s.updateProject)
   const editable = isGroupEditable(client, 'project')
-  const [draft, setDraft] = useState(client.project)
+  const [wishes, setWishes] = useState(client.wishes_description ?? '')
+  const [area, setArea] = useState(client.house_area ?? '')
+  const [price, setPrice] = useState(client.estimated_price ?? '')
+  const [layout, setLayout] = useState(client.layout_notes ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!isGroupVisible(client, 'project')) return null
 
   async function save() {
     setSaving(true)
-    await updateProject(client.id, draft)
+    const result = await updateProject(client.id, {
+      wishes_description: wishes || undefined,
+      house_area: area === '' ? undefined : Number(area),
+      estimated_price: price === '' ? undefined : Number(price),
+      layout_notes: layout || undefined,
+    })
     setSaving(false)
+    setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
   }
 
   if (!editable) {
     return (
       <Section title="Проектная информация">
-        <ReadRow label="Пожелания" value={client.project.wishes} />
-        <ReadRow label="Тип дома" value={client.project.houseType} />
-        <ReadRow label="Площадь" value={client.project.area ? `${client.project.area} м²` : undefined} />
+        <ReadRow label="Пожелания" value={client.wishes_description ?? undefined} />
+        <ReadRow label="Площадь" value={client.house_area ? `${client.house_area} м²` : undefined} />
         <ReadRow
           label="Ориентировочная цена"
-          value={client.project.estimatedPrice ? `${client.project.estimatedPrice.toLocaleString('ru-RU')} ₽` : undefined}
+          value={client.estimated_price ? `${client.estimated_price.toLocaleString('ru-RU')} ₽` : undefined}
         />
+        <ReadRow label="Заметки по планировке" value={client.layout_notes ?? undefined} />
       </Section>
     )
   }
@@ -38,34 +48,22 @@ export function ProjectPanel({ client }: { client: Client }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <Field label="Пожелания по проекту" required>
-            <Textarea
-              rows={3}
-              value={draft.wishes ?? ''}
-              onChange={(e) => setDraft({ ...draft, wishes: e.target.value })}
-            />
+            <Textarea rows={3} value={wishes} onChange={(e) => setWishes(e.target.value)} />
           </Field>
         </div>
-        <Field label="Тип дома / модуль" required>
-          <Input
-            value={draft.houseType ?? ''}
-            onChange={(e) => setDraft({ ...draft, houseType: e.target.value })}
-          />
-        </Field>
         <Field label="Площадь, м²" required>
-          <Input
-            type="number"
-            value={draft.area ?? ''}
-            onChange={(e) => setDraft({ ...draft, area: Number(e.target.value) })}
-          />
+          <Input type="number" value={area} onChange={(e) => setArea(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>
         <Field label="Ориентировочная цена, ₽" required>
-          <Input
-            type="number"
-            value={draft.estimatedPrice ?? ''}
-            onChange={(e) => setDraft({ ...draft, estimatedPrice: Number(e.target.value) })}
-          />
+          <Input type="number" value={price} onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>
+        <div className="col-span-2">
+          <Field label="Заметки по планировке" required>
+            <Textarea rows={2} value={layout} onChange={(e) => setLayout(e.target.value)} />
+          </Field>
+        </div>
       </div>
+      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
       <div className="mt-4">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? 'Сохранение…' : 'Сохранить'}

@@ -4,13 +4,23 @@ import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Select } from '@/shared/ui/Field'
-import { sectionById } from '@/shared/sections'
 import { useTasksStore } from '../store'
-import { TASK_STATES, Task, TaskSource } from '../types'
+import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
 
-const SOURCE_LABEL: Record<TaskSource, string> = {
+type SourceFilter = 'all' | 'manual' | 'clients' | 'production' | 'marketing' | 'warehouse'
+
+function sourceOf(task: Task): SourceFilter {
+  if (task.module_id !== null) return 'production'
+  if (task.link_type === 'client_stage') return 'clients'
+  if (task.link_type === 'content_stage') return 'marketing'
+  if (task.link_type === 'warehouse_request' || task.link_type === 'warehouse_shortage') return 'warehouse'
+  return 'manual'
+}
+
+const SOURCE_LABEL: Record<SourceFilter, string> = {
+  all: 'Все разделы',
   manual: 'Ручная',
   clients: 'Клиенты',
   production: 'Производство',
@@ -23,13 +33,13 @@ export function TasksPage() {
   const load = useTasksStore((s) => s.load)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
-  const [sourceFilter, setSourceFilter] = useState<'all' | TaskSource>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
 
   useEffect(() => {
     load()
   }, [load])
 
-  const filtered = sourceFilter === 'all' ? tasks : tasks.filter((t) => t.source === sourceFilter)
+  const filtered = sourceFilter === 'all' ? tasks : tasks.filter((t) => sourceOf(t) === sourceFilter)
 
   return (
     <div>
@@ -39,8 +49,7 @@ export function TasksPage() {
           <p className="mt-1 text-[13px] text-muted">Общий борд, включая задачи из других разделов</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as 'all' | TaskSource)} className="w-44">
-            <option value="all">Все разделы</option>
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-44">
             {Object.entries(SOURCE_LABEL).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
@@ -57,16 +66,16 @@ export function TasksPage() {
       <KanbanBoard
         columns={TASK_STATES}
         items={filtered}
-        keyOf={(t) => t.id}
-        columnOf={(t) => t.state}
+        keyOf={(t) => String(t.id)}
+        columnOf={(t) => t.status}
         onCardClick={setSelected}
         renderCard={(task) => (
           <div>
             <div className="text-[13px] font-medium text-ink">{task.title}</div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Chip tone="neutral">{task.source === 'clients' && task.assigneeAccessSection ? sectionById(task.assigneeAccessSection).label : SOURCE_LABEL[task.source]}</Chip>
-              {task.dueDate && (
-                <span className="text-[11px] text-muted">{new Date(task.dueDate).toLocaleDateString('ru-RU')}</span>
+              <Chip tone="neutral">{SOURCE_LABEL[sourceOf(task)]}</Chip>
+              {task.deadline && (
+                <span className="text-[11px] text-muted">{new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
               )}
             </div>
           </div>

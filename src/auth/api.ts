@@ -1,46 +1,49 @@
-import { generateId, withLatency } from '@/shared/lib/mockApi'
-import { loadState, saveState } from '@/shared/lib/storage'
+import { apiRequest, login as loginRequest, setToken } from '@/shared/lib/httpClient'
 import { SectionId } from '@/shared/sections'
-import { SEED_ACCOUNTS } from './mock'
 import { Account } from './types'
 
-const STORAGE_KEY = 'soborbum.auth.accounts'
+const SECTION = 'auth'
 
-let accounts: Account[] = loadState(STORAGE_KEY, SEED_ACCOUNTS)
-
-function persist() {
-  saveState(STORAGE_KEY, accounts)
+/** POST /api/auth/login + GET /api/auth/me */
+export async function login(email: string, password: string): Promise<Account> {
+  const token = await loginRequest(email, password)
+  setToken(token)
+  return apiRequest<Account>({ section: SECTION, path: '/me' })
 }
 
-/** GET /api/accounts */
+/** GET /api/auth/me */
+export function me(): Promise<Account> {
+  return apiRequest<Account>({ section: SECTION, path: '/me' })
+}
+
+/** GET /api/auth/users */
 export function listAccounts(): Promise<Account[]> {
-  return withLatency([...accounts])
+  return apiRequest<Account[]>({ section: SECTION, path: '/users' })
 }
 
-/** GET /api/accounts/:id */
-export function getAccount(id: string): Promise<Account | undefined> {
-  return withLatency(accounts.find((a) => a.id === id))
+export interface CreateAccountInput {
+  email: string
+  password: string
+  full_name: string
+  module_access: SectionId[]
 }
 
-/** POST /api/accounts */
-export function createAccount(input: { name: string; title: string; sectionAccess: SectionId[] }): Promise<Account> {
-  const account: Account = {
-    id: generateId('acc'),
-    name: input.name,
-    title: input.title,
-    role: 'worker',
-    sectionAccess: input.sectionAccess,
-  }
-  accounts = [...accounts, account]
-  persist()
-  return withLatency(account)
+/** POST /api/auth/users */
+export function createAccount(input: CreateAccountInput): Promise<Account> {
+  return apiRequest<Account>({
+    section: SECTION,
+    path: '/users',
+    method: 'POST',
+    body: { ...input, role: 'worker' },
+  })
 }
 
-/** PATCH /api/accounts/:id/access */
-export function updateAccountAccess(id: string, sectionAccess: SectionId[]): Promise<Account> {
-  accounts = accounts.map((a) => (a.id === id ? { ...a, sectionAccess } : a))
-  persist()
-  const updated = accounts.find((a) => a.id === id)
-  if (!updated) throw new Error('Account not found')
-  return withLatency(updated)
+/** PUT /api/auth/users/:id/access */
+export function updateAccountAccess(id: number, module_access: SectionId[]): Promise<Account> {
+  return apiRequest<Account>({
+    section: SECTION,
+    path: `/users/${id}/access`,
+    method: 'PUT',
+    body: { module_access },
+  })
 }

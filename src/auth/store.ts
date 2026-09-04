@@ -1,55 +1,78 @@
 import { create } from 'zustand'
-import { loadState, saveState } from '@/shared/lib/storage'
+import { getToken, setToken } from '@/shared/lib/httpClient'
 import { SectionId } from '@/shared/sections'
 import * as authApi from './api'
 import { Account } from './types'
 
-const SESSION_KEY = 'soborbum.auth.session'
-
 interface AuthState {
+  current: Account | null
   accounts: Account[]
-  currentAccountId: string | null
-  loading: boolean
-  loadAccounts: () => Promise<void>
-  login: (accountId: string) => void
+  booting: boolean
+  error: string | null
+  bootstrap: () => Promise<void>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
+  loadAccounts: () => Promise<void>
   hasAccess: (section: SectionId) => boolean
-  updateAccess: (accountId: string, sectionAccess: SectionId[]) => Promise<void>
-  addAccount: (input: { name: string; title: string; sectionAccess: SectionId[] }) => Promise<void>
+  updateAccess: (id: number, moduleAccess: SectionId[]) => Promise<void>
+  addAccount: (input: Omit<authApi.CreateAccountInput, 'email'> & { email: string }) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
+  current: null,
   accounts: [],
-  currentAccountId: loadState<string | null>(SESSION_KEY, null),
-  loading: true,
+  booting: true,
+  error: null,
 
-  loadAccounts: async () => {
-    const accounts = await authApi.listAccounts()
-    set({ accounts, loading: false })
+  bootstrap: async () => {
+    if (!getToken()) {
+      set({ booting: false })
+      return
+    }
+    try {
+      const current = await authApi.me()
+      set({ current, booting: false })
+      get().loadAccounts().catch(() => {})
+    } catch {
+      setToken(null)
+      set({ current: null, booting: false })
+    }
   },
 
-  login: (accountId) => {
-    saveState(SESSION_KEY, accountId)
-    set({ currentAccountId: accountId })
+  login: async (email, password) => {
+    set({ error: null })
+    try {
+      const current = await authApi.login(email, password)
+      set({ current })
+      get().loadAccounts().catch(() => {})
+      return true
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Не удалось войти' })
+      return false
+    }
   },
 
   logout: () => {
-    saveState(SESSION_KEY, null)
-    set({ currentAccountId: null })
+    setToken(null)
+    set({ current: null, accounts: [] })
+  },
+
+  /** GET /auth/users требует роль admin — для рабочих аккаунтов тихо остаётся пустым (см. вызовы в bootstrap/login). */
+  loadAccounts: async () => {
+    const accounts = await authApi.listAccounts()
+    set({ accounts })
   },
 
   hasAccess: (section) => {
-    const account = get().accounts.find((a) => a.id === get().currentAccountId)
+    const account = get().current
     if (!account) return false
     if (account.role === 'admin') return true
-    return account.sectionAccess.includes(section)
+    return account.module_access.includes(section)
   },
 
-  updateAccess: async (accountId, sectionAccess) => {
-    const updated = await authApi.updateAccountAccess(accountId, sectionAccess)
-    set((state) => ({
-      accounts: state.accounts.map((a) => (a.id === accountId ? updated : a)),
-    }))
+  updateAccess: async (id, moduleAccess) => {
+    const updated = await authApi.updateAccountAccess(id, moduleAccess)
+    set((state) => ({ accounts: state.accounts.map((a) => (a.id === id ? updated : a)) }))
   },
 
   addAccount: async (input) => {
@@ -57,9 +80,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set((state) => ({ accounts: [...state.accounts, created] }))
   },
 }))
-
-export function useCurrentAccount(): Account | null {
-  const accounts = useAuthStore((s) => s.accounts)
-  const currentAccountId = useAuthStore((s) => s.currentAccountId)
-  return accounts.find((a) => a.id === currentAccountId) ?? null
-}

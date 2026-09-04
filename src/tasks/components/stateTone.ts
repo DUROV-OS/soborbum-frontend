@@ -1,7 +1,7 @@
 import { ChipTone } from '@/shared/ui/Chip'
-import { TaskState } from '../types'
+import { TaskStatus } from '../types'
 
-export function stateTone(state: TaskState): ChipTone {
+export function stateTone(state: TaskStatus): ChipTone {
   switch (state) {
     case 'not_ready':
       return 'neutral'

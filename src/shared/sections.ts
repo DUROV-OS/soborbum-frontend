@@ -12,14 +12,17 @@ import {
 
 /**
  * Единый реестр разделов системы — используется матрицей доступа (auth/)
- * и боковым меню (app/Sidebar). Сам по себе не тянет код разделов, только
- * статичные метаданные.
+ * и боковым меню (app/Sidebar). Значения (кроме 'admin') совпадают буква
+ * в букву с enum Module на бэкенде — это то, что реально приходит в
+ * module_access и в Task.link_type, так что переименовывать их нельзя.
+ * 'admin' — чисто фронтовое значение для пункта меню «Доступ», бэкенд его
+ * не знает: администраторская страница гейтится по role==='admin'.
  */
 export type SectionId =
   | 'clients'
   | 'production'
-  | 'montage'
-  | 'cycles'
+  | 'installation'
+  | 'cycle'
   | 'warehouse'
   | 'marketing'
   | 'tasks'
@@ -35,10 +38,10 @@ export interface SectionMeta {
 }
 
 export const SECTIONS: SectionMeta[] = [
-  { id: 'cycles', label: 'Цикл клиента', path: '/cycles', icon: Repeat },
+  { id: 'cycle', label: 'Цикл клиента', path: '/cycles', icon: Repeat },
   { id: 'clients', label: 'Клиенты', path: '/clients', icon: Users },
   { id: 'production', label: 'Производство', path: '/production', icon: Factory },
-  { id: 'montage', label: 'Монтаж', path: '/montage', icon: Truck },
+  { id: 'installation', label: 'Монтаж', path: '/montage', icon: Truck },
   { id: 'warehouse', label: 'Склад', path: '/warehouse', icon: Boxes },
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },

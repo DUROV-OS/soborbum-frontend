@@ -1,63 +1,48 @@
 import { useState } from 'react'
-import { useAuthStore } from '@/auth/store'
 import { Chip } from '@/shared/ui/Chip'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
-import { sectionById } from '@/shared/sections'
 import { useTasksStore } from '../store'
-import { Task, TASK_STATES } from '../types'
+import { Task, TASK_STATES, TaskStatus } from '../types'
 import { stateTone } from './stateTone'
 
 export function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () => void }) {
-  const accounts = useAuthStore((s) => s.accounts)
-  const transition = useTasksStore((s) => s.transition)
+  const setStatus = useTasksStore((s) => s.setStatus)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   if (!task) return null
 
   const taskId = task.id
 
-  function nameOf(accountId: string) {
-    return accounts.find((a) => a.id === accountId)?.name ?? accountId
-  }
-
-  function act(target: Task['state']) {
-    const result = transition(taskId, target)
+  async function act(target: TaskStatus) {
+    setBusy(true)
+    const result = await setStatus(taskId, target)
+    setBusy(false)
     setError(result.ok ? null : result.reason ?? 'Действие недоступно')
   }
 
-  const stateLabel = TASK_STATES.find((s) => s.key === task.state)?.label ?? task.state
+  const stateLabel = TASK_STATES.find((s) => s.key === task.status)?.label ?? task.status
 
   return (
-    <Drawer open={!!task} onClose={onClose} title={task.title} subtitle={<Chip tone={stateTone(task.state)}>{stateLabel}</Chip>}>
+    <Drawer open={!!task} onClose={onClose} title={task.title} subtitle={<Chip tone={stateTone(task.status)}>{stateLabel}</Chip>}>
       <div className="flex flex-col gap-5">
         {task.description && <p className="text-[13px] text-ink">{task.description}</p>}
 
-        {task.dueDate && (
-          <Row label="Дедлайн" value={new Date(task.dueDate).toLocaleDateString('ru-RU')} />
-        )}
+        {task.deadline && <Row label="Дедлайн" value={new Date(task.deadline).toLocaleDateString('ru-RU')} />}
 
-        <Row
-          label="Исполнитель"
-          value={
-            task.assigneeAccessSection
-              ? `Любой сотрудник с доступом: ${sectionById(task.assigneeAccessSection).label}`
-              : task.assigneeIds.map(nameOf).join(', ') || '—'
-          }
-        />
-        <Row label="Проверяющий" value={task.checkerIds.map(nameOf).join(', ') || 'нет — проверка не требуется'} />
+        <Row label="Исполнители" value={task.assignees.map((a) => a.full_name).join(', ') || '—'} />
+        <Row label="Проверяющие" value={task.reviewers.map((a) => a.full_name).join(', ') || 'нет — проверка не требуется'} />
 
-        {task.dependsOn.length > 0 && (
-          <Row label="Зависит от" value={`${task.dependsOn.length} задач(и)`} />
-        )}
+        {task.depends_on_ids.length > 0 && <Row label="Зависит от" value={`${task.depends_on_ids.length} задач(и)`} />}
 
         {task.images.length > 0 && (
           <div>
             <div className="mb-1.5 text-[13px] text-muted">Изображения</div>
             <div className="flex flex-col gap-1">
               {task.images.map((img) => (
-                <div key={img.name} className="text-[13px] text-ink">
-                  {img.name}
+                <div key={img.id} className="text-[13px] text-ink">
+                  {img.filename}
                 </div>
               ))}
             </div>
@@ -67,32 +52,32 @@ export function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose
         {error && <p className="text-[12px] text-danger">{error}</p>}
 
         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-          {task.state === 'ready' && (
-            <Button size="sm" onClick={() => act('in_progress')}>
+          {task.status === 'ready' && (
+            <Button size="sm" disabled={busy} onClick={() => act('in_progress')}>
               Взять в работу
             </Button>
           )}
-          {task.state === 'in_progress' && (
-            <Button size="sm" onClick={() => act('in_review')}>
+          {task.status === 'in_progress' && (
+            <Button size="sm" disabled={busy} onClick={() => act('in_review')}>
               Отправить на проверку
             </Button>
           )}
-          {task.state === 'in_review' && (
+          {task.status === 'in_review' && (
             <>
-              <Button size="sm" onClick={() => act('done')}>
+              <Button size="sm" disabled={busy} onClick={() => act('done')}>
                 Принять — выполнена
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => act('in_progress')}>
+              <Button size="sm" variant="secondary" disabled={busy} onClick={() => act('in_progress')}>
                 Вернуть в работу
               </Button>
             </>
           )}
-          {task.state === 'not_ready' && (
+          {task.status === 'not_ready' && (
             <p className="text-[12px] text-muted">
               Задача откроется автоматически, когда будут выполнены задачи, от которых она зависит.
             </p>
           )}
-          {task.state === 'done' && <p className="text-[12px] text-muted">Задача выполнена.</p>}
+          {task.status === 'done' && <p className="text-[12px] text-muted">Задача выполнена.</p>}
         </div>
       </div>
     </Drawer>

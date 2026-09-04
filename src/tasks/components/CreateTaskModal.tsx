@@ -13,41 +13,50 @@ export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () 
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
-  const [checkerIds, setCheckerIds] = useState<string[]>([])
-  const [dependsOn, setDependsOn] = useState<string[]>([])
+  const [deadline, setDeadline] = useState('')
+  const [assigneeIds, setAssigneeIds] = useState<number[]>([])
+  const [reviewerIds, setReviewerIds] = useState<number[]>([])
+  const [dependsOn, setDependsOn] = useState<number[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const valid = title.trim().length > 0 && assigneeIds.length > 0
+  const valid = title.trim().length > 0
 
   function reset() {
     setTitle('')
     setDescription('')
-    setDueDate('')
+    setDeadline('')
     setAssigneeIds([])
-    setCheckerIds([])
+    setReviewerIds([])
     setDependsOn([])
+    setError(null)
   }
 
-  function toggle(list: string[], id: string, setter: (v: string[]) => void) {
+  function toggle(list: number[], id: number, setter: (v: number[]) => void) {
     setter(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!valid) return
-    create({
+    setSaving(true)
+    const result = await create({
       title,
       description: description || undefined,
-      dueDate: dueDate || undefined,
-      assigneeIds,
-      checkerIds,
-      dependsOn,
+      deadline: deadline || undefined,
+      assignee_ids: assigneeIds,
+      reviewer_ids: reviewerIds,
+      depends_on_ids: dependsOn,
     })
-    reset()
-    onClose()
+    setSaving(false)
+    if (result.ok) {
+      reset()
+      onClose()
+    } else {
+      setError(result.reason ?? 'Не удалось создать задачу')
+    }
   }
 
-  const openDependencyOptions: Task[] = tasks.filter((t) => t.state !== 'done')
+  const openDependencyOptions: Task[] = tasks.filter((t) => t.status !== 'done')
 
   return (
     <Modal
@@ -62,8 +71,8 @@ export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () 
           <Button variant="ghost" onClick={onClose}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!valid}>
-            Создать
+          <Button onClick={handleSubmit} disabled={!valid || saving}>
+            {saving ? 'Сохранение…' : 'Создать'}
           </Button>
         </>
       }
@@ -76,38 +85,49 @@ export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () 
           <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <Field label="Дедлайн">
-          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
         </Field>
-        <Field label="Исполнители" required hint="Любой из них может взять задачу в работу">
-          <div className="flex flex-col gap-1.5">
-            {accounts.map((account) => (
-              <label key={account.id} className="flex items-center gap-2 text-[13px] text-ink">
-                <input
-                  type="checkbox"
-                  checked={assigneeIds.includes(account.id)}
-                  onChange={() => toggle(assigneeIds, account.id, setAssigneeIds)}
-                  className="h-4 w-4 accent-[#395b4b]"
-                />
-                {account.name}
-              </label>
-            ))}
-          </div>
-        </Field>
-        <Field label="Проверяющие" hint="Необязательно — без проверяющего задача завершается автоматически">
-          <div className="flex flex-col gap-1.5">
-            {accounts.map((account) => (
-              <label key={account.id} className="flex items-center gap-2 text-[13px] text-ink">
-                <input
-                  type="checkbox"
-                  checked={checkerIds.includes(account.id)}
-                  onChange={() => toggle(checkerIds, account.id, setCheckerIds)}
-                  className="h-4 w-4 accent-[#395b4b]"
-                />
-                {account.name}
-              </label>
-            ))}
-          </div>
-        </Field>
+
+        {accounts.length === 0 ? (
+          <p className="text-[12px] text-muted">
+            Список сотрудников доступен только администратору — войдите под администратором, чтобы
+            назначить конкретных исполнителей, либо создайте задачу без них.
+          </p>
+        ) : (
+          <>
+            <Field label="Исполнители" hint="Любой из них может взять задачу в работу">
+              <div className="flex flex-col gap-1.5">
+                {accounts.map((account) => (
+                  <label key={account.id} className="flex items-center gap-2 text-[13px] text-ink">
+                    <input
+                      type="checkbox"
+                      checked={assigneeIds.includes(account.id)}
+                      onChange={() => toggle(assigneeIds, account.id, setAssigneeIds)}
+                      className="h-4 w-4 accent-[#395b4b]"
+                    />
+                    {account.full_name}
+                  </label>
+                ))}
+              </div>
+            </Field>
+            <Field label="Проверяющие" hint="Необязательно — без проверяющего задача завершается автоматически">
+              <div className="flex flex-col gap-1.5">
+                {accounts.map((account) => (
+                  <label key={account.id} className="flex items-center gap-2 text-[13px] text-ink">
+                    <input
+                      type="checkbox"
+                      checked={reviewerIds.includes(account.id)}
+                      onChange={() => toggle(reviewerIds, account.id, setReviewerIds)}
+                      className="h-4 w-4 accent-[#395b4b]"
+                    />
+                    {account.full_name}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          </>
+        )}
+
         {openDependencyOptions.length > 0 && (
           <Field label="Зависит от" hint="Задача станет доступна после выполнения выбранных">
             <div className="flex flex-col gap-1.5">
@@ -125,6 +145,7 @@ export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () 
             </div>
           </Field>
         )}
+        {error && <p className="text-[12px] text-danger">{error}</p>}
       </div>
     </Modal>
   )

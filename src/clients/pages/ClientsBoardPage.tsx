@@ -33,15 +33,15 @@ export function ClientsBoardPage() {
       <KanbanBoard
         columns={CLIENT_STAGES}
         items={clients}
-        keyOf={(c) => c.id}
+        keyOf={(c) => String(c.id)}
         columnOf={(c) => c.stage}
         onCardClick={(c) => navigate(`/clients/${c.id}`)}
         renderCard={(client) => (
           <div>
-            <div className="text-[13px] font-medium text-ink">{client.basic.fullName}</div>
-            <div className="mt-0.5 text-[12px] text-muted">{client.basic.phone}</div>
-            {client.project.houseType && (
-              <div className="mt-2 text-[12px] text-brand-dark">{client.project.houseType}</div>
+            <div className="text-[13px] font-medium text-ink">{client.full_name}</div>
+            <div className="mt-0.5 text-[12px] text-muted">{client.phone}</div>
+            {client.house_area && (
+              <div className="mt-2 text-[12px] text-brand-dark">{client.house_area} м²</div>
             )}
           </div>
         )}
