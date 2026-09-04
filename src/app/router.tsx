@@ -11,11 +11,12 @@ import { ProductionOverviewPage } from '@/production/pages/ProductionOverviewPag
 import { MontageDetailPage } from '@/montage/pages/MontageDetailPage'
 import { MontageOverviewPage } from '@/montage/pages/MontageOverviewPage'
 import { MarketingPage } from '@/marketing/pages/MarketingPage'
+import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
+import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
 import { AppShell } from './AppShell'
-import { Placeholder } from './Placeholder'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const current = useAuthStore((s) => s.current)
@@ -98,10 +99,18 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/cycles/*"
+          path="/cycles"
           element={
             <AccessGate section="cycle">
-              <Placeholder title="Цикл клиента" />
+              <CyclesListPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/cycles/:id"
+          element={
+            <AccessGate section="cycle">
+              <CycleDetailPage />
             </AccessGate>
           }
         />
