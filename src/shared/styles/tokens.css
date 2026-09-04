@@ -1,0 +1,24 @@
+:root {
+  --bg: 246 245 242;
+  --surface: 255 255 255;
+  --surface-muted: 240 238 233;
+  --ink: 28 36 32;
+  --muted: 107 117 112;
+  --border: 224 222 216;
+
+  --brand: 57 91 75;
+  --brand-dark: 39 61 51;
+  --brand-2: 126 162 134;
+
+  --timber: 185 138 83;
+  --timber-dark: 138 98 54;
+
+  --success: 31 143 92;
+  --success-bg: 224 240 231;
+  --warning: 200 144 46;
+  --warning-bg: 250 236 214;
+  --danger: 181 72 63;
+  --danger-bg: 249 226 222;
+  --info: 58 92 138;
+  --info-bg: 224 232 244;
+}
