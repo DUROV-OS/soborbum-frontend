@@ -1,6 +1,8 @@
 import { Wrench } from 'lucide-react'
+import { downloadFileById } from '@/shared/lib/httpClient'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MessageOut, PendingActionOut } from '../types'
+import { AttachmentChip } from './AttachmentChip'
 import { PendingActionCard } from './PendingActionCard'
 
 export function MessageBubble({
@@ -17,13 +19,28 @@ export function MessageBubble({
   const isUser = message.role === 'user'
   const textBlocks = message.content.filter((block) => block.type === 'text' || (!block.type && typeof block.text === 'string'))
   const toolBlocks = message.content.filter((block) => block.type === 'tool_use')
+  const fileBlocks = message.content.filter((block) => block.type === 'file_ref')
   const text = textBlocks.map((block) => block.text).filter(Boolean).join('\n\n')
   const relatedActions = pendingActions.filter((action) => action.message_id === message.id)
 
-  if (!text && toolBlocks.length === 0 && relatedActions.length === 0) return null
+  if (!text && toolBlocks.length === 0 && relatedActions.length === 0 && fileBlocks.length === 0) return null
 
   return (
     <div className={`flex min-w-0 flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
+      {fileBlocks.length > 0 && (
+        <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5 sm:max-w-md">
+          {fileBlocks.map((block, i) => (
+            <AttachmentChip
+              key={block.file_id ?? i}
+              filename={block.filename ?? 'файл'}
+              contentType={block.content_type}
+              onClick={
+                block.file_id ? () => downloadFileById(block.file_id as number, block.filename ?? 'файл') : undefined
+              }
+            />
+          ))}
+        </div>
+      )}
       {text && (
         <Markdown
           text={text}

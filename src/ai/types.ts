@@ -10,7 +10,18 @@ export type PendingActionStatus = 'pending' | 'approved' | 'rejected'
 export interface AskRequest {
   chat_id?: number | null
   message: string
+  file_ids?: number[]
   mode?: ChatMode
+}
+
+/** Файл, прикреплённый к сообщению чата — см. POST /api/ai/files. */
+export interface FileAssetOut {
+  id: number
+  filename: string
+  content_type: string
+  purpose: string
+  uploaded_by_id: number
+  created_at: string
 }
 
 export interface PendingActionOut {
@@ -46,6 +57,10 @@ export interface MessageContentBlock {
   name?: string
   input?: Record<string, unknown>
   id?: string
+  /** Только для type === "file_ref" — файл, прикреплённый к сообщению. */
+  file_id?: number
+  filename?: string
+  content_type?: string
   [key: string]: unknown
 }
 

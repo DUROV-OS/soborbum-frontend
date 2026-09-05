@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as aiApi from './api'
-import { AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, PendingActionOut } from './types'
+import { AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, FileAssetOut, PendingActionOut } from './types'
 
 function reasonOf(error: unknown): string {
   return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось выполнить действие'
@@ -18,12 +18,17 @@ interface AiState {
   sending: boolean
   /** Только что отправленное сообщение, пока ответ ещё не пришёл — рисуется как временный пузырь. */
   optimisticMessage: string | null
+  /** Файлы, уже загруженные на бэкенд (POST /ai/files) и ждущие следующего send(). */
+  attachments: FileAssetOut[]
+  uploadingAttachment: boolean
   error: string | null
 
   loadChats: (domain?: ChatDomain) => Promise<void>
   openChat: (id: number) => Promise<void>
   startDraft: (domain: ChatDomain, mode?: ChatMode) => void
   send: (message: string) => Promise<AskResponse | null>
+  addAttachment: (file: File) => Promise<void>
+  removeAttachment: (id: number) => void
   setMode: (mode: ChatMode) => Promise<void>
   renameChat: (id: number, title: string | null) => Promise<void>
   resolveAction: (id: number, decision: 'approve' | 'reject') => Promise<AskResponse | null>
@@ -54,6 +59,8 @@ export const useAiStore = create<AiState>((set, get) => {
     pendingActions: [],
     sending: false,
     optimisticMessage: null,
+    attachments: [],
+    uploadingAttachment: false,
     error: null,
 
     loadChats: async (domain) => {
@@ -67,7 +74,7 @@ export const useAiStore = create<AiState>((set, get) => {
     },
 
     openChat: async (id) => {
-      set({ loadingChat: true, draftDomain: null, optimisticMessage: null })
+      set({ loadingChat: true, draftDomain: null, optimisticMessage: null, attachments: [] })
       try {
         await refreshChat(id)
         set({ loadingChat: false })
@@ -77,26 +84,37 @@ export const useAiStore = create<AiState>((set, get) => {
     },
 
     startDraft: (domain, mode = 'require_approval') => {
-      set({ activeChat: null, pendingActions: [], draftDomain: domain, draftMode: mode, optimisticMessage: null })
+      set({
+        activeChat: null,
+        pendingActions: [],
+        draftDomain: domain,
+        draftMode: mode,
+        optimisticMessage: null,
+        attachments: [],
+      })
     },
 
     send: async (message) => {
-      const { activeChat, draftDomain, draftMode } = get()
+      const { activeChat, draftDomain, draftMode, attachments } = get()
       const domain = activeChat?.domain ?? draftDomain
       if (!domain) return null
       const mode = activeChat?.mode ?? draftMode
-      set({ sending: true, error: null, optimisticMessage: message })
+      const placeholder = message || (attachments.length > 0 ? `📎 ${attachments.length} файл(ов)` : message)
+      set({ sending: true, error: null, optimisticMessage: placeholder, attachments: [] })
       try {
         const response = await aiApi.askDomain(domain, {
           chat_id: activeChat?.id ?? null,
           message,
+          file_ids: attachments.map((a) => a.id),
           mode,
         })
         await refreshChat(response.chat_id)
         set({ sending: false, draftDomain: null, optimisticMessage: null })
         return response
       } catch (error) {
-        set({ sending: false, error: reasonOf(error) })
+        // Файлы уже загружены на бэкенд (у них есть id) - возвращаем их в composer, чтобы
+        // не заставлять сотрудника выбирать их заново.
+        set({ sending: false, error: reasonOf(error), attachments })
         // Сообщение пользователя (и всё, что успело сохраниться на сервере до сбоя) уже
         // могло быть закоммичено бэкендом раньше самого падения — подтягиваем реальное
         // состояние чата вместо того, чтобы оставить на экране только текст ошибки.
@@ -106,6 +124,20 @@ export const useAiStore = create<AiState>((set, get) => {
         set({ optimisticMessage: null })
         return null
       }
+    },
+
+    addAttachment: async (file) => {
+      set({ uploadingAttachment: true, error: null })
+      try {
+        const asset = await aiApi.uploadAttachment(file)
+        set((state) => ({ attachments: [...state.attachments, asset], uploadingAttachment: false }))
+      } catch (error) {
+        set({ uploadingAttachment: false, error: reasonOf(error) })
+      }
+    },
+
+    removeAttachment: (id) => {
+      set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) }))
     },
 
     setMode: async (mode) => {

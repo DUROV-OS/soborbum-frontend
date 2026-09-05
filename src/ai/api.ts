@@ -7,6 +7,7 @@ import {
   ChatDomain,
   ChatMode,
   ChatOut,
+  FileAssetOut,
   PendingActionOut,
   SectionAnalyticsOut,
   TaskPrioritiesOut,
@@ -21,6 +22,13 @@ function askPath(domain: ChatDomain): string {
 /** POST /api/ai/{domain}/ask (or /api/ai/chat/ask for domain "general") */
 export function askDomain(domain: ChatDomain, request: AskRequest): Promise<AskResponse> {
   return apiRequest<AskResponse>({ section: SECTION, path: askPath(domain), method: 'POST', body: request })
+}
+
+/** POST /api/ai/files (multipart) — вложение для чата, id передаётся в AskRequest.file_ids */
+export function uploadAttachment(file: File): Promise<FileAssetOut> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiRequest<FileAssetOut>({ section: SECTION, path: '/files', method: 'POST', form })
 }
 
 /** GET /api/ai/{section}/analytics */

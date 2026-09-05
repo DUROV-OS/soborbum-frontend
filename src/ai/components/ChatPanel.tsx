@@ -31,6 +31,10 @@ export function ChatPanel({
   const pendingActions = useAiStore((s) => s.pendingActions)
   const sending = useAiStore((s) => s.sending)
   const optimisticMessage = useAiStore((s) => s.optimisticMessage)
+  const attachments = useAiStore((s) => s.attachments)
+  const uploadingAttachment = useAiStore((s) => s.uploadingAttachment)
+  const addAttachment = useAiStore((s) => s.addAttachment)
+  const removeAttachment = useAiStore((s) => s.removeAttachment)
   const loadingChat = useAiStore((s) => s.loadingChat)
   const error = useAiStore((s) => s.error)
   const send = useAiStore((s) => s.send)
@@ -152,7 +156,14 @@ export function ChatPanel({
 
       {error && <p className="px-4 pb-2 text-[12px] text-danger">{error}</p>}
 
-      <ChatComposer sending={sending} onSend={handleSend} />
+      <ChatComposer
+        sending={sending}
+        attachments={attachments}
+        uploadingAttachment={uploadingAttachment}
+        onSend={handleSend}
+        onAttach={addAttachment}
+        onRemoveAttachment={removeAttachment}
+      />
 
       <PendingActionModal actions={modalActions} onClose={() => setModalActions([])} onResolve={handleResolve} />
     </div>
