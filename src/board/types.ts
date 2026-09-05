@@ -6,7 +6,10 @@ export interface BoardNode {
   level: number
   sort_order: number
   title: string
+  /** Полный фактический текст (500+ слов) — база для совета, не для показа сотруднику напрямую. */
   description: string
+  /** 2-3 абзаца ИИ-выжимки из description — то, что показываем в интерфейсе. null, пока ИИ ни разу не редактировал ноду. */
+  summary: string | null
   color: BoardNodeColor
   created_at: string
   updated_at: string

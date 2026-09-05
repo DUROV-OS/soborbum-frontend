@@ -24,6 +24,8 @@ export function NodePopover() {
   const openProposal = useBoardStore((s) => s.openProposal)
 
   const node = nodeId !== null && tree ? findNode(tree, nodeId) : null
+  const text = node?.summary || node?.description
+  const paragraphs = text ? text.split(/\n{2,}/) : []
 
   return (
     <Modal
@@ -35,9 +37,15 @@ export function NodePopover() {
       {node && (
         <>
           <Chip tone={STATUS_TONE[node.color]}>{STATUS_LABEL[node.color]}</Chip>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink">
-            {node.description || 'Описание пока не заполнено.'}
-          </p>
+          {paragraphs.length > 0 ? (
+            paragraphs.map((paragraph, i) => (
+              <p key={i} className="mt-3 text-[13px] leading-relaxed text-ink">
+                {paragraph}
+              </p>
+            ))
+          ) : (
+            <p className="mt-3 text-[13px] leading-relaxed text-ink">Описание пока не заполнено.</p>
+          )}
         </>
       )}
     </Modal>

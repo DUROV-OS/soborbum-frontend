@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { LoadingState } from '@/shared/ui/LoadingState'
-import { edgeKey } from '../lib/tree'
+import { edgeKey, splitDirections } from '../lib/tree'
 import { useBoardStore } from '../store'
+import { BoardNode } from '../types'
 import { BoardNodeCard } from './BoardNodeCard'
 
 const NODE_WIDTH = 208
@@ -57,12 +58,80 @@ function roundedPath(points: Point[], radius: number): string {
   return d.join(' ')
 }
 
+/** Группа «направление + его столбец» — рендерится и над, и под корнем, порядок блоков внутри
+ * группы (и то, к какому краю карточки направления идёт ребро) зависит от стороны. */
+function DirectionGroup({
+  direction,
+  side,
+  activeNodeIds,
+  popoverNodeId,
+  setNodeRef,
+  openPopover,
+}: {
+  direction: BoardNode
+  side: 'upper' | 'lower'
+  activeNodeIds: Set<number>
+  popoverNodeId: number | null
+  setNodeRef: (id: number) => (el: HTMLButtonElement | null) => void
+  openPopover: (id: number) => void
+}) {
+  const directionCard = (
+    <div style={{ width: NODE_WIDTH }}>
+      <BoardNodeCard
+        ref={setNodeRef(direction.id)}
+        node={direction}
+        active={activeNodeIds.has(direction.id)}
+        selected={popoverNodeId === direction.id}
+        onClick={() => openPopover(direction.id)}
+      />
+    </div>
+  )
+
+  const column = direction.children.length > 0 && (
+    <div
+      className={`flex flex-col gap-1.5 ${side === 'lower' ? 'mt-3' : 'mb-3'}`}
+      style={{ width: NODE_WIDTH, marginRight: NODE_WIDTH / 2 + STUB_GAP }}
+    >
+      {direction.children.map((child) => (
+        <BoardNodeCard
+          key={child.id}
+          ref={setNodeRef(child.id)}
+          node={child}
+          active={activeNodeIds.has(child.id)}
+          selected={popoverNodeId === child.id}
+          onClick={() => openPopover(child.id)}
+        />
+      ))}
+    </div>
+  )
+
+  return (
+    <div
+      className={`relative flex flex-col items-end ${side === 'upper' ? 'justify-end' : 'justify-start'}`}
+      style={{ width: GROUP_WIDTH }}
+    >
+      {side === 'lower' ? (
+        <>
+          {directionCard}
+          {column}
+        </>
+      ) : (
+        <>
+          {column}
+          {directionCard}
+        </>
+      )}
+    </div>
+  )
+}
+
 export function BoardTree() {
   const tree = useBoardStore((s) => s.tree)
   const loading = useBoardStore((s) => s.loading)
   const error = useBoardStore((s) => s.error)
   const loadTree = useBoardStore((s) => s.loadTree)
-  const activeNodeId = useBoardStore((s) => s.activeNodeId)
+  const activeNodeIds = useBoardStore((s) => s.activeNodeIds)
+  const noteNodeId = useBoardStore((s) => s.noteNodeId)
   const activeNote = useBoardStore((s) => s.activeNote)
   const activeEdgeKeys = useBoardStore((s) => s.activeEdgeKeys)
   const popoverNodeId = useBoardStore((s) => s.popoverNodeId)
@@ -109,7 +178,9 @@ export function BoardTree() {
     const rootRect = rectOf(tree.id)
     if (rootRect) {
       rects.set(tree.id, { bottom: rootRect.bottom, centerX: rootRect.centerX })
-      for (const direction of tree.children) {
+      const { upper, lower } = splitDirections(tree.children)
+
+      for (const direction of lower) {
         const dirRect = rectOf(direction.id)
         if (!dirRect) continue
         rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
@@ -136,6 +207,44 @@ export function BoardTree() {
             roundedPath(
               [
                 { x: dirRect.centerX, y: dirRect.bottom },
+                { x: dirRect.centerX, y: childRect.centerY },
+                { x: childRect.right, y: childRect.centerY },
+              ],
+              CORNER_RADIUS,
+            ),
+          )
+        }
+      }
+
+      // Верхняя половина направлений — зеркально: от верхушки корня к низу направления,
+      // от верхушки направления к его столбцу (тот тоже растёт вверх).
+      for (const direction of upper) {
+        const dirRect = rectOf(direction.id)
+        if (!dirRect) continue
+        rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
+        const midY = dirRect.bottom + (rootRect.top - dirRect.bottom) / 2
+        next.set(
+          edgeKey(tree.id, direction.id),
+          roundedPath(
+            [
+              { x: rootRect.centerX, y: rootRect.top },
+              { x: rootRect.centerX, y: midY },
+              { x: dirRect.centerX, y: midY },
+              { x: dirRect.centerX, y: dirRect.bottom },
+            ],
+            CORNER_RADIUS,
+          ),
+        )
+
+        for (const child of direction.children) {
+          const childRect = rectOf(child.id)
+          if (!childRect) continue
+          rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
+          next.set(
+            edgeKey(direction.id, child.id),
+            roundedPath(
+              [
+                { x: dirRect.centerX, y: dirRect.top },
                 { x: dirRect.centerX, y: childRect.centerY },
                 { x: childRect.right, y: childRect.centerY },
               ],
@@ -171,10 +280,11 @@ export function BoardTree() {
   if (error) return <EmptyState title="Не удалось загрузить дерево" description={error} />
   if (!tree) return null
 
-  const activeRect = activeNodeId !== null ? nodeRects.get(activeNodeId) : undefined
+  const { upper, lower } = splitDirections(tree.children)
+  const noteRect = noteNodeId !== null ? nodeRects.get(noteNodeId) : undefined
   const noteHalfWidth = 130
-  const noteLeft = activeRect
-    ? Math.min(Math.max(activeRect.centerX, noteHalfWidth), Math.max(contentWidth - noteHalfWidth, noteHalfWidth))
+  const noteLeft = noteRect
+    ? Math.min(Math.max(noteRect.centerX, noteHalfWidth), Math.max(contentWidth - noteHalfWidth, noteHalfWidth))
     : 0
 
   return (
@@ -194,55 +304,52 @@ export function BoardTree() {
       </svg>
 
       <div className="relative flex min-w-max flex-col items-center gap-4 px-6 py-4">
+        {upper.length > 0 && (
+          <div className="flex w-full justify-center gap-x-10">
+            {upper.map((direction) => (
+              <DirectionGroup
+                key={direction.id}
+                direction={direction}
+                side="upper"
+                activeNodeIds={activeNodeIds}
+                popoverNodeId={popoverNodeId}
+                setNodeRef={setNodeRef}
+                openPopover={openPopover}
+              />
+            ))}
+          </div>
+        )}
+
         <div style={{ width: NODE_WIDTH }}>
           <BoardNodeCard
             ref={setNodeRef(tree.id)}
             node={tree}
-            active={activeNodeId === tree.id}
+            active={activeNodeIds.has(tree.id)}
             selected={popoverNodeId === tree.id}
             onClick={() => openPopover(tree.id)}
           />
         </div>
 
         <div className="flex w-full justify-center gap-x-10">
-          {tree.children.map((direction) => (
-            <div key={direction.id} className="relative flex flex-col items-end" style={{ width: GROUP_WIDTH }}>
-              <div style={{ width: NODE_WIDTH }}>
-                <BoardNodeCard
-                  ref={setNodeRef(direction.id)}
-                  node={direction}
-                  active={activeNodeId === direction.id}
-                  selected={popoverNodeId === direction.id}
-                  onClick={() => openPopover(direction.id)}
-                />
-              </div>
-              {direction.children.length > 0 && (
-                <div
-                  className="mt-3 flex flex-col gap-1.5"
-                  style={{ width: NODE_WIDTH, marginRight: NODE_WIDTH / 2 + STUB_GAP }}
-                >
-                  {direction.children.map((child) => (
-                    <BoardNodeCard
-                      key={child.id}
-                      ref={setNodeRef(child.id)}
-                      node={child}
-                      active={activeNodeId === child.id}
-                      selected={popoverNodeId === child.id}
-                      onClick={() => openPopover(child.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+          {lower.map((direction) => (
+            <DirectionGroup
+              key={direction.id}
+              direction={direction}
+              side="lower"
+              activeNodeIds={activeNodeIds}
+              popoverNodeId={popoverNodeId}
+              setNodeRef={setNodeRef}
+              openPopover={openPopover}
+            />
           ))}
         </div>
       </div>
 
-      {activeRect && activeNote && (
+      {noteRect && activeNote && (
         <div
           data-testid="board-node-note"
           className="absolute z-20 w-[260px] -translate-x-1/2 rounded-md border border-brand/40 bg-surface px-3 py-2 text-[12px] leading-snug text-ink shadow-lg"
-          style={{ top: activeRect.bottom + 10, left: noteLeft }}
+          style={{ top: noteRect.bottom + 10, left: noteLeft }}
         >
           {activeNote}
         </div>

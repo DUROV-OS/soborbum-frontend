@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as boardApi from './api'
-import { buildIndexes, edgeKeysAlongPath, pathBetween } from './lib/tree'
+import { buildIndexes, buildTourSteps } from './lib/tree'
 import { BoardNode, BoardNodeChange, BoardProposal } from './types'
 
 function reasonOf(error: unknown): string {
@@ -12,9 +12,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Сколько нода «пульсирует» и держит подсказку с одним предложением от ИИ о том, что в ней меняется. */
-const NODE_DISPLAY_MS = 3600
-const TRAVEL_MS = 350
+function shuffled<T>(items: T[]): T[] {
+  const copy = [...items]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+/** Быстрый структурный «обзорный» проход по дереву — рёбра и ноды просто подсвечиваются по очереди. */
+const TOUR_EDGE_MS = 320
+const TOUR_NODE_MS = 480
+/** Сколько держится всплывающая подсказка с фразой ИИ о конкретной ноде, в конце — уже по существу. */
+const NOTE_DISPLAY_MS = 3600
 const FALLBACK_NOTE = 'Обновлено с учётом изменений по дереву.'
 
 interface BoardState {
@@ -31,10 +42,13 @@ interface BoardState {
   appliedChanges: BoardNodeChange[] | null
 
   animating: boolean
-  activeNodeId: number | null
-  /** Одно предложение от ИИ о том, что конкретно меняется в текущей активной ноде. */
-  activeNote: string | null
+  /** Ноды, подсвеченные прямо сейчас — пульсирующей рамкой (может быть несколько сразу). */
+  activeNodeIds: Set<number>
   activeEdgeKeys: Set<string>
+  /** Нода, под которой сейчас показывается всплывающая подсказка (фаза резюме, после экскурсии). */
+  noteNodeId: number | null
+  /** Одно предложение от ИИ о том, что конкретно меняется в ноде noteNodeId. */
+  activeNote: string | null
   actualizing: boolean
 
   loadTree: () => Promise<void>
@@ -49,27 +63,39 @@ interface BoardState {
 }
 
 export const useBoardStore = create<BoardState>((set, get) => {
-  async function playAnimation(changes: BoardNodeChange[]) {
+  /**
+   * Экскурсия по дереву от originId (см. buildTourSteps), а затем — вразнобой —
+   * всплывающие подсказки с фразой ИИ по каждой реально изменённой ноде.
+   */
+  async function playAnimation(originId: number, changes: BoardNodeChange[]) {
     const tree = get().tree
     if (!tree) return
     const indexes = buildIndexes(tree)
-    const queue = changes.filter((c) => c.change_type !== 'deleted' && indexes.byId.has(c.node_id))
 
     set({ animating: true })
-    let previousId: number | null = null
-    for (const change of queue) {
-      if (previousId !== null) {
-        const path = pathBetween(indexes, previousId, change.node_id)
-        if (path && path.length > 2) {
-          set({ activeEdgeKeys: new Set(edgeKeysAlongPath(path)), activeNodeId: null, activeNote: null })
-          await sleep(TRAVEL_MS)
-        }
+
+    for (const step of buildTourSteps(indexes, originId, tree.id)) {
+      if ('edges' in step) {
+        set({ activeEdgeKeys: new Set(step.edges), activeNodeIds: new Set() })
+        await sleep(TOUR_EDGE_MS)
+      } else {
+        set({ activeNodeIds: new Set(step.nodes), activeEdgeKeys: new Set() })
+        await sleep(TOUR_NODE_MS)
       }
-      set({ activeNodeId: change.node_id, activeEdgeKeys: new Set(), activeNote: change.note || FALLBACK_NOTE })
-      await sleep(NODE_DISPLAY_MS)
-      previousId = change.node_id
     }
-    set({ animating: false, activeNodeId: null, activeNote: null, activeEdgeKeys: new Set() })
+    set({ activeNodeIds: new Set(), activeEdgeKeys: new Set() })
+
+    const notes = shuffled(changes.filter((c) => c.change_type !== 'deleted' && indexes.byId.has(c.node_id)))
+    for (const change of notes) {
+      set({
+        activeNodeIds: new Set([change.node_id]),
+        noteNodeId: change.node_id,
+        activeNote: change.note || FALLBACK_NOTE,
+      })
+      await sleep(NOTE_DISPLAY_MS)
+    }
+
+    set({ animating: false, activeNodeIds: new Set(), noteNodeId: null, activeNote: null })
   }
 
   return {
@@ -85,9 +111,10 @@ export const useBoardStore = create<BoardState>((set, get) => {
     appliedChanges: null,
 
     animating: false,
-    activeNodeId: null,
-    activeNote: null,
+    activeNodeIds: new Set(),
     activeEdgeKeys: new Set(),
+    noteNodeId: null,
+    activeNote: null,
     actualizing: false,
 
     loadTree: async () => {
@@ -163,7 +190,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
           proposalLoading: false,
           appliedChanges: result.changes,
         })
-        await playAnimation(result.changes)
+        await playAnimation(proposal.node_id, result.changes)
       } catch (error) {
         set({ proposalLoading: false, proposalError: reasonOf(error) })
       }
@@ -175,7 +202,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
         const result = await boardApi.actualize()
         const tree = await boardApi.getTree()
         set({ tree, actualizing: false })
-        await playAnimation(result.changes)
+        await playAnimation(tree.id, result.changes)
       } catch (error) {
         set({ actualizing: false, error: reasonOf(error) })
       }
