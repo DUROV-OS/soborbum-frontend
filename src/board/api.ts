@@ -1,5 +1,15 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { ActualizeResult, ApplyResult, BoardNode, BoardNodeColor, BoardNodeDetail, BoardProposal } from './types'
+import {
+  ActualizeResult,
+  ApplyResult,
+  BoardDiscussion,
+  BoardDiscussionDetail,
+  BoardDiscussionMessage,
+  BoardNode,
+  BoardNodeColor,
+  BoardNodeDetail,
+  BoardProposal,
+} from './types'
 
 const SECTION = 'board'
 
@@ -50,6 +60,36 @@ export function respondToProposal(
 /** DELETE /api/board/proposals/:id */
 export function cancelProposal(proposalId: number): Promise<BoardProposal> {
   return apiRequest<BoardProposal>({ section: SECTION, path: `/proposals/${proposalId}`, method: 'DELETE' })
+}
+
+/** GET /api/board/discussions — свободные обсуждения с советом (mine=true — только свои). */
+export function listDiscussions(mine = true): Promise<BoardDiscussion[]> {
+  return apiRequest<BoardDiscussion[]>({ section: SECTION, path: '/discussions', query: { mine } })
+}
+
+/** GET /api/board/discussions/:id */
+export function getDiscussion(id: number): Promise<BoardDiscussionDetail> {
+  return apiRequest<BoardDiscussionDetail>({ section: SECTION, path: `/discussions/${id}` })
+}
+
+/** POST /api/board/discussions — создаёт обсуждение по компании в целом с первой репликой. */
+export function createDiscussion(message: string): Promise<BoardDiscussionDetail> {
+  return apiRequest<BoardDiscussionDetail>({
+    section: SECTION,
+    path: '/discussions',
+    method: 'POST',
+    body: { message },
+  })
+}
+
+/** POST /api/board/discussions/:id/messages — добавляет реплику и возвращает ответ совета. */
+export function postDiscussionMessage(id: number, message: string): Promise<BoardDiscussionMessage> {
+  return apiRequest<BoardDiscussionMessage>({
+    section: SECTION,
+    path: `/discussions/${id}/messages`,
+    method: 'POST',
+    body: { message },
+  })
 }
 
 /** POST /api/board/actualize (только для админа) */

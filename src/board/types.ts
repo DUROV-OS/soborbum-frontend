@@ -94,6 +94,34 @@ export interface ApplyResult {
   changes: BoardNodeChange[]
 }
 
+// --- Свободный чат с советом (без правок дерева) ---
+
+export interface BoardDiscussionMessage {
+  id: number
+  role: 'user' | 'assistant'
+  author_id: number | null
+  content: string
+  /** Заполняется, только если сообщение отправлено с consult_council (обсуждение, привязанное к ноде). */
+  council: CouncilOpinion[] | null
+  research_brief: string | null
+  created_at: string
+}
+
+export interface BoardDiscussion {
+  id: number
+  /** null — обсуждение по компании в целом. */
+  node_id: number | null
+  created_by_id: number
+  title: string
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+export interface BoardDiscussionDetail extends BoardDiscussion {
+  messages: BoardDiscussionMessage[]
+}
+
 export interface ActualizeResult {
   generated_at: string
   changes: BoardNodeChange[]

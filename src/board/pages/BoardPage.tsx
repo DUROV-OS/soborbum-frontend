@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/Button'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
+import { BoardChat } from '../components/BoardChat'
 import { BoardTree } from '../components/BoardTree'
 import { MobileWarningModal } from '../components/MobileWarningModal'
 import { NodePopover } from '../components/NodePopover'
@@ -48,6 +49,15 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
       </p>
     ),
   },
+  {
+    title: 'Чат с советом',
+    body: (
+      <p>
+        Под графом — свободный чат с ИИ-советом по компании в целом. Здесь можно задавать вопросы и разбирать
+        варианты; в отличие от «Внести изменения», этот диалог ничего не меняет в дереве.
+      </p>
+    ),
+  },
 ]
 
 export function BoardPage() {
@@ -82,6 +92,7 @@ export function BoardPage() {
       </div>
 
       <BoardTree />
+      <BoardChat />
       <NodePopover />
       <ProposalPanel />
       <MobileWarningModal />
