@@ -39,11 +39,10 @@ export interface Production {
   modules: Module[]
 }
 
-/** Минимальная форма /api/cycles/ — единственный способ узнать, какие
- * производства вообще существуют (в production/ нет своего списочного
- * эндпоинта). */
-export interface CycleWithProduction {
+export interface ProductionListItem {
   id: number
-  client: { full_name: string } | null
-  production: Production | null
+  cycle_id: number
+  cycle_status: 'client' | 'production' | 'installation' | 'completed'
+  created_at: string
+  module_count: number
 }

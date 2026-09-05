@@ -47,6 +47,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       get().loadAccounts().catch(() => {})
       return true
     } catch (error) {
+      setToken(null)
+      set({ current: null, accounts: [] })
       set({ error: error instanceof Error ? error.message : 'Не удалось войти' })
       return false
     }
@@ -55,10 +57,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     setToken(null)
     set({ current: null, accounts: [] })
+    // A full document navigation also clears every module store and in-flight view.
+    window.location.replace('/login')
   },
 
   /** GET /auth/users требует роль admin — для рабочих аккаунтов тихо остаётся пустым (см. вызовы в bootstrap/login). */
   loadAccounts: async () => {
+    if (get().current?.role !== 'admin') {
+      set({ accounts: [] })
+      return
+    }
     const accounts = await authApi.listAccounts()
     set({ accounts })
   },
@@ -67,8 +75,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const account = get().current
     if (!account) return false
     if (account.role === 'admin') return true
-    // GET /api/dashboard/today гейтится на бэкенде модулем AI — см. shared/sections.ts
-    if (section === 'today') return account.module_access.includes('ai')
+    if (section === 'admin') return false
+    if (section === 'today') return true
     return account.module_access.includes(section)
   },
 

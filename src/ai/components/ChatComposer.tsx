@@ -1,4 +1,4 @@
-import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
+import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { Paperclip, Send } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Field'
@@ -16,6 +16,7 @@ export function ChatComposer({
   onSend,
   onAttach,
   onRemoveAttachment,
+  initialMessage = '',
 }: {
   sending: boolean
   attachments: FileAssetOut[]
@@ -23,9 +24,12 @@ export function ChatComposer({
   onSend: (message: string) => void
   onAttach: (file: File) => void
   onRemoveAttachment: (id: number) => void
+  initialMessage?: string
 }) {
   const [value, setValue] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { setValue(initialMessage) }, [initialMessage])
 
   function submit() {
     const trimmed = value.trim()
@@ -87,11 +91,12 @@ export function ChatComposer({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Спросите что-нибудь…"
+          placeholder="Спросите Марину…"
+          aria-label="Сообщение Марине"
           className="max-h-32 resize-none"
           disabled={sending}
         />
-        <Button size="sm" onClick={submit} disabled={!canSend}>
+        <Button size="sm" onClick={submit} disabled={!canSend} aria-label="Отправить сообщение">
           <Send size={15} />
         </Button>
       </div>

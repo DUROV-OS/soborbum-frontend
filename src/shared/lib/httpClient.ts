@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api'
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? '/api').replace(/\/$/, '')
 
 const TOKEN_KEY = 'soborbum.auth.token'
 
@@ -23,6 +23,10 @@ export class ApiError extends Error {
 }
 
 async function extractErrorMessage(response: Response): Promise<string> {
+  if (response.status === 401 && token) {
+    setToken(null)
+    window.dispatchEvent(new Event('auth:expired'))
+  }
   try {
     const body = await response.json()
     if (typeof body.detail === 'string') return body.detail

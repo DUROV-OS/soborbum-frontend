@@ -2,7 +2,6 @@ import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
-import { QUICK_LOGIN } from '../demoAccounts'
 import { useAuthStore } from '../store'
 
 export function LoginPage() {
@@ -21,22 +20,13 @@ export function LoginPage() {
     if (ok) navigate('/', { replace: true })
   }
 
-  async function quickLogin(qlEmail: string, qlPassword: string) {
-    setEmail(qlEmail)
-    setPassword(qlPassword)
-    setSubmitting(true)
-    const ok = await login(qlEmail, qlPassword)
-    setSubmitting(false)
-    if (ok) navigate('/', { replace: true })
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="text-[22px] font-medium text-brand-dark">Soborbum</div>
+          <div className="text-[28px] font-semibold tracking-tight text-brand-dark">Durov OS<span className="text-brand">.</span></div>
           <p className="mt-1 text-[13px] text-muted">
-            Система управления производством модульных домов
+            Рабочее пространство вашей компании
           </p>
         </div>
 
@@ -66,21 +56,7 @@ export function LoginPage() {
           </div>
         </form>
 
-        <div className="mt-4 rounded-md border border-border bg-surface p-2">
-          <div className="px-2.5 py-1.5 text-[11px] text-muted">Быстрый вход (демо)</div>
-          {QUICK_LOGIN.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              onClick={() => quickLogin(account.email, account.password)}
-              disabled={submitting}
-              className="flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[13px] text-ink hover:bg-surface-muted disabled:opacity-50"
-            >
-              <span>{account.label}</span>
-              <span className="text-[12px] text-muted">{account.title}</span>
-            </button>
-          ))}
-        </div>
+        <p className="mt-5 text-center text-[12px] text-muted">Для получения доступа обратитесь к администратору компании.</p>
       </div>
     </div>
   )

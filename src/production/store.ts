@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as productionApi from './api'
-import { CycleWithProduction, Module, Production } from './types'
+import { ProductionListItem, Module, Production } from './types'
 
 export interface ActionResult {
   ok: boolean
@@ -9,11 +9,12 @@ export interface ActionResult {
 }
 
 interface ProductionState {
-  cycles: CycleWithProduction[]
+  productions: ProductionListItem[]
   production: Production | null
   module: Module | null
   loading: boolean
-  loadCycles: () => Promise<void>
+  error: string | null
+  loadProductions: () => Promise<void>
   loadProduction: (id: number) => Promise<void>
   loadModule: (id: number) => Promise<void>
   createModule: (productionId: number, name: string, description?: string) => Promise<ActionResult>
@@ -28,14 +29,20 @@ function reasonOf(error: unknown): string {
 }
 
 export const useProductionStore = create<ProductionState>((set, get) => ({
-  cycles: [],
+  productions: [],
   production: null,
   module: null,
   loading: true,
+  error: null,
 
-  loadCycles: async () => {
-    const cycles = await productionApi.listCyclesWithProduction()
-    set({ cycles, loading: false })
+  loadProductions: async () => {
+    set({ loading: true, error: null })
+    try {
+      const productions = await productionApi.listProductions()
+      set({ productions, loading: false })
+    } catch (error) {
+      set({ productions: [], loading: false, error: reasonOf(error) })
+    }
   },
 
   loadProduction: async (id) => {

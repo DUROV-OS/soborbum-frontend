@@ -46,6 +46,7 @@ export function AccessMatrixPage() {
   const addAccount = useAuthStore((s) => s.addAccount)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [updatingAccount, setUpdatingAccount] = useState<number | null>(null)
   const onboarding = useSectionOnboarding('admin')
 
   useEffect(() => {
@@ -54,13 +55,22 @@ export function AccessMatrixPage() {
 
   const workers = accounts.filter((a) => a.role === 'worker')
 
-  function toggle(accountId: number, section: SectionId, hasIt: boolean) {
+  async function toggle(accountId: number, section: SectionId, hasIt: boolean) {
+    if (updatingAccount !== null) return
     const account = accounts.find((a) => a.id === accountId)
     if (!account) return
     const next = hasIt
       ? account.module_access.filter((s) => s !== section)
       : [...account.module_access, section]
-    updateAccess(accountId, next)
+    setUpdatingAccount(accountId)
+    setError(null)
+    try {
+      await updateAccess(accountId, next)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Не удалось сохранить доступ')
+    } finally {
+      setUpdatingAccount(null)
+    }
   }
 
   return (
@@ -109,6 +119,8 @@ export function AccessMatrixPage() {
                       <input
                         type="checkbox"
                         checked={hasIt}
+                        disabled={updatingAccount !== null}
+                        aria-label={`${account.full_name}: ${section.label}`}
                         onChange={() => toggle(account.id, section.id, hasIt)}
                         className="h-4 w-4 accent-[#395b4b]"
                       />
@@ -149,6 +161,10 @@ function CreateAccountModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (open) reset()
+  }, [open])
+
   function reset() {
     setFullName('')
     setEmail('')
@@ -158,10 +174,10 @@ function CreateAccountModal({
   }
 
   async function handleSubmit() {
-    if (!fullName || !email || !password) return
+    if (!fullName.trim() || !email.trim() || password.length < 12 || saving) return
     setSaving(true)
     try {
-      await onCreate({ email, password, full_name: fullName, module_access: sections })
+      await onCreate({ email: email.trim(), password, full_name: fullName.trim(), module_access: sections })
       reset()
       onClose()
     } catch (e) {
@@ -175,16 +191,17 @@ function CreateAccountModal({
     <Modal
       open={open}
       onClose={() => {
+        if (saving) return
         reset()
         onClose()
       }}
       title="Новый сотрудник"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={() => { reset(); onClose() }} disabled={saving}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!fullName || !email || !password || saving}>
+          <Button onClick={handleSubmit} disabled={!fullName.trim() || !email.trim() || password.length < 12 || saving}>
             {saving ? 'Сохранение…' : 'Создать'}
           </Button>
         </>
@@ -192,13 +209,13 @@ function CreateAccountModal({
     >
       <div className="flex flex-col gap-4">
         <Field label="ФИО" required>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Иванов Иван" />
+          <Input name="employee-full-name" autoComplete="off" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Иванов Иван" />
         </Field>
         <Field label="Почта" required>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mail@example.com" />
+          <Input name="employee-email" autoComplete="off" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mail@example.com" />
         </Field>
-        <Field label="Пароль" required>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Field label="Пароль" required hint="Не менее 12 символов. Передайте сотруднику личным сообщением.">
+          <Input name="employee-new-password" autoComplete="new-password" minLength={12} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Field label="Доступ к разделам">
           <div className="flex flex-col gap-2">

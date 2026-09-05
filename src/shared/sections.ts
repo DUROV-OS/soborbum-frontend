@@ -20,10 +20,8 @@ import {
  * module_access и в Task.link_type, так что переименовывать их нельзя.
  * 'admin' — чисто фронтовое значение для пункта меню «Доступ», бэкенд его
  * не знает: администраторская страница гейтится по role==='admin'.
- * 'today' — тоже чисто фронтовое значение (эндпоинт GET /api/dashboard/today
- * гейтится на бэкенде модулем AI), hasAccess('today') в auth/store.ts
- * проксируется на доступ к 'ai', поэтому в матрицу назначаемых модулей
- * (ASSIGNABLE_SECTIONS) 'today' не попадает — им нельзя управлять отдельно.
+ * 'today' доступен каждому вошедшему сотруднику; сервер отдаёт только
+ * показатели разрешённых ему разделов. AI-доступ для сводки не требуется.
  */
 export type SectionId =
   | 'clients'
@@ -59,7 +57,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
   { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
-  { id: 'ai', label: 'ИИ-ассистент', path: '/ai', icon: Sparkles },
+  { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
 

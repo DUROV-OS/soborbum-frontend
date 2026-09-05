@@ -2,7 +2,7 @@ import { MouseEvent, useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { HelpButton } from '@/shared/ui/HelpButton'
@@ -47,6 +47,8 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
 
 export function AiChatPage() {
   const { chatId } = useParams()
+  const location = useLocation()
+  const initialMessage = !chatId && typeof location.state?.draftMessage === 'string' ? location.state.draftMessage : ''
   const navigate = useNavigate()
   const hasAccess = useAuthStore((s) => s.hasAccess)
   const chats = useAiStore((s) => s.chats)
@@ -164,6 +166,7 @@ export function AiChatPage() {
         }`}
       >
         <ChatPanel
+          initialMessage={initialMessage}
           onDeleted={() => navigate('/ai')}
           onChatCreated={(id) => navigate(`/ai/${id}`, { replace: true })}
           onBack={() => {

@@ -6,10 +6,16 @@ import { AppRouter } from '@/app/router'
 export function App() {
   const bootstrap = useAuthStore((s) => s.bootstrap)
   const booting = useAuthStore((s) => s.booting)
+  const logout = useAuthStore((s) => s.logout)
 
   useEffect(() => {
     bootstrap()
   }, [bootstrap])
+
+  useEffect(() => {
+    window.addEventListener('auth:expired', logout)
+    return () => window.removeEventListener('auth:expired', logout)
+  }, [logout])
 
   if (booting) {
     return <div className="flex h-screen items-center justify-center text-[13px] text-muted">Загрузка…</div>

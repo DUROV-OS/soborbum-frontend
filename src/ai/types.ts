@@ -34,6 +34,9 @@ export interface PendingActionOut {
   decided_by_id: number | null
   decided_at: string | null
   created_at: string
+  summary?: string
+  execution_status?: 'pending' | 'succeeded' | 'failed' | 'rejected' | 'unknown'
+  policy_version?: string | null
 }
 
 export interface AskResponse {
@@ -97,9 +100,9 @@ export const DOMAIN_LABEL: Record<ChatDomain, string> = {
 }
 
 export const MODE_LABEL: Record<ChatMode, string> = {
-  no_actions: 'Без действий',
-  require_approval: 'Одобрение',
-  auto_approve: 'Автоматически',
+  no_actions: 'Анализ · A0',
+  require_approval: 'С подтверждением · A2',
+  auto_approve: 'С подтверждением · A2',
 }
 
 /** Разделы, для которых бэкенд отдаёт GET /api/ai/{section}/analytics — включает «Монтаж», в отличие от ChatDomain. */

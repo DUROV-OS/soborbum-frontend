@@ -14,7 +14,7 @@ export function PendingActionModal({
   if (actions.length === 0) return null
 
   return (
-    <Modal open title="ИИ хочет выполнить действие" onClose={onClose}>
+    <Modal open title="Марина предлагает изменение" onClose={onClose}>
       <p className="mb-3 text-[13px] text-muted">
         Проверьте {actions.length > 1 ? 'предложенные действия' : 'предложенное действие'} и одобрите или отклоните.
       </p>
