@@ -12,8 +12,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const PULSE_MS = 900
+/** Сколько нода «пульсирует» и держит подсказку с одним предложением от ИИ о том, что в ней меняется. */
+const NODE_DISPLAY_MS = 3600
 const TRAVEL_MS = 350
+const FALLBACK_NOTE = 'Обновлено с учётом изменений по дереву.'
 
 interface BoardState {
   tree: BoardNode | null
@@ -30,6 +32,8 @@ interface BoardState {
 
   animating: boolean
   activeNodeId: number | null
+  /** Одно предложение от ИИ о том, что конкретно меняется в текущей активной ноде. */
+  activeNote: string | null
   activeEdgeKeys: Set<string>
   actualizing: boolean
 
@@ -57,15 +61,15 @@ export const useBoardStore = create<BoardState>((set, get) => {
       if (previousId !== null) {
         const path = pathBetween(indexes, previousId, change.node_id)
         if (path && path.length > 2) {
-          set({ activeEdgeKeys: new Set(edgeKeysAlongPath(path)), activeNodeId: null })
+          set({ activeEdgeKeys: new Set(edgeKeysAlongPath(path)), activeNodeId: null, activeNote: null })
           await sleep(TRAVEL_MS)
         }
       }
-      set({ activeNodeId: change.node_id, activeEdgeKeys: new Set() })
-      await sleep(PULSE_MS)
+      set({ activeNodeId: change.node_id, activeEdgeKeys: new Set(), activeNote: change.note || FALLBACK_NOTE })
+      await sleep(NODE_DISPLAY_MS)
       previousId = change.node_id
     }
-    set({ animating: false, activeNodeId: null, activeEdgeKeys: new Set() })
+    set({ animating: false, activeNodeId: null, activeNote: null, activeEdgeKeys: new Set() })
   }
 
   return {
@@ -82,6 +86,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
     animating: false,
     activeNodeId: null,
+    activeNote: null,
     activeEdgeKeys: new Set(),
     actualizing: false,
 

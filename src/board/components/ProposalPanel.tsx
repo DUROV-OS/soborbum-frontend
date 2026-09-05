@@ -21,9 +21,11 @@ const STANCE_TONE: Record<CouncilStance, ChipTone> = {
   oppose: 'danger',
 }
 
-/** Короткая тезисная выжимка того, что поменялось в описании ноды — первое предложение
- * нового описания, без полного текста (полный текст виден в самом дереве). */
+/** Короткая тезисная выжимка того, что поменялось в описании ноды — предпочитаем
+ * change_summary, который сама модель формулирует при правке (поле note), и только если
+ * его нет (старые записи, ручная правка) — берём первое предложение нового описания. */
 function shortSummary(change: BoardNodeChange): string {
+  if (change.note) return change.note
   if (change.change_type === 'deleted') return 'Нода удалена.'
 
   const text = change.new_description?.trim()

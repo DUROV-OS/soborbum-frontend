@@ -63,6 +63,7 @@ export function BoardTree() {
   const error = useBoardStore((s) => s.error)
   const loadTree = useBoardStore((s) => s.loadTree)
   const activeNodeId = useBoardStore((s) => s.activeNodeId)
+  const activeNote = useBoardStore((s) => s.activeNote)
   const activeEdgeKeys = useBoardStore((s) => s.activeEdgeKeys)
   const popoverNodeId = useBoardStore((s) => s.popoverNodeId)
   const openPopover = useBoardStore((s) => s.openPopover)
@@ -70,6 +71,8 @@ export function BoardTree() {
   const containerRef = useRef<HTMLDivElement>(null)
   const nodeRefs = useRef(new Map<number, HTMLButtonElement>())
   const [paths, setPaths] = useState<Map<string, string>>(new Map())
+  const [nodeRects, setNodeRects] = useState<Map<number, { bottom: number; centerX: number }>>(new Map())
+  const [contentWidth, setContentWidth] = useState(0)
 
   useEffect(() => {
     loadTree()
@@ -102,11 +105,14 @@ export function BoardTree() {
     }
 
     const next = new Map<string, string>()
+    const rects = new Map<number, { bottom: number; centerX: number }>()
     const rootRect = rectOf(tree.id)
     if (rootRect) {
+      rects.set(tree.id, { bottom: rootRect.bottom, centerX: rootRect.centerX })
       for (const direction of tree.children) {
         const dirRect = rectOf(direction.id)
         if (!dirRect) continue
+        rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
         const midY = rootRect.bottom + (dirRect.top - rootRect.bottom) / 2
         next.set(
           edgeKey(tree.id, direction.id),
@@ -124,6 +130,7 @@ export function BoardTree() {
         for (const child of direction.children) {
           const childRect = rectOf(child.id)
           if (!childRect) continue
+          rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
           next.set(
             edgeKey(direction.id, child.id),
             roundedPath(
@@ -139,6 +146,8 @@ export function BoardTree() {
       }
     }
     setPaths(next)
+    setNodeRects(rects)
+    setContentWidth(container.scrollWidth)
   }, [tree])
 
   useLayoutEffect(() => {
@@ -161,6 +170,12 @@ export function BoardTree() {
   if (loading && !tree) return <LoadingState label="Загружаем дерево стратегических направлений…" />
   if (error) return <EmptyState title="Не удалось загрузить дерево" description={error} />
   if (!tree) return null
+
+  const activeRect = activeNodeId !== null ? nodeRects.get(activeNodeId) : undefined
+  const noteHalfWidth = 130
+  const noteLeft = activeRect
+    ? Math.min(Math.max(activeRect.centerX, noteHalfWidth), Math.max(contentWidth - noteHalfWidth, noteHalfWidth))
+    : 0
 
   return (
     <div ref={containerRef} className="relative overflow-x-auto pb-8">
@@ -222,6 +237,16 @@ export function BoardTree() {
           ))}
         </div>
       </div>
+
+      {activeRect && activeNote && (
+        <div
+          data-testid="board-node-note"
+          className="absolute z-20 w-[260px] -translate-x-1/2 rounded-md border border-brand/40 bg-surface px-3 py-2 text-[12px] leading-snug text-ink shadow-lg"
+          style={{ top: activeRect.bottom + 10, left: noteLeft }}
+        >
+          {activeNote}
+        </div>
+      )}
     </div>
   )
 }
