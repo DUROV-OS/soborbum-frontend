@@ -7,12 +7,18 @@ import { BoardNode } from '../types'
 import { BoardNodeCard } from './BoardNodeCard'
 
 const NODE_WIDTH = 208
+/** durov.house вдвое крупнее обычной ноды, направления — в полтора раза. */
+const ROOT_SCALE = 2
+const DIRECTION_SCALE = 1.5
+const ROOT_WIDTH = NODE_WIDTH * ROOT_SCALE
+const DIRECTION_WIDTH = NODE_WIDTH * DIRECTION_SCALE
 const CORNER_RADIUS = 14
 /** Промежуток между левой и правой колонкой поднаправлений — в нём проходит общий «ствол» от направления. */
 const TRUNK_GAP = 44
-/** Ширина ряда из двух колонок поднаправлений — она же ширина группы «направление + колонки»,
- * по которой группы направлений равномерно распределяются в общем ряду. */
+/** Ширина ряда из двух колонок поднаправлений. Группа «направление + колонки» берёт большее из
+ * этой ширины и ширины самой (укрупнённой) карточки направления, чтобы ничего не обрезалось. */
 const CHILDREN_ROW_WIDTH = NODE_WIDTH * 2 + TRUNK_GAP
+const GROUP_WIDTH = Math.max(CHILDREN_ROW_WIDTH, DIRECTION_WIDTH)
 
 interface Point {
   x: number
@@ -101,13 +107,14 @@ function DirectionGroup({
   openPopover: (id: number) => void
 }) {
   const directionCard = (
-    <div style={{ width: NODE_WIDTH }}>
+    <div style={{ width: DIRECTION_WIDTH }}>
       <BoardNodeCard
         ref={setNodeRef(direction.id)}
         node={direction}
         active={activeNodeIds.has(direction.id)}
         selected={popoverNodeId === direction.id}
         onClick={() => openPopover(direction.id)}
+        scale={DIRECTION_SCALE}
       />
     </div>
   )
@@ -138,7 +145,7 @@ function DirectionGroup({
   return (
     <div
       className={`relative flex flex-col items-center ${side === 'upper' ? 'justify-end' : 'justify-start'}`}
-      style={{ width: CHILDREN_ROW_WIDTH }}
+      style={{ width: GROUP_WIDTH }}
     >
       {side === 'lower' ? (
         <>
@@ -343,13 +350,14 @@ export function BoardTree() {
           </div>
         )}
 
-        <div style={{ width: NODE_WIDTH }}>
+        <div style={{ width: ROOT_WIDTH }}>
           <BoardNodeCard
             ref={setNodeRef(tree.id)}
             node={tree}
             active={activeNodeIds.has(tree.id)}
             selected={popoverNodeId === tree.id}
             onClick={() => openPopover(tree.id)}
+            scale={ROOT_SCALE}
           />
         </div>
 

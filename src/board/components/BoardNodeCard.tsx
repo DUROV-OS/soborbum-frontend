@@ -12,10 +12,12 @@ interface BoardNodeCardProps {
   active: boolean
   selected: boolean
   onClick: () => void
+  /** Множитель размера относительно обычной ноды 2-го уровня — durov.house и направления крупнее. */
+  scale?: number
 }
 
 export const BoardNodeCard = forwardRef<HTMLButtonElement, BoardNodeCardProps>(function BoardNodeCard(
-  { node, active, selected, onClick },
+  { node, active, selected, onClick, scale = 1 },
   ref,
 ) {
   return (
@@ -23,16 +25,23 @@ export const BoardNodeCard = forwardRef<HTMLButtonElement, BoardNodeCardProps>(f
       ref={ref}
       type="button"
       onClick={onClick}
-      className={`relative z-10 flex w-full items-center gap-2 rounded-md border bg-surface px-3 py-2.5 text-left shadow-sm transition-colors ${
+      className={`relative z-10 flex w-full items-center rounded-md border bg-surface text-left shadow-sm transition-colors ${
         active
           ? 'board-node-active border-brand ring-2 ring-brand'
           : selected
             ? 'border-brand/50'
             : 'border-border hover:border-brand/40'
       }`}
+      style={{ gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px` }}
     >
-      <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[node.color]}`} aria-hidden />
-      <span className="truncate text-[13px] font-medium text-ink">{node.title}</span>
+      <span
+        className={`shrink-0 rounded-full ${DOT_CLASS[node.color]}`}
+        style={{ width: 8 * scale, height: 8 * scale }}
+        aria-hidden
+      />
+      <span className="truncate font-medium text-ink" style={{ fontSize: 13 * scale }}>
+        {node.title}
+      </span>
     </button>
   )
 })
