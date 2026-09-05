@@ -77,9 +77,11 @@ export function ClientDetailPage() {
         <Section title="Базовые данные">
           <ReadRow label="Телефон" value={client.phone} />
           <ReadRow label="Почта" value={client.email} />
-          <ReadRow label="ИНН" value={client.inn} />
-          <ReadRow label="Паспорт" value={client.passport_number} />
-          <ReadRow label="Дата рождения" value={new Date(client.birth_date).toLocaleDateString('ru-RU')} />
+          {client.contacts.length > 0
+            ? client.contacts.map((c, i) => (
+                <ReadRow key={i} label={c.messenger} value={c.contact} />
+              ))
+            : <ReadRow label="Способы связи" value={undefined} />}
         </Section>
 
         <ProjectPanel client={client} />

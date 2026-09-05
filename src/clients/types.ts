@@ -38,6 +38,15 @@ export interface ClientNote {
   created_at: string
 }
 
+/** Способ связи с клиентом: мессенджер/канал и адрес в нём. */
+export interface ClientContact {
+  messenger: string
+  contact: string
+}
+
+/** Подсказки для поля «мессенджер» — не ограничение, просто частые варианты. */
+export const MESSENGER_SUGGESTIONS = ['Telegram', 'WhatsApp', 'Viber', 'Телефон', 'Email', 'VK']
+
 export interface Client {
   id: number
   cycle_id: number
@@ -46,9 +55,7 @@ export interface Client {
   full_name: string
   phone: string
   email: string
-  inn: string
-  passport_number: string
-  birth_date: string
+  contacts: ClientContact[]
   order_type: OrderType | null
   wishes_description: string | null
   estimated_price: number | null
@@ -70,7 +77,5 @@ export interface ClientCreateInput {
   full_name: string
   phone: string
   email: string
-  inn: string
-  passport_number: string
-  birth_date: string
+  contacts: ClientContact[]
 }
