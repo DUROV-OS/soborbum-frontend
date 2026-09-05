@@ -20,7 +20,7 @@ export const useTodayStore = create<TodayState>((set) => ({
   error: null,
 
   load: async (reload = false) => {
-    set({ loading: true, error: null })
+    set({ loading: true, error: null, data: null })
     try {
       const data = await todayApi.getToday(reload)
       set({ data, loading: false })

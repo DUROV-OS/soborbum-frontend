@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as boardApi from './api'
 import { buildIndexes, buildTourSteps } from './lib/tree'
-import { BoardNode, BoardNodeChange, BoardProposal } from './types'
+import { BoardDiscussionMessage, BoardNode, BoardNodeChange, BoardProposal } from './types'
 
 function reasonOf(error: unknown): string {
   return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось выполнить действие'
@@ -51,6 +51,14 @@ interface BoardState {
   activeNote: string | null
   actualizing: boolean
 
+  /** Свободный чат с советом по компании в целом (под графом). */
+  chatDiscussionId: number | null
+  chatMessages: BoardDiscussionMessage[]
+  chatLoading: boolean
+  chatSending: boolean
+  chatPending: string | null
+  chatError: string | null
+
   loadTree: () => Promise<void>
   openPopover: (nodeId: number) => void
   closePopover: () => void
@@ -60,6 +68,8 @@ interface BoardState {
   reject: (comment: string) => Promise<void>
   accept: () => Promise<void>
   runActualize: () => Promise<void>
+  loadChat: () => Promise<void>
+  sendChatMessage: (message: string) => Promise<void>
 }
 
 export const useBoardStore = create<BoardState>((set, get) => {
@@ -116,6 +126,13 @@ export const useBoardStore = create<BoardState>((set, get) => {
     noteNodeId: null,
     activeNote: null,
     actualizing: false,
+
+    chatDiscussionId: null,
+    chatMessages: [],
+    chatLoading: false,
+    chatSending: false,
+    chatPending: null,
+    chatError: null,
 
     loadTree: async () => {
       set({ loading: true, error: null })
@@ -205,6 +222,53 @@ export const useBoardStore = create<BoardState>((set, get) => {
         await playAnimation(tree.id, result.changes)
       } catch (error) {
         set({ actualizing: false, error: reasonOf(error) })
+      }
+    },
+
+    loadChat: async () => {
+      if (get().chatLoading || get().chatDiscussionId !== null) return
+      set({ chatLoading: true, chatError: null })
+      try {
+        const discussions = await boardApi.listDiscussions(true)
+        const companyWide = discussions
+          .filter((d) => d.node_id === null)
+          .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0]
+        if (!companyWide) {
+          set({ chatLoading: false })
+          return
+        }
+        const detail = await boardApi.getDiscussion(companyWide.id)
+        set({ chatLoading: false, chatDiscussionId: detail.id, chatMessages: detail.messages })
+      } catch (error) {
+        set({ chatLoading: false, chatError: reasonOf(error) })
+      }
+    },
+
+    sendChatMessage: async (message) => {
+      const text = message.trim()
+      if (!text || get().chatSending) return
+      set({ chatSending: true, chatError: null, chatPending: text })
+      try {
+        const discussionId = get().chatDiscussionId
+        if (discussionId === null) {
+          const created = await boardApi.createDiscussion(text)
+          set({ chatDiscussionId: created.id, chatMessages: created.messages })
+        } else {
+          const reply = await boardApi.postDiscussionMessage(discussionId, text)
+          const userMessage: BoardDiscussionMessage = {
+            id: -Date.now(),
+            role: 'user',
+            author_id: null,
+            content: text,
+            council: null,
+            research_brief: null,
+            created_at: new Date().toISOString(),
+          }
+          set({ chatMessages: [...get().chatMessages, userMessage, reply] })
+        }
+        set({ chatSending: false, chatPending: null })
+      } catch (error) {
+        set({ chatSending: false, chatPending: null, chatError: reasonOf(error) })
       }
     },
   }

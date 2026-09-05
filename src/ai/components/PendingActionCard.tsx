@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, X } from 'lucide-react'
+import { Check, ShieldCheck, X } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { PendingActionOut } from '../types'
@@ -7,7 +7,7 @@ import { PendingActionOut } from '../types'
 function formatInput(input: Record<string, unknown>): { key: string; value: string }[] {
   return Object.entries(input).map(([key, value]) => ({
     key,
-    value: typeof value === 'string' ? value : JSON.stringify(value),
+    value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
   }))
 }
 
@@ -23,28 +23,39 @@ export function PendingActionCard({
 
   async function decide(decision: 'approve' | 'reject') {
     setDeciding(decision)
-    await onResolve(action.id, decision)
-    setDeciding(null)
+    try {
+      await onResolve(action.id, decision)
+    } finally {
+      setDeciding(null)
+    }
   }
 
   return (
-    <div className="w-full max-w-[85%] rounded-md border border-border bg-surface-muted p-3 sm:max-w-md">
+    <div className="w-full rounded-md border border-border bg-surface-muted p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium text-ink">{action.tool_name}</span>
+        <span className="text-[13px] font-medium text-ink">{action.summary ?? 'Предложенное изменение'}</span>
         {action.status === 'pending' ? (
           <Chip tone="warning">Ожидает</Chip>
+        ) : action.execution_status === 'succeeded' ? (
+          <Chip tone="success">Выполнено</Chip>
+        ) : action.execution_status === 'failed' ? (
+          <Chip tone="danger">Не выполнено</Chip>
         ) : action.status === 'approved' ? (
-          <Chip tone="success">Одобрено</Chip>
+          <Chip tone="warning">Результат не подтверждён</Chip>
         ) : (
           <Chip tone="danger">Отклонено</Chip>
         )}
       </div>
+      {action.status === 'pending' && <p className="mb-3 flex items-start gap-2 text-[12px] text-muted">
+        <ShieldCheck size={15} className="mt-0.5 shrink-0" />
+        Изменение будет выполнено после подтверждения. Права проверяются повторно при выполнении.
+      </p>}
       {fields.length > 0 && (
-        <dl className="mb-2 flex flex-col gap-1">
+        <dl className="mb-3 flex max-h-72 flex-col gap-2 overflow-y-auto">
           {fields.map(({ key, value }) => (
-            <div key={key} className="flex min-w-0 gap-2 text-[12px]">
+            <div key={key} className="min-w-0 text-[12px]">
               <dt className="shrink-0 text-muted">{key}:</dt>
-              <dd className="min-w-0 truncate text-ink">{value}</dd>
+              <dd className="min-w-0 whitespace-pre-wrap break-words text-ink">{value}</dd>
             </div>
           ))}
         </dl>

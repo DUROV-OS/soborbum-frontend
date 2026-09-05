@@ -7,6 +7,8 @@ import { LoadingState } from '@/shared/ui/LoadingState'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { Factory } from 'lucide-react'
+import { Button } from '@/shared/ui/Button'
+import { CYCLE_STAGES } from '@/cycles/types'
 import { useProductionStore } from '../store'
 
 const ONBOARDING_PAGES: OnboardingPage[] = [
@@ -31,21 +33,16 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
 ]
 
 export function ProductionOverviewPage() {
-  const cycles = useProductionStore((s) => s.cycles)
+  const productions = useProductionStore((s) => s.productions)
   const loading = useProductionStore((s) => s.loading)
-  const loadCycles = useProductionStore((s) => s.loadCycles)
+  const loadProductions = useProductionStore((s) => s.loadProductions)
+  const error = useProductionStore((s) => s.error)
   const navigate = useNavigate()
   const onboarding = useSectionOnboarding('production')
 
   useEffect(() => {
-    loadCycles()
-  }, [loadCycles])
-
-  // Один цикл может держать несколько домов (множественный заказ) — карточка
-  // на каждый дом.
-  const houses = cycles.flatMap((cycle) =>
-    (cycle.productions ?? []).map((production) => ({ cycle, production })),
-  )
+    loadProductions()
+  }, [loadProductions])
 
   return (
     <div>
@@ -59,9 +56,12 @@ export function ProductionOverviewPage() {
         <HelpButton onClick={onboarding.show} />
       </div>
 
-      {loading && cycles.length === 0 ? (
+      {error ? (
+        <EmptyState title="Не удалось загрузить производства" description={error}
+          action={<Button onClick={() => loadProductions()}>Повторить</Button>} />
+      ) : loading && productions.length === 0 ? (
         <LoadingState label="Загружаем производства…" />
-      ) : houses.length === 0 ? (
+      ) : productions.length === 0 ? (
         <EmptyState
           icon={<Factory size={28} />}
           title="Производств пока нет"
@@ -69,25 +69,23 @@ export function ProductionOverviewPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {houses.map(({ cycle, production }) => {
-            const multi = cycle.productions.length > 1
-            return (
-              <button
-                key={production.id}
-                type="button"
-                onClick={() => navigate(`/production/${production.id}`)}
-                className="rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-brand/40"
-              >
-                <div className="text-[13px] font-medium text-ink">
-                  {cycle.client?.full_name ?? `Цикл №${cycle.id}`}
-                </div>
-                {multi && <div className="mt-0.5 text-[12px] text-brand-dark">{production.name}</div>}
-                <div className="mt-1 text-[12px] text-muted">
-                  {production.modules.length} модул{production.modules.length === 1 ? 'ь' : 'я'}
-                </div>
-              </button>
-            )
-          })}
+          {productions.map((production) => (
+            <button
+              key={production.id}
+              type="button"
+              onClick={() => navigate(`/production/${production.id}`)}
+              className="rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-brand/40"
+            >
+              <div className="text-[14px] font-medium text-ink">Заказ №{production.cycle_id}</div>
+              {production.name !== 'Дом' && (
+                <div className="mt-0.5 text-[12px] text-brand-dark">{production.name}</div>
+              )}
+              <div className="mt-1 text-[12px] text-muted">
+                Модулей: {production.module_count} · {CYCLE_STAGES.find((s) => s.key === production.cycle_status)?.label}
+              </div>
+            </button>
+          ))}
+
         </div>
       )}
 

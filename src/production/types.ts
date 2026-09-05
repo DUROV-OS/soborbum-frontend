@@ -43,12 +43,17 @@ export interface Production {
   modules: Module[]
 }
 
-/** Минимальная форма /api/cycles/ — способ узнать, какие производства
- * существуют. `productions` — список домов цикла (множественный заказ);
- * `production` бэкенд оставляет для совместимости и указывает на первый дом. */
-export interface CycleWithProduction {
+/** Строка списка /api/production/ — по одной на каждый дом (множественный
+ * заказ даёт несколько строк на цикл). Данные клиента не отдаются: списку
+ * достаточно права production. */
+export interface ProductionListItem {
   id: number
-  client: { full_name: string } | null
-  productions: Production[]
-  production: Production | null
+  cycle_id: number
+  /** Порядковый номер дома в цикле (1 для одиночного заказа). */
+  house_index: number
+  /** Название проекта дома, напр. «Дом 1». */
+  name: string
+  cycle_status: 'client' | 'production' | 'installation' | 'completed'
+  created_at: string
+  module_count: number
 }

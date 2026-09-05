@@ -16,6 +16,7 @@ export function ChatPanel({
   onDeleted,
   onChatCreated,
   onBack,
+  initialMessage,
 }: {
   contextLabel?: string
   contextPrefix?: string
@@ -24,6 +25,7 @@ export function ChatPanel({
   onChatCreated?: (chatId: number) => void
   /** Кнопка "назад к списку", видна только на мобильной ширине — список и переписка не помещаются рядом. */
   onBack?: () => void
+  initialMessage?: string
 }) {
   const chat = useAiStore((s) => s.activeChat)
   const draftDomain = useAiStore((s) => s.draftDomain)
@@ -71,7 +73,7 @@ export function ChatPanel({
 
   async function handleResolve(id: number, decision: 'approve' | 'reject') {
     const response = await resolveAction(id, decision)
-    setModalActions((prev) => prev.filter((a) => a.id !== id))
+    if (response) setModalActions((prev) => prev.filter((a) => a.id !== id))
     if (response && response.status === 'pending_approval' && response.pending_actions.length > 0) {
       setModalActions(response.pending_actions)
     }
@@ -97,7 +99,7 @@ export function ChatPanel({
               <ArrowLeft size={16} />
             </button>
           )}
-          <Chip tone="brand">{DOMAIN_LABEL[domain]}</Chip>
+          <Chip tone="brand">Марина · {DOMAIN_LABEL[domain]}</Chip>
           {contextLabel && <Chip tone="neutral">{contextLabel}</Chip>}
           {chat && <ChatTitleEditor title={chat.title} onRename={(title) => renameChat(chat.id, title)} />}
         </div>
@@ -157,6 +159,7 @@ export function ChatPanel({
       {error && <p className="px-4 pb-2 text-[12px] text-danger">{error}</p>}
 
       <ChatComposer
+        initialMessage={initialMessage}
         sending={sending}
         attachments={attachments}
         uploadingAttachment={uploadingAttachment}

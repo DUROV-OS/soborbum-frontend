@@ -1,0 +1,136 @@
+// Browser regression checks use synthetic responses, never a production account or AI provider.
+import assert from 'node:assert/strict'
+import { mkdir, readFile, readdir } from 'node:fs/promises'
+import path from 'node:path'
+import { chromium } from 'playwright'
+
+const baseURL = process.env.SMOKE_BASE_URL ?? 'http://127.0.0.1:5173'
+const artifactDir = process.env.SMOKE_ARTIFACT_DIR ?? 'test-results'
+await mkdir(artifactDir, { recursive: true })
+const browser = await chromium.launch({ headless: true })
+const errors = []
+const checks = []
+const modules = ['clients', 'production', 'installation', 'cycle', 'warehouse', 'marketing', 'tasks', 'ai', 'board']
+const worker = { id: 2, email: 'worker@example.test', full_name: 'Сотрудник производства', role: 'worker', module_access: ['production'], is_active: true, created_at: '2026-09-05T08:00:00Z' }
+const admin = { ...worker, id: 1, email: 'owner@example.test', full_name: 'Руководитель', role: 'admin', module_access: modules }
+const widget = (section, title, value, tone = 'neutral') => ({ section, title, value, tone })
+const overview = {
+  generated_at: '2026-09-05T09:30:00Z', source: 'database', ai_configured: false,
+  summary: 'Направлений, требующих внимания: 4. Начните с очереди ниже.',
+  actions: [
+    { id: 'tasks', section: 'tasks', title: 'Проверить просроченные задачи', description: 'Уточните причину задержки и следующий срок.', count: 3, href: '/tasks', tone: 'danger' },
+    { id: 'production', section: 'production', title: 'Проверить заявки на материалы', description: 'Заявки ожидают решения склада.', count: 2, href: '/production', tone: 'warning' },
+    { id: 'warehouse', section: 'warehouse', title: 'Проверить пополнение склада', description: 'Остатки и текущая потребность требуют внимания.', count: 3, href: '/warehouse', tone: 'warning' },
+    { id: 'clients', section: 'clients', title: 'Проверить поступление оплаты', description: 'Клиенты на этапе оплаты без подтверждённого поступления.', count: 1, href: '/clients', tone: 'warning' },
+  ],
+  widgets: [widget('production', 'Производственных заказов', '4'), widget('production', 'Модули ждут материалы', '2', 'warning'), widget('tasks', 'Открытых задач', '8'), widget('tasks', 'Просроченных задач', '3', 'warning'), widget('warehouse', 'Позиций на складе', '24'), widget('warehouse', 'Позиций требуют пополнения', '3', 'warning')],
+}
+
+async function openAs(user, route = '/today', viewport = { width: 1440, height: 1100 }) {
+  const context = await browser.newContext({ viewport })
+  await context.addInitScript(() => {
+    if (!sessionStorage.getItem('fixture-seeded')) {
+      localStorage.setItem('soborbum.auth.token', 'browser-test-token')
+      sessionStorage.setItem('fixture-seeded', '1')
+    }
+    for (const id of ['today', 'admin', 'production', 'ai']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
+  })
+  const page = await context.newPage()
+  page.on('pageerror', error => errors.push(error.message))
+  const requests = []
+  await page.route('https://fonts.googleapis.com/**', route => route.abort())
+  await page.route('https://fonts.gstatic.com/**', route => route.abort())
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url())
+    requests.push(`${route.request().method()} ${url.pathname}`)
+    let body
+    let status = 200
+    if (url.pathname === '/api/auth/me') body = user
+    else if (url.pathname === '/api/auth/users' && route.request().method() === 'GET') body = [admin, worker]
+    else if (url.pathname === '/api/auth/users/2/access') { status = 403; body = { detail: 'Изменение доступа отклонено сервером' } }
+    else if (url.pathname === '/api/dashboard/today') body = user.role === 'admin' ? overview : { ...overview, actions: [], widgets: overview.widgets.filter(w => w.section === 'production'), summary: 'По доступным данным отклонений для очереди внимания нет.' }
+    else if (url.pathname === '/api/production/') body = [{ id: 7, cycle_id: 11, cycle_status: 'production', created_at: '2026-09-05T08:00:00Z', module_count: 4 }]
+    else if (url.pathname === '/api/ai/chats') body = []
+    else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
+    await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  })
+  await page.goto(baseURL + route)
+  return { page, context, requests }
+}
+
+try {
+  const employee = await openAs(worker)
+  await employee.page.getByRole('heading', { name: 'Главное на сегодня.' }).waitFor()
+  assert.equal(await employee.page.getByRole('heading', { name: 'Марина', exact: true }).count(), 0)
+  await employee.page.getByRole('navigation').getByRole('link', { name: 'Производство', exact: true }).click()
+  await employee.page.getByRole('button', { name: 'Заказ №11' }).waitFor()
+  assert(employee.requests.includes('GET /api/production/'))
+  assert(!employee.requests.some(request => request.includes('/api/cycles')))
+  checks.push('Production-only employee loads productions without cycle access or AI')
+  await employee.page.goto(baseURL + '/admin')
+  await employee.page.getByText('Доступ ограничен', { exact: true }).waitFor()
+  assert(!employee.requests.includes('GET /api/auth/users'))
+  checks.push('Worker cannot mount the administrator screen')
+  await employee.context.close()
+
+  const owner = await openAs(admin)
+  await owner.page.getByText('Проверить просроченные задачи', { exact: true }).waitFor()
+  await owner.page.screenshot({ path: path.join(artifactDir, 'durov-os-today-desktop.png'), fullPage: true })
+  assert(await owner.page.getByText('Подключение Марины ещё не настроено. Сводка компании доступна.').isVisible())
+  await owner.page.getByLabel('Вопрос Марине', { exact: true }).fill('Какие материалы задерживают производство?')
+  await owner.page.getByRole('button', { name: 'Открыть вопрос Марине' }).click()
+  const composer = owner.page.getByLabel('Сообщение Марине', { exact: true })
+  await composer.waitFor()
+  assert.equal(await composer.inputValue(), 'Какие материалы задерживают производство?')
+  assert(!owner.requests.some(request => request.includes('/ask')))
+  assert.equal(await owner.page.getByRole('button', { name: 'Автоматически', exact: true }).count(), 0)
+  checks.push('Today works without AI and opens an unsent draft with A0/A2 controls')
+
+  await owner.page.goto(baseURL + '/admin')
+  await owner.page.getByRole('button', { name: 'Новый сотрудник' }).click()
+  let dialog = owner.page.getByRole('dialog', { name: 'Новый сотрудник' })
+  await dialog.getByLabel('ФИО').fill('Черновик сотрудника')
+  await dialog.getByLabel('Почта').fill('draft@example.test')
+  await dialog.getByLabel('Пароль').fill('private-test-password')
+  assert.equal(await dialog.getByLabel('Пароль').getAttribute('autocomplete'), 'new-password')
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  await owner.page.getByRole('button', { name: 'Новый сотрудник' }).click()
+  dialog = owner.page.getByRole('dialog', { name: 'Новый сотрудник' })
+  assert.equal(await dialog.getByLabel('ФИО').inputValue(), '')
+  assert.equal(await dialog.getByLabel('Почта').inputValue(), '')
+  assert.equal(await dialog.getByLabel('Пароль').inputValue(), '')
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  checks.push('Cancelled employee form clears identity and password and discourages login autofill')
+  await owner.page.getByRole('checkbox', { name: 'Сотрудник производства: Клиенты', exact: true }).click()
+  await owner.page.getByText('Изменение доступа отклонено сервером', { exact: true }).waitFor()
+  assert.equal(await owner.page.getByRole('checkbox', { name: 'Сотрудник производства: Клиенты', exact: true }).isChecked(), false)
+  checks.push('Failed permission update remains unchecked and explains the server error')
+  await owner.page.getByRole('button', { name: 'Меню учётной записи' }).click()
+  await owner.page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await owner.page.getByRole('button', { name: 'Войти', exact: true }).waitFor()
+  assert.equal(await owner.page.evaluate(() => localStorage.getItem('soborbum.auth.token')), null)
+  assert.equal(await owner.page.getByText('Быстрый вход (демо)', { exact: true }).count(), 0)
+  checks.push('Logout clears token and screen state; no demo account switch is exposed')
+  await owner.context.close()
+
+  const mobile = await openAs(admin, '/today', { width: 390, height: 844 })
+  await mobile.page.getByText('Проверить просроченные задачи', { exact: true }).waitFor()
+  assert(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+  await mobile.page.screenshot({ path: path.join(artifactDir, 'durov-os-today-mobile.png'), fullPage: true })
+  await mobile.page.getByRole('button', { name: 'Открыть меню' }).click()
+  await mobile.page.getByRole('button', { name: 'Закрыть меню' }).click()
+  await mobile.page.waitForFunction(() => document.querySelector('aside').getBoundingClientRect().right <= 0)
+  assert((await mobile.page.getByRole('complementary', { name: 'Главное меню' }).boundingBox()).x < 0)
+  checks.push('390px layout has no horizontal overflow and mobile navigation opens/closes')
+  await mobile.context.close()
+
+  const assets = await readdir('dist/assets')
+  const source = (await Promise.all(assets.filter(file => file.endsWith('.js')).map(file => readFile(path.join('dist/assets', file), 'utf8')))).join('\n')
+  assert(!source.includes('admin123') && !source.includes('soborbum2026') && !source.includes('admin@soborbum.local'))
+  checks.push('Production JavaScript contains no former demo credentials')
+  assert.deepEqual(errors, [])
+  console.log(checks.map((text, index) => `${index + 1}. PASS ${text}`).join('\n'))
+  console.log(`PASS ${checks.length} browser checks; no uncaught page errors. Fixtures are synthetic.`)
+} finally {
+  await browser.close()
+}

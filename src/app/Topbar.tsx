@@ -18,7 +18,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <Menu size={20} />
         </button>
-        <h1 className="truncate text-[15px] font-medium text-ink">{section?.label ?? 'Soborbum'}</h1>
+        <span className="truncate text-[13px] font-medium text-muted">{section?.label ?? 'Durov OS'}</span>
       </div>
       <RoleSwitcher />
     </header>

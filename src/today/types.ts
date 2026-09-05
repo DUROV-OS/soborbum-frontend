@@ -12,4 +12,7 @@ export interface TodayDashboard {
   generated_at: string
   summary: string
   widgets: DashboardWidget[]
+  actions?: { id: string; section: string; title: string; description: string; href: string; count: number; tone: WidgetTone }[]
+  source?: 'database'
+  ai_configured?: boolean
 }

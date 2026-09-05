@@ -1,11 +1,11 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { CycleWithProduction, MaterialRequest, Module, ModuleMaterial, Production } from './types'
+import { ProductionListItem, MaterialRequest, Module, ModuleMaterial, Production } from './types'
 
 const SECTION = 'production'
 
-/** GET /api/cycles/ (используется только для перечисления производств) */
-export function listCyclesWithProduction(): Promise<CycleWithProduction[]> {
-  return apiRequest<CycleWithProduction[]>({ section: 'cycles', path: '/' })
+/** Собственный список: достаточно права production, данные клиентов не запрашиваются. */
+export function listProductions(): Promise<ProductionListItem[]> {
+  return apiRequest<ProductionListItem[]>({ section: SECTION, path: '/' })
 }
 
 /** GET /api/production/:id */

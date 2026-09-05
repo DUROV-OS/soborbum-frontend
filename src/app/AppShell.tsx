@@ -12,7 +12,7 @@ export function AppShell() {
   }, [location.pathname])
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-dvh w-full">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && (
         <div
@@ -23,7 +23,7 @@ export function AppShell() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-bg p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto bg-bg p-4 sm:p-7 xl:p-9">
           <Outlet />
         </main>
       </div>
