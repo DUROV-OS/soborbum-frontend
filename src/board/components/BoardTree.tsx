@@ -193,7 +193,7 @@ export function BoardTree() {
         ))}
       </svg>
 
-      <div className="relative flex min-w-max flex-col items-center gap-8 px-6 py-4">
+      <div className="relative flex min-w-max flex-col items-center gap-4 px-6 py-4">
         <div style={{ width: NODE_WIDTH }}>
           <BoardNodeCard
             ref={setNodeRef(tree.id)}
@@ -218,7 +218,7 @@ export function BoardTree() {
               </div>
               {direction.children.length > 0 && (
                 <div
-                  className="mt-6 flex flex-col gap-2"
+                  className="mt-3 flex flex-col gap-1.5"
                   style={{ width: NODE_WIDTH, marginRight: NODE_WIDTH / 2 + STUB_GAP }}
                 >
                   {direction.children.map((child) => (
