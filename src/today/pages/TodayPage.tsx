@@ -1,24 +1,59 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AlertCircle, CalendarDays, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { Markdown } from '@/shared/ui/Markdown'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { StatWidget } from '@/shared/ui/StatWidget'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useTodayStore } from '../store'
 
-const SECTION_LABELS: Record<string, string> = {
-  clients: 'Клиенты',
-  production: 'Производство',
-  installation: 'Монтаж',
-  cycle: 'Цикл клиента',
-  warehouse: 'Склад',
-  marketing: 'Маркетинг',
-  tasks: 'Задачи',
-  users: 'Сотрудники',
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Сводка на день',
+    body: (
+      <p>
+        «Сегодня» — стартовая страница системы. ИИ каждый раз собирает короткую сводку о состоянии всего
+        предприятия сразу: клиенты, производство, монтаж, склад, маркетинг и задачи.
+      </p>
+    ),
+  },
+  {
+    title: 'Показатели по разделам',
+    body: (
+      <p>
+        Ниже текстовой сводки — карточки с цифрами: например, сколько клиентов на каждой стадии, каких
+        материалов не хватает на складе, сколько задач просрочено. Карточки кликабельны — нажатие переносит в
+        соответствующий раздел. Показываются только те карточки, к разделам которых у вас есть доступ.
+      </p>
+    ),
+  },
+  {
+    title: 'Обновление данных',
+    body: (
+      <p>
+        Кнопка «Обновить» в правом верхнем углу пересобирает сводку и цифры прямо сейчас, не дожидаясь
+        автоматического обновления.
+      </p>
+    ),
+  },
+]
+
+const SECTION_PATHS: Record<string, string> = {
+  clients: '/clients',
+  production: '/production',
+  installation: '/montage',
+  cycle: '/cycles',
+  warehouse: '/warehouse',
+  marketing: '/marketing',
+  tasks: '/tasks',
+  users: '/admin',
 }
 
-function sectionLabel(section: string): string {
-  return SECTION_LABELS[section] ?? section
+function sectionPath(section: string): string | undefined {
+  return SECTION_PATHS[section]
 }
 
 export function TodayPage() {
@@ -26,6 +61,8 @@ export function TodayPage() {
   const loading = useTodayStore((s) => s.loading)
   const error = useTodayStore((s) => s.error)
   const load = useTodayStore((s) => s.load)
+  const onboarding = useSectionOnboarding('today')
+  const navigate = useNavigate()
 
   useEffect(() => {
     load()
@@ -33,10 +70,7 @@ export function TodayPage() {
 
   const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  const sections: string[] = []
-  for (const widget of data?.widgets ?? []) {
-    if (!sections.includes(widget.section)) sections.push(widget.section)
-  }
+  const widgets = data?.widgets ?? []
 
   return (
     <div>
@@ -45,10 +79,13 @@ export function TodayPage() {
           <h1 className="text-[20px] font-medium text-ink">Сегодня</h1>
           <p className="mt-1 text-[13px] text-muted capitalize">{today}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => load()} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Обновить
-        </Button>
+        <div className="flex items-center gap-2 self-start">
+          <Button variant="secondary" size="sm" onClick={() => load(true)} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Обновить
+          </Button>
+          <HelpButton onClick={onboarding.show} />
+        </div>
       </div>
 
       {loading && !data && (
@@ -76,7 +113,7 @@ export function TodayPage() {
             {data.summary ? <Markdown text={data.summary} /> : 'Сводка пуста.'}
           </div>
 
-          {sections.length === 0 && (
+          {widgets.length === 0 && (
             <EmptyState
               icon={<CalendarDays size={28} />}
               title="Пока нечего показать"
@@ -84,26 +121,32 @@ export function TodayPage() {
             />
           )}
 
-          {sections.map((section) => (
-            <div key={section}>
-              <h2 className="mb-2 text-[13px] font-medium text-muted">{sectionLabel(section)}</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data.widgets
-                  .filter((w) => w.section === section)
-                  .map((widget, index) => (
-                    <StatWidget
-                      key={`${section}-${index}`}
-                      label={widget.title}
-                      value={widget.value}
-                      hint={widget.hint ?? undefined}
-                      tone={widget.tone}
-                    />
-                  ))}
-              </div>
+          {widgets.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {widgets.map((widget, index) => {
+                const path = sectionPath(widget.section)
+                return (
+                  <StatWidget
+                    key={`${widget.section}-${index}`}
+                    label={widget.title}
+                    value={widget.value}
+                    hint={widget.hint ?? undefined}
+                    tone={widget.tone}
+                    onClick={path ? () => navigate(path) : undefined}
+                  />
+                )
+              })}
             </div>
-          ))}
+          )}
         </div>
       )}
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Сегодня»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

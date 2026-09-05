@@ -11,7 +11,7 @@ interface TodayState {
   data: TodayDashboard | null
   loading: boolean
   error: string | null
-  load: () => Promise<void>
+  load: (reload?: boolean) => Promise<void>
 }
 
 export const useTodayStore = create<TodayState>((set) => ({
@@ -19,10 +19,10 @@ export const useTodayStore = create<TodayState>((set) => ({
   loading: true,
   error: null,
 
-  load: async () => {
+  load: async (reload = false) => {
     set({ loading: true, error: null })
     try {
-      const data = await todayApi.getToday()
+      const data = await todayApi.getToday(reload)
       set({ data, loading: false })
     } catch (error) {
       set({ error: reasonOf(error), loading: false })

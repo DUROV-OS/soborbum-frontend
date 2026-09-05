@@ -2,6 +2,6 @@ import { apiRequest } from '@/shared/lib/httpClient'
 import { TodayDashboard } from './types'
 
 /** GET /api/dashboard/today */
-export function getToday(): Promise<TodayDashboard> {
-  return apiRequest<TodayDashboard>({ section: 'dashboard', path: '/today' })
+export function getToday(reload = false): Promise<TodayDashboard> {
+  return apiRequest<TodayDashboard>({ section: 'dashboard', path: '/today', query: { reload } })
 }
