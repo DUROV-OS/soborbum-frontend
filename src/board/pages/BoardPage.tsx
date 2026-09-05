@@ -1,17 +1,61 @@
 import { RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
+import { HelpButton } from '@/shared/ui/HelpButton'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { BoardTree } from '../components/BoardTree'
 import { MobileWarningModal } from '../components/MobileWarningModal'
 import { NodePopover } from '../components/NodePopover'
 import { ProposalPanel } from '../components/ProposalPanel'
 import { useBoardStore } from '../store'
 
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Дерево направлений',
+    body: (
+      <p>
+        Каждая нода дерева — направление или аспект бизнеса. Цвет рамки показывает статус: зелёный — «в порядке»,
+        жёлтый — «требует внимания», красный — «критично».
+      </p>
+    ),
+  },
+  {
+    title: 'Карточка ноды',
+    body: (
+      <p>
+        Кликните по ноде, чтобы открыть окно с её статусом и подробным описанием текущего положения дел,
+        составленным ИИ.
+      </p>
+    ),
+  },
+  {
+    title: 'Внести изменения',
+    body: (
+      <p>
+        В окне ноды есть кнопка «Внести изменения» — опишите словами, что хотите поменять, и совет директоров
+        (роли ИИ) обсудит предложение в несколько раундов, выскажется «за», «с оговорками» или «против» и вынесет
+        итоговое решение.
+      </p>
+    ),
+  },
+  {
+    title: 'Актуализация по данным',
+    body: (
+      <p>
+        Администраторам доступна кнопка «Актуализировать по данным» — она пересчитывает статусы и описания нод по
+        свежим данным из всех разделов системы.
+      </p>
+    ),
+  },
+]
+
 export function BoardPage() {
   const current = useAuthStore((s) => s.current)
   const actualizing = useBoardStore((s) => s.actualizing)
   const animating = useBoardStore((s) => s.animating)
   const runActualize = useBoardStore((s) => s.runActualize)
+  const onboarding = useSectionOnboarding('board')
 
   return (
     <div>
@@ -22,23 +66,32 @@ export function BoardPage() {
             Стратегические направления компании: текущее положение дел и обсуждение изменений с ИИ-советом.
           </p>
         </div>
-        {current?.role === 'admin' && (
-          <Button
-            variant="secondary"
-            className="self-start"
-            disabled={actualizing || animating}
-            onClick={() => runActualize()}
-          >
-            <RefreshCw size={16} className={actualizing ? 'animate-spin' : ''} />
-            Актуализировать по данным
-          </Button>
-        )}
+        <div className="flex items-center gap-2 self-start">
+          {current?.role === 'admin' && (
+            <Button
+              variant="secondary"
+              disabled={actualizing || animating}
+              onClick={() => runActualize()}
+            >
+              <RefreshCw size={16} className={actualizing ? 'animate-spin' : ''} />
+              Актуализировать по данным
+            </Button>
+          )}
+          <HelpButton onClick={onboarding.show} />
+        </div>
       </div>
 
       <BoardTree />
       <NodePopover />
       <ProposalPanel />
       <MobileWarningModal />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Совет директоров»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

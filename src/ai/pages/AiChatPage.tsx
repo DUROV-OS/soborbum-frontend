@@ -5,11 +5,45 @@ import { ru } from 'date-fns/locale'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
+import { HelpButton } from '@/shared/ui/HelpButton'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { ChatPanel } from '../components/ChatPanel'
 import { useAiStore } from '../store'
 import { ChatDomain, DOMAIN_LABEL, DOMAIN_TO_SECTION } from '../types'
 
 const ALL_DOMAINS: ChatDomain[] = ['general', 'clients', 'production', 'cycle', 'warehouse', 'marketing', 'tasks']
+
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Чаты по разделам',
+    body: (
+      <p>
+        Вкладки сверху списка чатов — это разделы: «Общий» и по одному на каждый раздел, к которому у вас есть
+        доступ. Выбор вкладки фильтрует список и определяет, в контексте какого раздела ИИ будет отвечать в
+        новом чате.
+      </p>
+    ),
+  },
+  {
+    title: 'Новый чат',
+    body: (
+      <p>
+        Кнопка «Новый чат» создаёт переписку в выбранном разделе. ИИ учитывает данные этого раздела при ответах —
+        например, в «Складе» он видит остатки материалов, а в «Клиентах» — карточки клиентов.
+      </p>
+    ),
+  },
+  {
+    title: 'Управление чатами',
+    body: (
+      <p>
+        Кликните по чату в списке, чтобы открыть переписку. При наведении на чат появляется значок корзины —
+        удаляет чат безвозвратно.
+      </p>
+    ),
+  },
+]
 
 export function AiChatPage() {
   const { chatId } = useParams()
@@ -29,6 +63,7 @@ export function AiChatPage() {
 
   const domains = ALL_DOMAINS.filter((d) => d === 'general' || hasAccess(DOMAIN_TO_SECTION[d]))
   const [domain, setDomain] = useState<ChatDomain>('general')
+  const onboarding = useSectionOnboarding('ai')
 
   useEffect(() => {
     loadChats(domain)
@@ -79,10 +114,13 @@ export function AiChatPage() {
               </button>
             ))}
           </div>
-          <Button size="sm" onClick={handleNewChat}>
-            <Plus size={14} />
-            Новый чат
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="flex-1" onClick={handleNewChat}>
+              <Plus size={14} />
+              Новый чат
+            </Button>
+            <HelpButton onClick={onboarding.show} />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
@@ -134,6 +172,13 @@ export function AiChatPage() {
           }}
         />
       </div>
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «ИИ-ассистент»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

@@ -3,10 +3,43 @@ import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useClientsStore } from '../store'
 import { CLIENT_STAGES } from '../types'
 import { CreateClientModal } from '../components/CreateClientModal'
+
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Доска клиентов',
+    body: (
+      <p>
+        Каждая колонка — стадия пути клиента, от первого обращения до старта производства. Карточка клиента
+        находится в той колонке, которая соответствует его текущей стадии.
+      </p>
+    ),
+  },
+  {
+    title: 'Новый клиент',
+    body: (
+      <p>
+        Кнопка «Новый клиент» в правом верхнем углу открывает форму создания карточки — заполните имя, телефон и
+        другие данные.
+      </p>
+    ),
+  },
+  {
+    title: 'Карточка клиента',
+    body: (
+      <p>
+        Кликните по карточке, чтобы открыть детали клиента: там же можно перевести его на следующую стадию,
+        добавить заметки и файлы.
+      </p>
+    ),
+  },
+]
 
 export function ClientsBoardPage() {
   const clients = useClientsStore((s) => s.clients)
@@ -14,6 +47,7 @@ export function ClientsBoardPage() {
   const load = useClientsStore((s) => s.load)
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
+  const onboarding = useSectionOnboarding('clients')
 
   useEffect(() => {
     load()
@@ -28,10 +62,13 @@ export function ClientsBoardPage() {
           <h1 className="text-[20px] font-medium text-ink">Клиенты</h1>
           <p className="mt-1 text-[13px] text-muted">Путь клиента до начала производства</p>
         </div>
-        <Button className="self-start" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Новый клиент
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Новый клиент
+          </Button>
+          <HelpButton onClick={onboarding.show} />
+        </div>
       </div>
 
       <KanbanBoard
@@ -53,6 +90,13 @@ export function ClientsBoardPage() {
       />
 
       <CreateClientModal open={creating} onClose={() => setCreating(false)} />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Клиенты»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

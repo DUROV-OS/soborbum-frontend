@@ -3,8 +3,11 @@ import { Plus } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { Tabs } from '@/shared/ui/Tabs'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useMarketingStore } from '../store'
 import { CONTENT_STAGES, ContentItem } from '../types'
 import { CalendarView } from '../components/CalendarView'
@@ -13,12 +16,43 @@ import { ContentDetailDrawer } from '../components/ContentDetailDrawer'
 
 type View = 'calendar' | 'stages'
 
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Календарь контента',
+    body: (
+      <p>
+        По умолчанию раздел показывает календарь выпуска контента с датами публикаций. Переключитесь на вкладку
+        «По стадиям», чтобы увидеть контент в виде доски по этапам подготовки.
+      </p>
+    ),
+  },
+  {
+    title: 'Новый контент',
+    body: (
+      <p>
+        Кнопка «Новый контент» в правом верхнем углу открывает форму создания карточки: название, дата выхода и
+        описание.
+      </p>
+    ),
+  },
+  {
+    title: 'Детали и вопрос ИИ',
+    body: (
+      <p>
+        Клик по карточке в календаре или на доске открывает подробности контента. Кнопка «Спросить ИИ» откроет
+        чат с контекстом раздела маркетинга.
+      </p>
+    ),
+  },
+]
+
 export function MarketingPage() {
   const items = useMarketingStore((s) => s.items)
   const load = useMarketingStore((s) => s.load)
   const [view, setView] = useState<View>('calendar')
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<ContentItem | null>(null)
+  const onboarding = useSectionOnboarding('marketing')
 
   useEffect(() => {
     load()
@@ -39,6 +73,7 @@ export function MarketingPage() {
             <Plus size={16} />
             Новый контент
           </Button>
+          <HelpButton onClick={onboarding.show} />
         </div>
       </div>
 
@@ -77,6 +112,13 @@ export function MarketingPage() {
 
       <CreateContentModal open={creating} onClose={() => setCreating(false)} />
       <ContentDetailDrawer item={selected} onClose={() => setSelected(null)} />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Маркетинг»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

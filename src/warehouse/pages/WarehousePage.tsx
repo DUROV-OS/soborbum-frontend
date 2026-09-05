@@ -6,7 +6,10 @@ import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { DataTable } from '@/shared/ui/DataTable'
 import { Input, Select } from '@/shared/ui/Field'
+import { HelpButton } from '@/shared/ui/HelpButton'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { Tabs } from '@/shared/ui/Tabs'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useWarehouseStore } from '../store'
 import { Material } from '../types'
 import { CreateMaterialModal } from '../components/CreateMaterialModal'
@@ -26,6 +29,46 @@ const SORT_LABEL: Record<SortKey, string> = {
   threshold_desc: 'По порогу (убыв.)',
 }
 
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Три вкладки склада',
+    body: (
+      <p>
+        «Материалы» — остатки на складе, «Заявки на проверку» — запросы от производства, ожидающие вашего
+        решения, «История движения» — журнал прихода и расхода. Переключайтесь между ними вкладками под
+        заголовком.
+      </p>
+    ),
+  },
+  {
+    title: 'Добавить материал или поставку',
+    body: (
+      <p>
+        Кнопка «Материал» создаёт новую позицию на складе. Кнопка «Оформить поставку» фиксирует приход
+        материала — остатки на складе обновятся автоматически.
+      </p>
+    ),
+  },
+  {
+    title: 'Поиск и фильтры',
+    body: (
+      <p>
+        В строке поиска можно найти материал по названию, типу, размеру или поставщику. Рядом — сортировка и
+        переключатель «Нужна поставка», который оставляет только позиции ниже порога.
+      </p>
+    ),
+  },
+  {
+    title: 'Детали и вопрос ИИ',
+    body: (
+      <p>
+        Клик по строке материала открывает карточку с подробностями. Кнопка «Спросить ИИ» открывает чат, где
+        можно задать вопрос по складу прямо в контексте раздела.
+      </p>
+    ),
+  },
+]
+
 export function WarehousePage() {
   const materials = useWarehouseStore((s) => s.materials)
   const loading = useWarehouseStore((s) => s.loading)
@@ -37,6 +80,7 @@ export function WarehousePage() {
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [onlyNeedsSupply, setOnlyNeedsSupply] = useState(false)
+  const onboarding = useSectionOnboarding('warehouse')
 
   useEffect(() => {
     load()
@@ -79,6 +123,7 @@ export function WarehousePage() {
             <Truck size={16} />
             Оформить поставку
           </Button>
+          <HelpButton onClick={onboarding.show} />
         </div>
       </div>
 
@@ -144,6 +189,13 @@ export function WarehousePage() {
       <CreateMaterialModal open={creatingMaterial} onClose={() => setCreatingMaterial(false)} />
       <SupplyIntakeModal open={supplying} onClose={() => setSupplying(false)} />
       <MaterialDetailDrawer material={selected} onClose={() => setSelected(null)} />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Склад»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

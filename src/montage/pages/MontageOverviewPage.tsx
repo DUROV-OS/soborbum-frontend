@@ -5,9 +5,41 @@ import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { LoadingState } from '@/shared/ui/LoadingState'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useMontageStore } from '../store'
 import { INSTALLATION_STAGES } from '../types'
+
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Производства, готовые к монтажу',
+    body: (
+      <p>
+        Список содержит все производства, по которым уже можно начинать монтаж на объекте клиента.
+      </p>
+    ),
+  },
+  {
+    title: 'Начать монтаж',
+    body: (
+      <p>
+        Пока монтаж не запущен, у строки есть кнопка «Начать монтаж» — нажмите её, чтобы создать монтажную
+        карточку для этого клиента.
+      </p>
+    ),
+  },
+  {
+    title: 'Ход монтажа',
+    body: (
+      <p>
+        После старта появляется бейдж со стадией монтажа, а кнопка «Открыть» ведёт в детальную карточку — там
+        отмечаются доставка, установка и проработка на объекте.
+      </p>
+    ),
+  },
+]
 
 export function MontageOverviewPage() {
   const cycles = useMontageStore((s) => s.cycles)
@@ -17,6 +49,7 @@ export function MontageOverviewPage() {
   const navigate = useNavigate()
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const onboarding = useSectionOnboarding('installation')
 
   useEffect(() => {
     loadCycles()
@@ -35,9 +68,12 @@ export function MontageOverviewPage() {
     <div>
       <SectionAnalyticsCard section="installation" />
 
-      <div className="mb-5">
-        <h1 className="text-[20px] font-medium text-ink">Монтаж</h1>
-        <p className="mt-1 text-[13px] text-muted">Доставка, установка и проработка на объекте клиента</p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-medium text-ink">Монтаж</h1>
+          <p className="mt-1 text-[13px] text-muted">Доставка, установка и проработка на объекте клиента</p>
+        </div>
+        <HelpButton onClick={onboarding.show} />
       </div>
 
       {error && <p className="mb-4 text-[13px] text-danger">{error}</p>}
@@ -69,6 +105,13 @@ export function MontageOverviewPage() {
           ))}
         </div>
       )}
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Монтаж»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

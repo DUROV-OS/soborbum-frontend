@@ -4,8 +4,11 @@ import { AskAiButton } from '@/ai/components/AskAiButton'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Input, Select } from '@/shared/ui/Field'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useTasksStore } from '../store'
 import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
@@ -64,6 +67,45 @@ function matchesDate(task: Task, range: [Date, Date] | null): boolean {
   return deadline >= range[0] && deadline < range[1]
 }
 
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Общий борд задач',
+    body: (
+      <p>
+        Здесь собраны задачи из всех разделов — производства, клиентов, маркетинга, склада — и задачи, созданные
+        вручную. Доска разбита по колонкам-статусам, как в остальных разделах.
+      </p>
+    ),
+  },
+  {
+    title: 'Мои задачи',
+    body: (
+      <p>
+        Блок «Мои задачи» над доской показывает то, что назначено именно вам, — чтобы не искать среди общего
+        потока.
+      </p>
+    ),
+  },
+  {
+    title: 'Поиск и фильтры',
+    body: (
+      <p>
+        Строка поиска ищет по названию и описанию. Рядом — фильтр по разделу-источнику задачи и по сроку
+        (день, неделя, месяц, год и другие периоды). По умолчанию показывается этот месяц.
+      </p>
+    ),
+  },
+  {
+    title: 'Новая задача и вопрос ИИ',
+    body: (
+      <p>
+        Кнопка «Новая задача» создаёт ручную задачу. Кнопка «Спросить ИИ» открывает чат с контекстом раздела
+        задач. Клик по карточке открывает детали и позволяет сменить статус.
+      </p>
+    ),
+  },
+]
+
 export function TasksPage() {
   const tasks = useTasksStore((s) => s.tasks)
   const loading = useTasksStore((s) => s.loading)
@@ -73,6 +115,7 @@ export function TasksPage() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [query, setQuery] = useState('')
+  const onboarding = useSectionOnboarding('tasks')
 
   useEffect(() => {
     load()
@@ -100,6 +143,7 @@ export function TasksPage() {
             <Plus size={16} />
             Новая задача
           </Button>
+          <HelpButton onClick={onboarding.show} />
         </div>
       </div>
 
@@ -150,6 +194,13 @@ export function TasksPage() {
 
       <CreateTaskModal open={creating} onClose={() => setCreating(false)} />
       <TaskDetailDrawer task={selected} onClose={() => setSelected(null)} />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Задачи»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }

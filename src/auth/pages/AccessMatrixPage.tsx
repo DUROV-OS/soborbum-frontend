@@ -3,8 +3,41 @@ import { Plus } from 'lucide-react'
 import { ASSIGNABLE_SECTIONS, SectionId } from '@/shared/sections'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
+import { HelpButton } from '@/shared/ui/HelpButton'
 import { Modal } from '@/shared/ui/Modal'
+import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { useAuthStore } from '../store'
+
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    title: 'Матрица доступа',
+    body: (
+      <p>
+        Строки таблицы — сотрудники, столбцы — разделы системы. Галочка означает, что сотрудник видит раздел и
+        может в нём работать. Администраторы видят все разделы всегда, независимо от галочек в этой таблице.
+      </p>
+    ),
+  },
+  {
+    title: 'Управление доступом',
+    body: (
+      <p>
+        Кликните по галочке в ячейке, чтобы включить или выключить доступ сотрудника к разделу — изменение
+        применяется сразу.
+      </p>
+    ),
+  },
+  {
+    title: 'Новый сотрудник',
+    body: (
+      <p>
+        Кнопка «Новый сотрудник» в правом верхнем углу открывает форму: ФИО, почта, пароль и сразу — список
+        разделов, к которым нужно дать доступ.
+      </p>
+    ),
+  },
+]
 
 export function AccessMatrixPage() {
   const accounts = useAuthStore((s) => s.accounts)
@@ -13,6 +46,7 @@ export function AccessMatrixPage() {
   const addAccount = useAuthStore((s) => s.addAccount)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const onboarding = useSectionOnboarding('admin')
 
   useEffect(() => {
     loadAccounts().catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить сотрудников'))
@@ -38,10 +72,13 @@ export function AccessMatrixPage() {
             Доступ к разделу — либо есть, либо нет. Администраторы видят всё всегда.
           </p>
         </div>
-        <Button className="self-start" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Новый сотрудник
-        </Button>
+        <div className="flex items-center gap-2 self-start">
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Новый сотрудник
+          </Button>
+          <HelpButton onClick={onboarding.show} />
+        </div>
       </div>
 
       {error && <p className="mb-4 text-[13px] text-danger">{error}</p>}
@@ -85,6 +122,13 @@ export function AccessMatrixPage() {
       </div>
 
       <CreateAccountModal open={creating} onClose={() => setCreating(false)} onCreate={addAccount} />
+
+      <OnboardingDialog
+        open={onboarding.open}
+        onClose={onboarding.close}
+        title="Раздел «Доступ»"
+        pages={ONBOARDING_PAGES}
+      />
     </div>
   )
 }
