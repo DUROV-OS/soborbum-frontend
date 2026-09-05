@@ -1,5 +1,5 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { Client, ClientCreateInput, ClientNote } from './types'
+import { Client, ClientCreateInput, ClientNote, OrderType } from './types'
 
 const SECTION = 'clients'
 
@@ -19,6 +19,7 @@ export function createClient(input: ClientCreateInput): Promise<Client> {
 }
 
 export interface ProjectUpdateInput {
+  order_type?: OrderType
   wishes_description?: string
   estimated_price?: number
   house_area?: number
@@ -33,6 +34,7 @@ export function updateProject(id: number, patch: ProjectUpdateInput): Promise<Cl
 export interface DocumentsUpdateInput {
   final_price?: number
   installation_address?: string
+  houses_count?: number
 }
 
 /** PATCH /api/clients/:id/documents */

@@ -15,6 +15,9 @@ export interface Cycle {
   id: number
   status: CycleStatus
   client: Client | null
+  /** Один проект производства на каждый дом (множественный заказ);
+   * `production` — первый дом, оставлен для совместимости. */
+  productions: Production[]
   production: Production | null
   installation: Installation | null
 }

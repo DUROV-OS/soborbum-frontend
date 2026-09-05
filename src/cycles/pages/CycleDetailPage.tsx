@@ -54,10 +54,20 @@ export function CycleDetailPage() {
         </SectionCard>
 
         <SectionCard title="Производство">
-          {cycle.production ? (
+          {cycle.productions && cycle.productions.length > 0 ? (
             <>
-              <p className="text-[13px] text-ink">{cycle.production.modules.length} модул(ей)</p>
-              <LinkRow to={`/production/${cycle.production.id}`} label="Открыть производство" />
+              {cycle.productions.length > 1 && (
+                <p className="text-[13px] text-ink">{cycle.productions.length} дома в производстве</p>
+              )}
+              {cycle.productions.map((production) => (
+                <div key={production.id} className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] text-muted">
+                    {cycle.productions.length > 1 ? production.name : 'Проект'} ·{' '}
+                    {production.modules.length} модул(ей)
+                  </span>
+                  <LinkRow to={`/production/${production.id}`} label="Открыть" />
+                </div>
+              ))}
             </>
           ) : (
             <Empty text="Начнётся после стадии «постоплата»" />

@@ -35,15 +35,20 @@ export interface Module {
 export interface Production {
   id: number
   cycle_id: number
+  /** Порядковый номер дома в цикле (1 для одиночного заказа). */
+  house_index: number
+  /** Название проекта дома, напр. «Дом 1». */
+  name: string
   created_at: string
   modules: Module[]
 }
 
-/** Минимальная форма /api/cycles/ — единственный способ узнать, какие
- * производства вообще существуют (в production/ нет своего списочного
- * эндпоинта). */
+/** Минимальная форма /api/cycles/ — способ узнать, какие производства
+ * существуют. `productions` — список домов цикла (множественный заказ);
+ * `production` бэкенд оставляет для совместимости и указывает на первый дом. */
 export interface CycleWithProduction {
   id: number
   client: { full_name: string } | null
+  productions: Production[]
   production: Production | null
 }

@@ -41,7 +41,11 @@ export function ProductionOverviewPage() {
     loadCycles()
   }, [loadCycles])
 
-  const active = cycles.filter((c) => c.production)
+  // Один цикл может держать несколько домов (множественный заказ) — карточка
+  // на каждый дом.
+  const houses = cycles.flatMap((cycle) =>
+    (cycle.productions ?? []).map((production) => ({ cycle, production })),
+  )
 
   return (
     <div>
@@ -57,7 +61,7 @@ export function ProductionOverviewPage() {
 
       {loading && cycles.length === 0 ? (
         <LoadingState label="Загружаем производства…" />
-      ) : active.length === 0 ? (
+      ) : houses.length === 0 ? (
         <EmptyState
           icon={<Factory size={28} />}
           title="Производств пока нет"
@@ -65,19 +69,25 @@ export function ProductionOverviewPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {active.map(({ id, client, production }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => navigate(`/production/${production!.id}`)}
-              className="rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-brand/40"
-            >
-              <div className="text-[13px] font-medium text-ink">{client?.full_name ?? `Цикл №${id}`}</div>
-              <div className="mt-1 text-[12px] text-muted">
-                {production!.modules.length} модул{production!.modules.length === 1 ? 'ь' : 'я'}
-              </div>
-            </button>
-          ))}
+          {houses.map(({ cycle, production }) => {
+            const multi = cycle.productions.length > 1
+            return (
+              <button
+                key={production.id}
+                type="button"
+                onClick={() => navigate(`/production/${production.id}`)}
+                className="rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-brand/40"
+              >
+                <div className="text-[13px] font-medium text-ink">
+                  {cycle.client?.full_name ?? `Цикл №${cycle.id}`}
+                </div>
+                {multi && <div className="mt-0.5 text-[12px] text-brand-dark">{production.name}</div>}
+                <div className="mt-1 text-[12px] text-muted">
+                  {production.modules.length} модул{production.modules.length === 1 ? 'ь' : 'я'}
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
 

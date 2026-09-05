@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Button } from '@/shared/ui/Button'
-import { Field, Input, Textarea } from '@/shared/ui/Field'
+import { Field, Input, Select, Textarea } from '@/shared/ui/Field'
 import { useClientsStore } from '../store'
 import { isGroupEditable, isGroupVisible } from '../rules'
-import { Client } from '../types'
+import { Client, ORDER_TYPES, OrderType, orderTypeLabel } from '../types'
 
 export function ProjectPanel({ client }: { client: Client }) {
   const updateProject = useClientsStore((s) => s.updateProject)
   const editable = isGroupEditable(client, 'project')
+  const [orderType, setOrderType] = useState<OrderType | ''>(client.order_type ?? '')
   const [wishes, setWishes] = useState(client.wishes_description ?? '')
   const [area, setArea] = useState(client.house_area ?? '')
   const [price, setPrice] = useState(client.estimated_price ?? '')
@@ -20,6 +21,7 @@ export function ProjectPanel({ client }: { client: Client }) {
   async function save() {
     setSaving(true)
     const result = await updateProject(client.id, {
+      order_type: orderType || undefined,
       wishes_description: wishes || undefined,
       house_area: area === '' ? undefined : Number(area),
       estimated_price: price === '' ? undefined : Number(price),
@@ -32,6 +34,7 @@ export function ProjectPanel({ client }: { client: Client }) {
   if (!editable) {
     return (
       <Section title="Проектная информация">
+        <ReadRow label="Тип заказа" value={orderTypeLabel(client.order_type)} />
         <ReadRow label="Пожелания" value={client.wishes_description ?? undefined} />
         <ReadRow label="Площадь" value={client.house_area ? `${client.house_area} м²` : undefined} />
         <ReadRow
@@ -46,6 +49,18 @@ export function ProjectPanel({ client }: { client: Client }) {
   return (
     <Section title="Проектная информация">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Field label="Тип заказа" required hint="Множественный — несколько домов у одного клиента; количество укажете на «Согласовании».">
+            <Select value={orderType} onChange={(e) => setOrderType(e.target.value as OrderType | '')}>
+              <option value="">— выберите —</option>
+              {ORDER_TYPES.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
         <div className="sm:col-span-2">
           <Field label="Пожелания по проекту" required>
             <Textarea rows={3} value={wishes} onChange={(e) => setWishes(e.target.value)} />

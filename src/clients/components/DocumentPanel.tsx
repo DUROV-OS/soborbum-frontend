@@ -11,8 +11,12 @@ import { ReadRow, Section } from './ProjectPanel'
 export function DocumentPanel({ client }: { client: Client }) {
   const updateDocuments = useClientsStore((s) => s.updateDocuments)
   const editable = isGroupEditable(client, 'documents')
+  const isMultiple = client.order_type === 'multiple'
   const [finalPrice, setFinalPrice] = useState(client.final_price ?? '')
   const [address, setAddress] = useState(client.installation_address ?? '')
+  const [housesCount, setHousesCount] = useState<number | ''>(
+    client.houses_count > 1 ? client.houses_count : isMultiple ? 2 : '',
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,6 +27,7 @@ export function DocumentPanel({ client }: { client: Client }) {
     const result = await updateDocuments(client.id, {
       final_price: finalPrice === '' ? undefined : Number(finalPrice),
       installation_address: address || undefined,
+      houses_count: isMultiple && housesCount !== '' ? Number(housesCount) : undefined,
     })
     setSaving(false)
     setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
@@ -31,6 +36,7 @@ export function DocumentPanel({ client }: { client: Client }) {
   if (!editable) {
     return (
       <Section title="Документы и договор">
+        {isMultiple && <ReadRow label="Количество домов" value={String(client.houses_count)} />}
         <ReadRow
           label="Итоговая цена"
           value={client.final_price ? `${client.final_price.toLocaleString('ru-RU')} ₽` : undefined}
@@ -51,6 +57,18 @@ export function DocumentPanel({ client }: { client: Client }) {
   return (
     <Section title="Документы и договор">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isMultiple && (
+          <div className="sm:col-span-2">
+            <Field label="Количество домов" required hint="Множественный заказ: не меньше 2. Под каждый дом заведётся отдельный проект производства.">
+              <Input
+                type="number"
+                min={2}
+                value={housesCount}
+                onChange={(e) => setHousesCount(e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </Field>
+          </div>
+        )}
         <Field label="Итоговая цена, ₽" required>
           <Input type="number" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>

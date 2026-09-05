@@ -31,7 +31,12 @@ export function ProductionDetailPage() {
       </Link>
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-[18px] font-medium text-ink">Производство №{production.id}</h1>
+        <h1 className="text-[18px] font-medium text-ink">
+          Производство №{production.id}
+          {production.name && production.name !== 'Дом' && (
+            <span className="ml-2 text-[13px] font-normal text-muted">· {production.name}</span>
+          )}
+        </h1>
         <div className="flex gap-2 self-start">
           <AskAiButton domain="production" contextLabel={`Производство №${production.id}`} contextPrefix={`[production_id=${production.id}] `} />
           <Button size="sm" onClick={() => setCreating(true)}>
