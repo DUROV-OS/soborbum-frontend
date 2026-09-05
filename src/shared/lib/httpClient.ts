@@ -23,10 +23,6 @@ export class ApiError extends Error {
 }
 
 async function extractErrorMessage(response: Response): Promise<string> {
-  if (response.status === 401 && token) {
-    setToken(null)
-    window.dispatchEvent(new Event('auth:expired'))
-  }
   try {
     const body = await response.json()
     if (typeof body.detail === 'string') return body.detail
