@@ -185,7 +185,7 @@ export function BoardTree() {
             node={tree}
             active={activeNodeId === tree.id}
             selected={popoverNodeId === tree.id}
-            onClick={(e) => openPopover(tree.id, e.currentTarget.getBoundingClientRect())}
+            onClick={() => openPopover(tree.id)}
           />
         </div>
 
@@ -198,7 +198,7 @@ export function BoardTree() {
                   node={direction}
                   active={activeNodeId === direction.id}
                   selected={popoverNodeId === direction.id}
-                  onClick={(e) => openPopover(direction.id, e.currentTarget.getBoundingClientRect())}
+                  onClick={() => openPopover(direction.id)}
                 />
               </div>
               {direction.children.length > 0 && (
@@ -213,7 +213,7 @@ export function BoardTree() {
                       node={child}
                       active={activeNodeId === child.id}
                       selected={popoverNodeId === child.id}
-                      onClick={(e) => openPopover(child.id, e.currentTarget.getBoundingClientRect())}
+                      onClick={() => openPopover(child.id)}
                     />
                   ))}
                 </div>

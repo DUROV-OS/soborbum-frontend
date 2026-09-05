@@ -1,4 +1,4 @@
-import { forwardRef, MouseEvent } from 'react'
+import { forwardRef } from 'react'
 import { BoardNode } from '../types'
 
 export const DOT_CLASS: Record<BoardNode['color'], string> = {
@@ -11,7 +11,7 @@ interface BoardNodeCardProps {
   node: BoardNode
   active: boolean
   selected: boolean
-  onClick: (e: MouseEvent<HTMLButtonElement>) => void
+  onClick: () => void
 }
 
 export const BoardNodeCard = forwardRef<HTMLButtonElement, BoardNodeCardProps>(function BoardNodeCard(

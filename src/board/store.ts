@@ -21,7 +21,6 @@ interface BoardState {
   error: string | null
 
   popoverNodeId: number | null
-  popoverAnchorRect: DOMRect | null
   proposalNodeId: number | null
   proposal: BoardProposal | null
   proposalLoading: boolean
@@ -33,7 +32,7 @@ interface BoardState {
   actualizing: boolean
 
   loadTree: () => Promise<void>
-  openPopover: (nodeId: number, anchorRect: DOMRect) => void
+  openPopover: (nodeId: number) => void
   closePopover: () => void
   openProposal: (nodeId: number) => void
   closeProposal: () => void
@@ -73,7 +72,6 @@ export const useBoardStore = create<BoardState>((set, get) => {
     error: null,
 
     popoverNodeId: null,
-    popoverAnchorRect: null,
     proposalNodeId: null,
     proposal: null,
     proposalLoading: false,
@@ -94,17 +92,11 @@ export const useBoardStore = create<BoardState>((set, get) => {
       }
     },
 
-    openPopover: (nodeId, anchorRect) => set({ popoverNodeId: nodeId, popoverAnchorRect: anchorRect }),
-    closePopover: () => set({ popoverNodeId: null, popoverAnchorRect: null }),
+    openPopover: (nodeId) => set({ popoverNodeId: nodeId }),
+    closePopover: () => set({ popoverNodeId: null }),
 
     openProposal: (nodeId) =>
-      set({
-        proposalNodeId: nodeId,
-        proposal: null,
-        proposalError: null,
-        popoverNodeId: null,
-        popoverAnchorRect: null,
-      }),
+      set({ proposalNodeId: nodeId, proposal: null, proposalError: null, popoverNodeId: null }),
 
     closeProposal: () => {
       const proposal = get().proposal
