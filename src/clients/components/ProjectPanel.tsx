@@ -36,7 +36,7 @@ export function ProjectPanel({ client }: { client: Client }) {
       <Section title="Проектная информация">
         <ReadRow label="Тип заказа" value={orderTypeLabel(client.order_type)} />
         <ReadRow label="Пожелания" value={client.wishes_description ?? undefined} />
-        <ReadRow label="Площадь" value={client.house_area ? `${client.house_area} м²` : undefined} />
+        <ReadRow label="Ориентировочная площадь" value={client.house_area ? `${client.house_area} м²` : undefined} />
         <ReadRow
           label="Ориентировочная цена"
           value={client.estimated_price ? `${client.estimated_price.toLocaleString('ru-RU')} ₽` : undefined}
@@ -66,7 +66,7 @@ export function ProjectPanel({ client }: { client: Client }) {
             <Textarea rows={3} value={wishes} onChange={(e) => setWishes(e.target.value)} />
           </Field>
         </div>
-        <Field label="Площадь, м²" required>
+        <Field label="Ориентировочная площадь, м²" required>
           <Input type="number" value={area} onChange={(e) => setArea(e.target.value === '' ? '' : Number(e.target.value))} />
         </Field>
         <Field label="Ориентировочная цена, ₽" required>
