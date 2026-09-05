@@ -25,6 +25,8 @@ interface BoardState {
   proposal: BoardProposal | null
   proposalLoading: boolean
   proposalError: string | null
+  /** Заполняется после принятия предложения — таблица изменений в панели показывается, пока не null. */
+  appliedChanges: BoardNodeChange[] | null
 
   animating: boolean
   activeNodeId: number | null
@@ -76,6 +78,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
     proposal: null,
     proposalLoading: false,
     proposalError: null,
+    appliedChanges: null,
 
     animating: false,
     activeNodeId: null,
@@ -96,14 +99,26 @@ export const useBoardStore = create<BoardState>((set, get) => {
     closePopover: () => set({ popoverNodeId: null }),
 
     openProposal: (nodeId) =>
-      set({ proposalNodeId: nodeId, proposal: null, proposalError: null, popoverNodeId: null }),
+      set({
+        proposalNodeId: nodeId,
+        proposal: null,
+        proposalError: null,
+        appliedChanges: null,
+        popoverNodeId: null,
+      }),
 
     closeProposal: () => {
       const proposal = get().proposal
       if (proposal && proposal.status === 'pending') {
         boardApi.cancelProposal(proposal.id).catch(() => {})
       }
-      set({ proposalNodeId: null, proposal: null, proposalError: null, proposalLoading: false })
+      set({
+        proposalNodeId: null,
+        proposal: null,
+        proposalError: null,
+        proposalLoading: false,
+        appliedChanges: null,
+      })
     },
 
     sendMessage: async (message) => {
@@ -139,9 +154,9 @@ export const useBoardStore = create<BoardState>((set, get) => {
         const tree = await boardApi.getTree()
         set({
           tree,
-          proposalNodeId: null,
-          proposal: null,
+          proposal: result.proposal,
           proposalLoading: false,
+          appliedChanges: result.changes,
         })
         await playAnimation(result.changes)
       } catch (error) {

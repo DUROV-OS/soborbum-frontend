@@ -6,7 +6,7 @@ import { Field, Textarea } from '@/shared/ui/Field'
 import { LoadingState } from '@/shared/ui/LoadingState'
 import { findNode } from '../lib/tree'
 import { useBoardStore } from '../store'
-import { CouncilStance, ProposalRound } from '../types'
+import { BoardNodeChange, CouncilStance, ProposalRound } from '../types'
 import { STATUS_LABEL } from './NodePopover'
 
 const STANCE_LABEL: Record<CouncilStance, string> = {
@@ -21,6 +21,20 @@ const STANCE_TONE: Record<CouncilStance, ChipTone> = {
   oppose: 'danger',
 }
 
+/** Короткая тезисная выжимка того, что поменялось в описании ноды — первое предложение
+ * нового описания, без полного текста (полный текст виден в самом дереве). */
+function shortSummary(change: BoardNodeChange): string {
+  if (change.change_type === 'deleted') return 'Нода удалена.'
+
+  const text = change.new_description?.trim()
+  if (!text) return change.change_type === 'created' ? 'Добавлена новая нода.' : 'Обновлено.'
+
+  const firstSentence = text.match(/^.*?[.!?](?:\s|$)/)?.[0].trim() ?? text
+  const summary = firstSentence.length > 160 ? `${firstSentence.slice(0, 157).trimEnd()}…` : firstSentence
+
+  return change.change_type === 'created' ? `Добавлена: ${summary}` : summary
+}
+
 function RoundCard({ round, index }: { round: ProposalRound; index: number }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -29,6 +43,7 @@ function RoundCard({ round, index }: { round: ProposalRound; index: number }) {
       <div className="text-[12px] text-muted">
         Раунд {index + 1}
         {round.decision === 'rejected' && ' — отклонён сотрудником'}
+        {round.decision === 'accepted' && ' — принято'}
       </div>
       <p className="mt-1 text-[13px] text-ink">{round.summary}</p>
 
@@ -73,6 +88,8 @@ export function ProposalPanel() {
   const proposal = useBoardStore((s) => s.proposal)
   const loading = useBoardStore((s) => s.proposalLoading)
   const error = useBoardStore((s) => s.proposalError)
+  const appliedChanges = useBoardStore((s) => s.appliedChanges)
+  const animating = useBoardStore((s) => s.animating)
   const tree = useBoardStore((s) => s.tree)
   const sendMessage = useBoardStore((s) => s.sendMessage)
   const reject = useBoardStore((s) => s.reject)
@@ -171,6 +188,36 @@ export function ProposalPanel() {
                 Отмена
               </Button>
             </div>
+          </div>
+        )}
+
+        {appliedChanges && animating && (
+          <LoadingState label="ИИ применяет изменения по дереву — следите за подсветкой на схеме…" />
+        )}
+
+        {appliedChanges && !animating && (
+          <div className="flex flex-col gap-3">
+            <div className="overflow-hidden rounded-md border border-border">
+              <table className="w-full text-left text-[12px]">
+                <thead>
+                  <tr className="border-b border-border bg-surface-muted">
+                    <th className="px-3 py-2 font-medium text-muted">Нода</th>
+                    <th className="px-3 py-2 font-medium text-muted">Что изменилось</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {appliedChanges.map((change) => (
+                    <tr key={change.id} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2 align-top font-medium text-ink">{change.title}</td>
+                      <td className="px-3 py-2 align-top text-muted">{shortSummary(change)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Button variant="secondary" onClick={closeProposal}>
+              Закрыть
+            </Button>
           </div>
         )}
       </div>
