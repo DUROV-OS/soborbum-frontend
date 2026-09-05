@@ -5,8 +5,10 @@ import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
+import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
+import { DateFilter, DEFAULT_DATE_FILTER, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useClientsStore } from '../store'
 import { CLIENT_STAGES } from '../types'
 import { CreateClientModal } from '../components/CreateClientModal'
@@ -39,6 +41,15 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
       </p>
     ),
   },
+  {
+    title: 'Фильтр по периоду',
+    body: (
+      <p>
+        Фильтр в правом верхнем углу показывает клиентов, обратившихся за выбранный период (день, неделя, месяц,
+        год и другие). По умолчанию показывается этот месяц.
+      </p>
+    ),
+  },
 ]
 
 export function ClientsBoardPage() {
@@ -47,11 +58,15 @@ export function ClientsBoardPage() {
   const load = useClientsStore((s) => s.load)
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
+  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER)
   const onboarding = useSectionOnboarding('clients')
 
   useEffect(() => {
     load()
   }, [load])
+
+  const range = dateFilterRange(dateFilter)
+  const filtered = clients.filter((c) => matchesDateFilter(c.created_at, range))
 
   return (
     <div>
@@ -63,6 +78,7 @@ export function ClientsBoardPage() {
           <p className="mt-1 text-[13px] text-muted">Путь клиента до начала производства</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
+          <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} />
             Новый клиент
@@ -73,7 +89,7 @@ export function ClientsBoardPage() {
 
       <KanbanBoard
         columns={CLIENT_STAGES}
-        items={clients}
+        items={filtered}
         keyOf={(c) => String(c.id)}
         columnOf={(c) => c.stage}
         onCardClick={(c) => navigate(`/clients/${c.id}`)}

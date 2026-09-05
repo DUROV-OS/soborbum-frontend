@@ -5,9 +5,11 @@ import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
 import { Button } from '@/shared/ui/Button'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
+import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { Tabs } from '@/shared/ui/Tabs'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
+import { DateFilter, DEFAULT_DATE_FILTER, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useMarketingStore } from '../store'
 import { CONTENT_STAGES, ContentItem } from '../types'
 import { CalendarView } from '../components/CalendarView'
@@ -44,6 +46,15 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
       </p>
     ),
   },
+  {
+    title: 'Фильтр по периоду',
+    body: (
+      <p>
+        На доске «По стадиям» фильтр по дате выхода показывает контент за выбранный период (день, неделя, месяц,
+        год и другие). По умолчанию показывается этот месяц.
+      </p>
+    ),
+  },
 ]
 
 export function MarketingPage() {
@@ -52,11 +63,15 @@ export function MarketingPage() {
   const [view, setView] = useState<View>('calendar')
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<ContentItem | null>(null)
+  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER)
   const onboarding = useSectionOnboarding('marketing')
 
   useEffect(() => {
     load()
   }, [load])
+
+  const range = dateFilterRange(dateFilter)
+  const filtered = items.filter((i) => matchesDateFilter(i.planned_release_date, range))
 
   return (
     <div>
@@ -77,7 +92,7 @@ export function MarketingPage() {
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Tabs
           tabs={[
             { key: 'calendar', label: 'Календарь' },
@@ -86,6 +101,7 @@ export function MarketingPage() {
           activeKey={view}
           onChange={setView}
         />
+        {view === 'stages' && <DateFilterSelect value={dateFilter} onChange={setDateFilter} />}
       </div>
 
       {view === 'calendar' ? (
@@ -93,7 +109,7 @@ export function MarketingPage() {
       ) : (
         <KanbanBoard
           columns={CONTENT_STAGES}
-          items={items}
+          items={filtered}
           keyOf={(i) => String(i.id)}
           columnOf={(i) => i.stage}
           onCardClick={setSelected}

@@ -7,8 +7,10 @@ import { Chip } from '@/shared/ui/Chip'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Input, Select } from '@/shared/ui/Field'
+import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
+import { DateFilter, DEFAULT_DATE_FILTER, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useTasksStore } from '../store'
 import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
@@ -32,39 +34,6 @@ const SOURCE_LABEL: Record<SourceFilter, string> = {
   production: 'Производство',
   marketing: 'Маркетинг',
   warehouse: 'Склад',
-}
-
-type DateFilter = 'today' | 'week' | 'month' | 'year' | 'all'
-
-const DATE_LABEL: Record<DateFilter, string> = {
-  today: 'За сегодня',
-  week: 'За эту неделю',
-  month: 'За этот месяц',
-  year: 'За этот год',
-  all: 'За всё время',
-}
-
-/** Границы диапазона [начало, конец) по дедлайну задачи — null для "за всё время" (фильтр не применяется). */
-function dateRange(filter: DateFilter): [Date, Date] | null {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const d = now.getDate()
-  if (filter === 'today') return [new Date(y, m, d), new Date(y, m, d + 1)]
-  if (filter === 'week') {
-    const weekday = (now.getDay() + 6) % 7 // понедельник = 0
-    return [new Date(y, m, d - weekday), new Date(y, m, d - weekday + 7)]
-  }
-  if (filter === 'month') return [new Date(y, m, 1), new Date(y, m + 1, 1)]
-  if (filter === 'year') return [new Date(y, 0, 1), new Date(y + 1, 0, 1)]
-  return null
-}
-
-function matchesDate(task: Task, range: [Date, Date] | null): boolean {
-  if (!range) return true
-  if (!task.deadline) return false
-  const deadline = new Date(task.deadline)
-  return deadline >= range[0] && deadline < range[1]
 }
 
 const ONBOARDING_PAGES: OnboardingPage[] = [
@@ -113,7 +82,7 @@ export function TasksPage() {
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER)
   const [query, setQuery] = useState('')
   const onboarding = useSectionOnboarding('tasks')
 
@@ -121,11 +90,11 @@ export function TasksPage() {
     load()
   }, [load])
 
-  const range = dateRange(dateFilter)
+  const range = dateFilterRange(dateFilter)
   const q = query.trim().toLowerCase()
   const filtered = tasks
     .filter((t) => sourceFilter === 'all' || sourceOf(t) === sourceFilter)
-    .filter((t) => matchesDate(t, range))
+    .filter((t) => matchesDateFilter(t.deadline, range))
     .filter((t) => !q || t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q))
 
   return (
@@ -161,13 +130,7 @@ export function TasksPage() {
             </option>
           ))}
         </Select>
-        <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value as DateFilter)} className="w-full sm:w-44">
-          {Object.entries(DATE_LABEL).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </Select>
+        <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
       </div>
 
       <MyTasksPanel onOpenTask={setSelected} />
