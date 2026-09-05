@@ -1,10 +1,10 @@
 import { forwardRef } from 'react'
 import { BoardNode } from '../types'
 
-export const DOT_CLASS: Record<BoardNode['color'], string> = {
-  green: 'bg-success',
-  yellow: 'bg-warning',
-  red: 'bg-danger',
+const STATUS_BORDER_CLASS: Record<BoardNode['color'], string> = {
+  green: 'border-success',
+  yellow: 'border-warning',
+  red: 'border-danger',
 }
 
 interface BoardNodeCardProps {
@@ -25,20 +25,13 @@ export const BoardNodeCard = forwardRef<HTMLButtonElement, BoardNodeCardProps>(f
       ref={ref}
       type="button"
       onClick={onClick}
-      className={`relative z-10 flex w-full items-center rounded-md border bg-surface text-left shadow-sm transition-colors ${
+      className={`relative z-10 flex w-full items-center justify-center rounded-2xl border-2 bg-surface text-center shadow-sm transition-colors ${
         active
           ? 'board-node-active border-brand ring-2 ring-brand'
-          : selected
-            ? 'border-brand/50'
-            : 'border-border hover:border-brand/40'
+          : `${STATUS_BORDER_CLASS[node.color]} hover:border-brand/60 ${selected ? 'ring-2 ring-brand/40' : ''}`
       }`}
-      style={{ gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px` }}
+      style={{ padding: `${10 * scale}px ${12 * scale}px` }}
     >
-      <span
-        className={`shrink-0 rounded-full ${DOT_CLASS[node.color]}`}
-        style={{ width: 8 * scale, height: 8 * scale }}
-        aria-hidden
-      />
       <span className="truncate font-medium text-ink" style={{ fontSize: 13 * scale }}>
         {node.title}
       </span>
