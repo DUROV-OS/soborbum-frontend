@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { LoadingState } from '@/shared/ui/LoadingState'
-import { edgeKey, splitDirections } from '../lib/tree'
+import { edgeKey, splitInHalf } from '../lib/tree'
 import { useBoardStore } from '../store'
 import { BoardNode } from '../types'
 import { BoardNodeCard } from './BoardNodeCard'
 
 const NODE_WIDTH = 208
 const CORNER_RADIUS = 14
-const STUB_GAP = 22
-/** Группа «направление + его столбец поднаправлений» шире самой карточки направления,
- * чтобы столбец (сдвинутый влево так, чтобы его правый край входил в центр направления)
- * не вылезал за пределы своей flex-ячейки и не наезжал на соседние направления. */
-const GROUP_WIDTH = NODE_WIDTH * 2 + STUB_GAP
+/** Промежуток между левой и правой колонкой поднаправлений — в нём проходит общий «ствол» от направления. */
+const TRUNK_GAP = 44
+/** Ширина ряда из двух колонок поднаправлений — она же ширина группы «направление + колонки»,
+ * по которой группы направлений равномерно распределяются в общем ряду. */
+const CHILDREN_ROW_WIDTH = NODE_WIDTH * 2 + TRUNK_GAP
 
 interface Point {
   x: number
@@ -58,8 +58,33 @@ function roundedPath(points: Point[], radius: number): string {
   return d.join(' ')
 }
 
-/** Группа «направление + его столбец» — рендерится и над, и под корнем, порядок блоков внутри
- * группы (и то, к какому краю карточки направления идёт ребро) зависит от стороны. */
+interface NodeCardListProps {
+  nodes: BoardNode[]
+  activeNodeIds: Set<number>
+  popoverNodeId: number | null
+  setNodeRef: (id: number) => (el: HTMLButtonElement | null) => void
+  openPopover: (id: number) => void
+}
+
+function NodeColumn({ nodes, activeNodeIds, popoverNodeId, setNodeRef, openPopover }: NodeCardListProps) {
+  return (
+    <div className="flex shrink-0 flex-col gap-2" style={{ width: NODE_WIDTH }}>
+      {nodes.map((node) => (
+        <BoardNodeCard
+          key={node.id}
+          ref={setNodeRef(node.id)}
+          node={node}
+          active={activeNodeIds.has(node.id)}
+          selected={popoverNodeId === node.id}
+          onClick={() => openPopover(node.id)}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Группа «направление + две колонки поднаправлений слева и справа от него» — рендерится и над,
+ * и под корнем; порядок блоков внутри группы (и то, с какой стороны идёт всё) зависит от стороны. */
 function DirectionGroup({
   direction,
   side,
@@ -87,37 +112,42 @@ function DirectionGroup({
     </div>
   )
 
-  const column = direction.children.length > 0 && (
+  const { first: left, second: right } = splitInHalf(direction.children)
+  const columns = direction.children.length > 0 && (
     <div
-      className={`flex flex-col gap-1.5 ${side === 'lower' ? 'mt-3' : 'mb-3'}`}
-      style={{ width: NODE_WIDTH, marginRight: NODE_WIDTH / 2 + STUB_GAP }}
+      className={`flex justify-between ${side === 'lower' ? 'mt-6' : 'mb-6'}`}
+      style={{ width: CHILDREN_ROW_WIDTH }}
     >
-      {direction.children.map((child) => (
-        <BoardNodeCard
-          key={child.id}
-          ref={setNodeRef(child.id)}
-          node={child}
-          active={activeNodeIds.has(child.id)}
-          selected={popoverNodeId === child.id}
-          onClick={() => openPopover(child.id)}
-        />
-      ))}
+      <NodeColumn
+        nodes={left}
+        activeNodeIds={activeNodeIds}
+        popoverNodeId={popoverNodeId}
+        setNodeRef={setNodeRef}
+        openPopover={openPopover}
+      />
+      <NodeColumn
+        nodes={right}
+        activeNodeIds={activeNodeIds}
+        popoverNodeId={popoverNodeId}
+        setNodeRef={setNodeRef}
+        openPopover={openPopover}
+      />
     </div>
   )
 
   return (
     <div
-      className={`relative flex flex-col items-end ${side === 'upper' ? 'justify-end' : 'justify-start'}`}
-      style={{ width: GROUP_WIDTH }}
+      className={`relative flex flex-col items-center ${side === 'upper' ? 'justify-end' : 'justify-start'}`}
+      style={{ width: CHILDREN_ROW_WIDTH }}
     >
       {side === 'lower' ? (
         <>
           {directionCard}
-          {column}
+          {columns}
         </>
       ) : (
         <>
-          {column}
+          {columns}
           {directionCard}
         </>
       )}
@@ -165,6 +195,7 @@ export function BoardTree() {
       if (!el) return null
       const r = el.getBoundingClientRect()
       return {
+        left: r.left - containerRect.left,
         right: r.right - containerRect.left,
         top: r.top - containerRect.top,
         bottom: r.bottom - containerRect.top,
@@ -176,84 +207,76 @@ export function BoardTree() {
     const next = new Map<string, string>()
     const rects = new Map<number, { bottom: number; centerX: number }>()
     const rootRect = rectOf(tree.id)
-    if (rootRect) {
-      rects.set(tree.id, { bottom: rootRect.bottom, centerX: rootRect.centerX })
-      const { upper, lower } = splitDirections(tree.children)
 
-      for (const direction of lower) {
-        const dirRect = rectOf(direction.id)
-        if (!dirRect) continue
-        rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
-        const midY = rootRect.bottom + (dirRect.top - rootRect.bottom) / 2
+    const processDirection = (direction: BoardNode, side: 'upper' | 'lower') => {
+      if (!rootRect) return
+      const dirRect = rectOf(direction.id)
+      if (!dirRect) return
+      rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
+
+      const rootAnchorY = side === 'lower' ? rootRect.bottom : rootRect.top
+      const dirNearRootY = side === 'lower' ? dirRect.top : dirRect.bottom
+      const dirNearChildrenY = side === 'lower' ? dirRect.bottom : dirRect.top
+      const midY =
+        side === 'lower'
+          ? rootRect.bottom + (dirRect.top - rootRect.bottom) / 2
+          : dirRect.bottom + (rootRect.top - dirRect.bottom) / 2
+
+      next.set(
+        edgeKey(tree.id, direction.id),
+        roundedPath(
+          [
+            { x: rootRect.centerX, y: rootAnchorY },
+            { x: rootRect.centerX, y: midY },
+            { x: dirRect.centerX, y: midY },
+            { x: dirRect.centerX, y: dirNearRootY },
+          ],
+          CORNER_RADIUS,
+        ),
+      )
+
+      const { first: left, second: right } = splitInHalf(direction.children)
+      for (const child of left) {
+        const childRect = rectOf(child.id)
+        if (!childRect) continue
+        rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
         next.set(
-          edgeKey(tree.id, direction.id),
+          edgeKey(direction.id, child.id),
           roundedPath(
             [
-              { x: rootRect.centerX, y: rootRect.bottom },
-              { x: rootRect.centerX, y: midY },
-              { x: dirRect.centerX, y: midY },
-              { x: dirRect.centerX, y: dirRect.top },
+              { x: dirRect.centerX, y: dirNearChildrenY },
+              { x: dirRect.centerX, y: childRect.centerY },
+              { x: childRect.right, y: childRect.centerY },
             ],
             CORNER_RADIUS,
           ),
         )
-
-        for (const child of direction.children) {
-          const childRect = rectOf(child.id)
-          if (!childRect) continue
-          rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
-          next.set(
-            edgeKey(direction.id, child.id),
-            roundedPath(
-              [
-                { x: dirRect.centerX, y: dirRect.bottom },
-                { x: dirRect.centerX, y: childRect.centerY },
-                { x: childRect.right, y: childRect.centerY },
-              ],
-              CORNER_RADIUS,
-            ),
-          )
-        }
       }
-
-      // Верхняя половина направлений — зеркально: от верхушки корня к низу направления,
-      // от верхушки направления к его столбцу (тот тоже растёт вверх).
-      for (const direction of upper) {
-        const dirRect = rectOf(direction.id)
-        if (!dirRect) continue
-        rects.set(direction.id, { bottom: dirRect.bottom, centerX: dirRect.centerX })
-        const midY = dirRect.bottom + (rootRect.top - dirRect.bottom) / 2
+      for (const child of right) {
+        const childRect = rectOf(child.id)
+        if (!childRect) continue
+        rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
         next.set(
-          edgeKey(tree.id, direction.id),
+          edgeKey(direction.id, child.id),
           roundedPath(
             [
-              { x: rootRect.centerX, y: rootRect.top },
-              { x: rootRect.centerX, y: midY },
-              { x: dirRect.centerX, y: midY },
-              { x: dirRect.centerX, y: dirRect.bottom },
+              { x: dirRect.centerX, y: dirNearChildrenY },
+              { x: dirRect.centerX, y: childRect.centerY },
+              { x: childRect.left, y: childRect.centerY },
             ],
             CORNER_RADIUS,
           ),
         )
-
-        for (const child of direction.children) {
-          const childRect = rectOf(child.id)
-          if (!childRect) continue
-          rects.set(child.id, { bottom: childRect.bottom, centerX: childRect.centerX })
-          next.set(
-            edgeKey(direction.id, child.id),
-            roundedPath(
-              [
-                { x: dirRect.centerX, y: dirRect.top },
-                { x: dirRect.centerX, y: childRect.centerY },
-                { x: childRect.right, y: childRect.centerY },
-              ],
-              CORNER_RADIUS,
-            ),
-          )
-        }
       }
     }
+
+    if (rootRect) {
+      rects.set(tree.id, { bottom: rootRect.bottom, centerX: rootRect.centerX })
+      const { first: upper, second: lower } = splitInHalf(tree.children)
+      lower.forEach((direction) => processDirection(direction, 'lower'))
+      upper.forEach((direction) => processDirection(direction, 'upper'))
+    }
+
     setPaths(next)
     setNodeRects(rects)
     setContentWidth(container.scrollWidth)
@@ -280,7 +303,7 @@ export function BoardTree() {
   if (error) return <EmptyState title="Не удалось загрузить дерево" description={error} />
   if (!tree) return null
 
-  const { upper, lower } = splitDirections(tree.children)
+  const { first: upper, second: lower } = splitInHalf(tree.children)
   const noteRect = noteNodeId !== null ? nodeRects.get(noteNodeId) : undefined
   const noteHalfWidth = 130
   const noteLeft = noteRect
@@ -303,7 +326,7 @@ export function BoardTree() {
         ))}
       </svg>
 
-      <div className="relative flex min-w-max flex-col items-center gap-4 px-6 py-4">
+      <div className="relative flex min-w-max flex-col items-center gap-10 px-6 py-6">
         {upper.length > 0 && (
           <div className="flex w-full justify-center gap-x-10">
             {upper.map((direction) => (

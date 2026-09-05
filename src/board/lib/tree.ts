@@ -36,10 +36,13 @@ export function edgeKey(a: number, b: number): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`
 }
 
-/** Делит направления 1-го уровня пополам — первая половина рисуется над durov.house, вторая под ним. */
-export function splitDirections<T>(directions: T[]): { upper: T[]; lower: T[] } {
-  const mid = Math.ceil(directions.length / 2)
-  return { upper: directions.slice(0, mid), lower: directions.slice(mid) }
+/**
+ * Делит список пополам (первая половина чуть больше при нечётном количестве) — используется и
+ * для направлений 1-го уровня (верх/низ от durov.house), и для их поднаправлений (левая/правая колонка).
+ */
+export function splitInHalf<T>(items: T[]): { first: T[]; second: T[] } {
+  const mid = Math.ceil(items.length / 2)
+  return { first: items.slice(0, mid), second: items.slice(mid) }
 }
 
 export type TourStep = { edges: string[] } | { nodes: number[] }
