@@ -4,7 +4,7 @@ import { useAuthStore } from '@/auth/store'
 import { SECTIONS, SectionId } from '@/shared/sections'
 
 const GROUPS: { title: string; ids: SectionId[] }[] = [
-  { title: 'Рабочее пространство', ids: ['today', 'ai', 'tasks', 'board'] },
+  { title: 'Рабочее пространство', ids: ['today', 'ai', 'tasks', 'board', 'agents'] },
   { title: 'Операции', ids: ['cycle', 'clients', 'production', 'warehouse', 'installation', 'marketing'] },
   { title: 'Команда', ids: ['admin'] },
 ]

@@ -33,7 +33,7 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       localStorage.setItem('soborbum.auth.token', 'browser-test-token')
       sessionStorage.setItem('fixture-seeded', '1')
     }
-    for (const id of ['today', 'admin', 'production', 'ai']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
+    for (const id of ['today', 'admin', 'production', 'ai', 'agents']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
   })
   const page = await context.newPage()
   page.on('pageerror', error => errors.push(error.message))
@@ -85,6 +85,11 @@ try {
   assert(!owner.requests.some(request => request.includes('/ask')))
   assert.equal(await owner.page.getByRole('button', { name: 'Автоматически', exact: true }).count(), 0)
   checks.push('Today works without AI and opens an unsent draft with A0/A2 controls')
+  await owner.page.goto(baseURL + '/agents')
+  await owner.page.getByRole('heading', { name: 'Агенты.' }).waitFor()
+  await owner.page.getByRole('tab', { name: 'Панель' }).click()
+  await owner.page.getByRole('heading', { name: 'Разметка до «обучен»' }).waitFor()
+  checks.push('Admin opens Agents map and the telemetry panel')
 
   await owner.page.goto(baseURL + '/admin')
   await owner.page.getByRole('button', { name: 'Новый сотрудник' }).click()

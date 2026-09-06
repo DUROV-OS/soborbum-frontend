@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { ArrowRight, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { ASSIGNABLE_SECTIONS, SectionId } from '@/shared/sections'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
@@ -82,6 +83,19 @@ export function AccessMatrixPage() {
       </div>
 
       {error && <p className="mb-4 text-[13px] text-danger">{error}</p>}
+
+      <Link
+        to="/agents"
+        className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4 transition-colors hover:border-brand/40"
+      >
+        <div>
+          <p className="text-[14px] font-medium text-ink">Панель агентов</p>
+          <p className="mt-1 text-[12px] text-muted">
+            Разметка, блоки юриста и следы восьми ролей — отдельно от матрицы доступа.
+          </p>
+        </div>
+        <ArrowRight size={17} className="shrink-0 text-muted" />
+      </Link>
 
       <div className="overflow-x-auto rounded-md border border-border bg-surface">
         <table className="w-full text-left text-[13px]">

@@ -16,6 +16,7 @@ import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { AiChatPage } from '@/ai/pages/AiChatPage'
 import { BoardPage } from '@/board/pages/BoardPage'
+import { AgentsPage } from '@/agents/pages/AgentsPage'
 import { TodayPage } from '@/today/pages/TodayPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -154,6 +155,14 @@ export function AppRouter() {
           element={
             <AccessGate section="board">
               <BoardPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/agents"
+          element={
+            <AccessGate section="agents">
+              <AgentsPage />
             </AccessGate>
           }
         />
