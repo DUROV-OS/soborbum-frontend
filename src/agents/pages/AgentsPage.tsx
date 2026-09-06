@@ -8,6 +8,7 @@ import { AdminAgentsPanel } from '../components/AdminAgentsPanel'
 import { AgentConstellation } from '../components/AgentConstellation'
 import { AgentPassportCard } from '../components/AgentPassportCard'
 import { PlanLists } from '../components/PlanLists'
+import { RunTaskForm } from '../components/RunTaskForm'
 import { AGENTS } from '../data'
 import { AgentId } from '../types'
 
@@ -34,8 +35,8 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
     title: 'Панель администратора',
     body: (
       <p>
-        Администратору доступна вкладка «Панель»: разметка, блоки, следы. Цифры честные — со стартового gold, не
-        «агент уже обучен».
+        Администратору доступна вкладка «Панель»: живые следы с /api/agents/runs и контракт разметки. Gold —
+        не «агент уже обучен».
       </p>
     ),
   },
@@ -83,6 +84,7 @@ export function AgentsPage() {
             <AgentConstellation selectedId={selectedId} onSelect={setSelectedId} />
             <AgentPassportCard agent={selected} />
           </div>
+          <RunTaskForm />
           <section className="rounded-2xl border border-border bg-surface px-5 py-4 sm:px-6">
             <p className="text-[13px] text-ink">
               Юрист не голосует «за идею». Если фильтр дал block — координатор не будит коммерческих специалистов.
