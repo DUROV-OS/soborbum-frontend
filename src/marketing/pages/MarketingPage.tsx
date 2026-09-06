@@ -15,8 +15,15 @@ import { CONTENT_STAGES, ContentItem } from '../types'
 import { CalendarView } from '../components/CalendarView'
 import { CreateContentModal } from '../components/CreateContentModal'
 import { ContentDetailDrawer } from '../components/ContentDetailDrawer'
+import { TrendExplorer } from '../components/TrendExplorer'
 
-type View = 'calendar' | 'stages'
+type View = 'calendar' | 'stages' | 'trends'
+
+const VIEW_SUBTITLE: Record<View, string> = {
+  calendar: 'Календарь выпуска контента',
+  stages: 'Контент по стадиям подготовки',
+  trends: 'Динамика популярности запросов, как в Google Trends',
+}
 
 const ONBOARDING_PAGES: OnboardingPage[] = [
   {
@@ -55,6 +62,16 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
       </p>
     ),
   },
+  {
+    title: 'Тренд',
+    body: (
+      <p>
+        Вкладка «Тренд» строит графики популярности запросов по данным Google Trends: динамика во времени,
+        распределение по регионам и похожие запросы. Введите до пяти запросов через запятую, чтобы сравнить их.
+        Ниже — блок «Тренды ниши»: готовый срез спроса по модульным домам, регионам России и набирающим темам.
+      </p>
+    ),
+  },
 ]
 
 export function MarketingPage() {
@@ -80,14 +97,16 @@ export function MarketingPage() {
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Маркетинг</h1>
-          <p className="mt-1 text-[13px] text-muted">Календарь выпуска контента</p>
+          <p className="mt-1 text-[13px] text-muted">{VIEW_SUBTITLE[view]}</p>
         </div>
         <div className="flex gap-2 self-start">
           <AskAiButton domain="marketing" />
-          <Button onClick={() => setCreating(true)}>
-            <Plus size={16} />
-            Новый контент
-          </Button>
+          {view !== 'trends' && (
+            <Button onClick={() => setCreating(true)}>
+              <Plus size={16} />
+              Новый контент
+            </Button>
+          )}
           <HelpButton onClick={onboarding.show} />
         </div>
       </div>
@@ -97,6 +116,7 @@ export function MarketingPage() {
           tabs={[
             { key: 'calendar', label: 'Календарь' },
             { key: 'stages', label: 'По стадиям' },
+            { key: 'trends', label: 'Тренд' },
           ]}
           activeKey={view}
           onChange={setView}
@@ -104,7 +124,9 @@ export function MarketingPage() {
         {view === 'stages' && <DateFilterSelect value={dateFilter} onChange={setDateFilter} />}
       </div>
 
-      {view === 'calendar' ? (
+      {view === 'trends' ? (
+        <TrendExplorer />
+      ) : view === 'calendar' ? (
         <CalendarView items={items} onSelect={setSelected} />
       ) : (
         <KanbanBoard
