@@ -131,8 +131,8 @@ export const PLAN_NEXT: PlanItem[] = [
   },
   {
     id: 'connectors',
-    title: 'Живой vault и amoCRM в gather()',
-    detail: 'Коннекторы есть, в рантайм ещё не вшиты.',
+    title: 'amoCRM и МойСклад в gather()',
+    detail: 'Vault уже читается с диска. CRM и склад — следующий коннектор.',
     done: false,
   },
   {

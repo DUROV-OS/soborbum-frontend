@@ -42,7 +42,7 @@ export function RunTaskForm() {
       <div className="border-b border-border px-5 py-4 sm:px-6">
         <h2 className="text-[18px] font-semibold tracking-tight text-ink">Прогнать запрос</h2>
         <p className="mt-1 text-[12px] text-muted">
-          Координатор, legal gate и маршрут. Ответ по паспорту роли — без Claude и без vault.
+          Координатор, legal gate и маршрут. Цитаты — из checkout vault_backups. Claude у специалистов ещё нет.
         </p>
       </div>
       <form onSubmit={onSubmit} className="space-y-4 px-5 py-5 sm:px-6">
