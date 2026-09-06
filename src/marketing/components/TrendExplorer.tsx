@@ -6,6 +6,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { LoadingState } from '@/shared/ui/LoadingState'
 import { Input, Select } from '@/shared/ui/Field'
 import * as trends from '../trends'
+import { NicheTrends } from './NicheTrends'
 import { TrendChart } from './TrendChart'
 
 const TIMEFRAMES: [string, string][] = [
@@ -55,18 +56,6 @@ export function TrendExplorer() {
   const [result, setResult] = useState<Result | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [trending, setTrending] = useState<trends.TrendingNow | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    trends.trendingNow({ geo: geo || 'US', limit: 14 }).then(
-      (r) => alive && setTrending(r),
-      () => alive && setTrending(null),
-    )
-    return () => {
-      alive = false
-    }
-  }, [geo])
 
   useEffect(() => {
     if (!applied) return
@@ -215,22 +204,7 @@ export function TrendExplorer() {
         </>
       )}
 
-      {trending && trending.items.length > 0 && (
-        <section className="rounded-md border border-border bg-surface p-4 sm:p-5">
-          <h3 className="text-[14px] font-medium text-ink">В тренде сейчас · {trending.geo}</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {trending.items.map((t) => (
-              <span
-                key={t.keyword}
-                className="inline-flex items-center gap-1.5 rounded-pill bg-surface-muted px-2.5 py-1 text-[12px] text-ink"
-              >
-                {t.keyword}
-                {t.volume != null && <span className="text-muted">{formatVolume(t.volume)}</span>}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
+      <NicheTrends />
     </div>
   )
 }
@@ -289,10 +263,4 @@ function RelatedColumn({
       )}
     </div>
   )
-}
-
-function formatVolume(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M+`
-  if (v >= 1_000) return `${Math.round(v / 1_000)}K+`
-  return `${v}+`
 }

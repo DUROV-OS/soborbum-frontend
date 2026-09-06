@@ -49,42 +49,85 @@ export interface Related {
   rising: RelatedEntry[]
 }
 
-export interface TrendNews {
-  title: string | null
-  url: string | null
-  source: string | null
-  picture: string | null
-  time: string | null
-}
-
-export interface TrendingItem {
-  keyword: string
-  volume: number | null
-  volume_growth_pct: number | null
-  geo: string | null
-  started_at: string | null
-  ended_at: string | null
-  trend_keywords: string[]
-  topics: string[]
-  news: TrendNews[]
-}
-
-export interface TrendingNow {
-  geo: string
-  with_news: boolean
-  items: TrendingItem[]
-}
-
 export interface LookupEntry {
   name: string | null
   id: string | null
+}
+
+// --- «Тренды ниши»: срез по бизнесу «модульные дома» -------------------------
+
+export interface KeywordGroup {
+  group: string
+  keywords: string[]
+}
+
+export interface NicheKeywords {
+  geo: string
+  groups: KeywordGroup[]
+}
+
+export type NicheDirection = 'rising' | 'flat' | 'falling' | 'n/a'
+
+export interface NicheTopicStat {
+  keyword: string
+  group: string
+  /** значение 0…100 на последнюю точку периода */
+  current: number | null
+  average: number | null
+  peak: number | null
+  peak_date: string | null
+  /** прирост «конец периода vs начало», % */
+  growth_pct: number | null
+  direction: NicheDirection
+}
+
+export interface NicheOverview {
+  timeframe: string
+  geo: string
+  /** сколько запросов реально отдал Google */
+  resolved: number
+  /** запросы, по которым Google в этот момент дал лимит */
+  unavailable: string[]
+  topics: NicheTopicStat[]
+}
+
+export interface NicheRegion {
+  geo_name: string | null
+  geo_code: string | null
+  /** 0…100, усреднено по ключевым запросам ниши */
+  value: number | null
+}
+
+export interface NicheRegions {
+  keywords: string[]
+  timeframe: string
+  geo: string
+  resolution: string
+  regions: NicheRegion[]
+}
+
+export interface NicheRisingEntry {
+  query: string
+  value: number | null
+  /** какой запрос ниши вывел эту тему */
+  seed: string
+}
+
+export interface NicheRising {
+  timeframe: string
+  geo: string
+  seeds_used: string[]
+  unavailable: string[]
+  rising: NicheRisingEntry[]
 }
 
 /** `type`, а не `interface` — нужен неявный индекс для передачи в query. */
 type OverTimeParams = { q: string; timeframe?: string; geo?: string; cat?: string }
 type RegionParams = { q: string; timeframe?: string; geo?: string; resolution?: string }
 type RelatedParams = { q: string; timeframe?: string; geo?: string }
-type TrendingParams = { geo?: string; limit?: number; with_news?: boolean }
+type NicheOverviewParams = { timeframe?: string; geo?: string; groups?: string }
+type NicheRegionsParams = { q?: string; timeframe?: string; geo?: string; resolution?: string }
+type NicheRisingParams = { timeframe?: string; geo?: string; limit?: number; groups?: string }
 
 /** GET /api/marketing/trends/interest-over-time — данные линейного графика. */
 export function interestOverTime(params: OverTimeParams): Promise<InterestOverTime> {
@@ -106,9 +149,24 @@ export function relatedTopics(params: RelatedParams): Promise<Related> {
   return apiRequest<Related>({ section: SECTION, path: '/trends/related-topics', query: params })
 }
 
-/** GET /api/marketing/trends/trending-now — что в тренде прямо сейчас. */
-export function trendingNow(params: TrendingParams = {}): Promise<TrendingNow> {
-  return apiRequest<TrendingNow>({ section: SECTION, path: '/trends/trending-now', query: params })
+/** GET /api/marketing/trends/niche/keywords — группы запросов ниши для фильтров. */
+export function nicheKeywords(geo?: string): Promise<NicheKeywords> {
+  return apiRequest<NicheKeywords>({ section: SECTION, path: '/trends/niche/keywords', query: { geo } })
+}
+
+/** GET /api/marketing/trends/niche/overview — спрос по нише: рост / направление по запросам. */
+export function nicheOverview(params: NicheOverviewParams = {}): Promise<NicheOverview> {
+  return apiRequest<NicheOverview>({ section: SECTION, path: '/trends/niche/overview', query: params })
+}
+
+/** GET /api/marketing/trends/niche/regions — регионы РФ по интересу к нише. */
+export function nicheRegions(params: NicheRegionsParams = {}): Promise<NicheRegions> {
+  return apiRequest<NicheRegions>({ section: SECTION, path: '/trends/niche/regions', query: params })
+}
+
+/** GET /api/marketing/trends/niche/rising — набирающие темы вокруг ниши. */
+export function nicheRising(params: NicheRisingParams = {}): Promise<NicheRising> {
+  return apiRequest<NicheRising>({ section: SECTION, path: '/trends/niche/rising', query: params })
 }
 
 /** GET /api/marketing/trends/geo — справочник регионов. */
