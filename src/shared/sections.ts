@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Factory,
   Landmark,
+  Network,
   Megaphone,
   Repeat,
   ShieldCheck,
@@ -20,6 +21,8 @@ import {
  * module_access и в Task.link_type, так что переименовывать их нельзя.
  * 'admin' — чисто фронтовое значение для пункта меню «Доступ», бэкенд его
  * не знает: администраторская страница гейтится по role==='admin'.
+ * 'agents' — тоже фронтовое: операционная команда из восьми ролей, не Module
+ * на бэкенде. Доступен каждому вошедшему, как «Сегодня».
  * 'today' доступен каждому вошедшему сотруднику; сервер отдаёт только
  * показатели разрешённых ему разделов. AI-доступ для сводки не требуется.
  */
@@ -35,6 +38,7 @@ export type SectionId =
   | 'ai'
   | 'today'
   | 'board'
+  | 'agents'
 
 export interface SectionMeta {
   id: SectionId
@@ -57,6 +61,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
   { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
+  { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]

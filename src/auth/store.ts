@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (account.role === 'admin') return true
     // «Сегодня» доступен каждому вошедшему сотруднику; сервер отдаёт только
     // показатели разрешённых ему разделов и не требует AI-доступа.
-    if (section === 'today') return true
+    if (section === 'today' || section === 'agents') return true
     return account.module_access.includes(section)
   },
 
