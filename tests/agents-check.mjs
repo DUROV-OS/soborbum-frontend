@@ -28,6 +28,48 @@ async function openAs(user, viewport = { width: 1440, height: 1100 }) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) })
       return
     }
+    if (url.pathname === '/api/agents/stats') {
+      await route.fulfill({
+        status: user.role === 'admin' ? 200 : 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          week: [
+            { date: '31.08', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '01.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '02.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '03.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '04.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '05.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+            { date: '06.09', runs: 0, blocked: 0, escalated: 0, released: 0 },
+          ],
+          legal: { allow: 0, allow_with_conditions: 0, escalate_human: 0, block: 0 },
+          routing: [],
+          traces: [],
+          totals: { runs: 0, blocked: 0, escalated: 0, released: 0 },
+        }),
+      })
+      return
+    }
+    if (url.pathname === '/api/agents/runs') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 1,
+          trace_id: 'browsercheck',
+          text: 'Каких материалов не хватает на складе?',
+          reply: 'Координатор.\nLegal gate: allow.',
+          legal_verdict: 'allow',
+          legal_rules: [],
+          legal_passport: '',
+          released: true,
+          specialists: ['warehouse'],
+          specialist_titles: ['кладовщик'],
+          created_at: '2026-09-06T08:00:00Z',
+        }),
+      })
+      return
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
   return { ...context, page, errors }
@@ -53,6 +95,7 @@ const employee = await openAs(worker)
 await employee.page.goto(baseURL + '/agents')
 await employee.page.getByRole('heading', { name: 'Агенты.' }).waitFor()
 assert.equal(await employee.page.getByRole('tab', { name: 'Панель' }).count(), 0)
+await employee.page.getByRole('heading', { name: 'Прогнать запрос' }).waitFor()
 await employee.page.getByText('Уже сделано').waitFor()
 await employee.page.screenshot({ path: path.join(artifactDir, 'agents-worker-team.png'), fullPage: true })
 assert.deepEqual(employee.errors, [])
