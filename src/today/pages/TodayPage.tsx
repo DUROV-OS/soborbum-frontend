@@ -6,6 +6,7 @@ import { useAiStore } from '@/ai/store'
 import { SECTIONS } from '@/shared/sections'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { StatWidget } from '@/shared/ui/StatWidget'
 import { useTodayStore } from '../store'
 
 export function TodayPage() {
@@ -97,19 +98,19 @@ export function TodayPage() {
         </div>
 
         <section aria-labelledby="metrics-title">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-2"><h2 id="metrics-title" className="text-[18px] font-semibold tracking-tight text-ink">Компания в цифрах</h2><p className="text-[12px] text-muted">Только доступные вам разделы</p></div>
+          <h2 id="metrics-title" className="mb-4 text-[18px] font-semibold tracking-tight text-ink">Показатели по разделам</h2>
           {widgets.length === 0 ? <EmptyState title="Рабочие разделы пока не назначены" description="Администратор может назначить доступ в разделе «Доступ»." /> :
-            <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-3 gap-3">
               {widgets.map((widget, index) => {
                 const section = SECTIONS.find((s) => s.id === (widget.section === 'users' ? 'admin' : widget.section))
-                const Icon = section?.icon
-                return <button key={`${widget.section}-${index}`} type="button" disabled={!section} onClick={() => section && navigate(section.path)}
-                  className="group min-w-0 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-brand/40 sm:p-5">
-                  <div className="mb-4 flex items-center justify-between gap-2 text-muted"><span className="truncate text-[11px]">{section?.label ?? widget.section}</span>{Icon && <Icon size={16} strokeWidth={1.5} className="shrink-0" />}</div>
-                  <div className={`text-[32px] font-semibold leading-none tracking-tight tabular ${widget.tone === 'danger' ? 'text-danger' : widget.tone === 'warning' ? 'text-warning' : 'text-ink'}`}>{widget.value}</div>
-                  <div className="mt-3 text-[12px] leading-relaxed text-muted">{widget.title}</div>
-                  {widget.hint && <p className="mt-2 text-[11px] text-muted">{widget.hint}</p>}
-                </button>
+                return <StatWidget
+                  key={`${widget.section}-${index}`}
+                  label={widget.title}
+                  value={widget.value}
+                  hint={widget.hint ?? undefined}
+                  tone={widget.tone}
+                  onClick={section ? () => navigate(section.path) : undefined}
+                />
               })}
             </div>}
         </section>
