@@ -7,11 +7,23 @@ export const SERIES_COLORS = ['#2b6950', '#b8544f', '#b98a53', '#3a5c8a', '#7a5a
 const HEIGHT = 300
 const PAD = { top: 12, right: 14, bottom: 28, left: 32 }
 
-function formatTick(iso: string | null): string {
+const DAY = 86_400_000
+
+/**
+ * Формат подписи даты зависит от охвата ряда: у «за всё время» точки идут
+ * годами — показываем год, иначе месяц+год или день+месяц.
+ */
+function tickOptions(spanDays: number): Intl.DateTimeFormatOptions {
+  if (spanDays > 3 * 365) return { year: 'numeric' }
+  if (spanDays > 180) return { month: 'short', year: '2-digit' }
+  return { day: '2-digit', month: 'short' }
+}
+
+function formatDate(iso: string | null, options: Intl.DateTimeFormatOptions): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
+  return d.toLocaleDateString('ru-RU', options)
 }
 
 /**
@@ -59,6 +71,12 @@ export function TrendChart({ series, keywords }: { series: InterestPoint[]; keyw
 
   if (!n) return null
 
+  const times = series.map((p) => (p.date ? new Date(p.date).getTime() : NaN)).filter((t) => !Number.isNaN(t))
+  const spanDays = times.length > 1 ? (Math.max(...times) - Math.min(...times)) / DAY : 0
+  const axisOpts = tickOptions(spanDays)
+  const fullOpts: Intl.DateTimeFormatOptions =
+    spanDays > 180 ? { day: '2-digit', month: 'short', year: 'numeric' } : axisOpts
+
   const ticks = [0, 25, 50, 75, 100]
   const labelIdxs =
     n <= 6 ? series.map((_, i) => i) : [1, 2, 3, 4].map((k) => Math.round((k / 5) * (n - 1))).concat(0)
@@ -85,7 +103,7 @@ export function TrendChart({ series, keywords }: { series: InterestPoint[]; keyw
 
         {labelIdxs.map((i) => (
           <text key={i} x={x(i)} y={HEIGHT - 8} textAnchor="middle" className="fill-muted text-[10px]">
-            {formatTick(series[i]?.date ?? null)}
+            {formatDate(series[i]?.date ?? null, axisOpts)}
           </text>
         ))}
 
@@ -151,7 +169,7 @@ export function TrendChart({ series, keywords }: { series: InterestPoint[]; keyw
           style={{ left: Math.min(Math.max(x(hover!) + 10, 0), Math.max(width - 170, 0)), top: PAD.top }}
         >
           <div className="mb-1 font-medium text-ink">
-            {formatTick(active.date)}
+            {formatDate(active.date, fullOpts)}
             {active.is_partial && <span className="text-muted"> · неполные данные</span>}
           </div>
           {keywords.map((kw, si) => (
