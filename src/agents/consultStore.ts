@@ -32,6 +32,9 @@ function reasonOf(error: unknown): string {
   if (error instanceof Error && /signal timed out|aborted|TimeoutError/i.test(error.message)) {
     return 'Ответ занял слишком долго — повторите, не обновляя страницу.'
   }
+  if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
+    return 'Сеть оборвалась или сервер не ответил вовремя. Обновите страницу и повторите.'
+  }
   return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось отправить'
 }
 
