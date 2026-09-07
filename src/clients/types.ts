@@ -13,6 +13,26 @@ export function orderTypeLabel(type: OrderType | null): string {
   return ORDER_TYPES.find((o) => o.key === type)?.label ?? '—'
 }
 
+/** Формат расчёта клиента — фиксируется в документных данных на «Согласовании».
+ * `advance` требует `advance_amount`; `advance` и `postpay` подразумевают приём
+ * остатка на «Постоплате» (см. balance_paid). */
+export type PaymentPlan = 'full' | 'advance' | 'postpay'
+
+export const PAYMENT_PLANS: { key: PaymentPlan; label: string }[] = [
+  { key: 'full', label: 'Полная предоплата' },
+  { key: 'advance', label: 'Аванс + оплата после получения' },
+  { key: 'postpay', label: 'Оплата после получения' },
+]
+
+export function paymentPlanLabel(plan: PaymentPlan | null): string {
+  return PAYMENT_PLANS.find((p) => p.key === plan)?.label ?? '—'
+}
+
+/** true — по плану есть остаток, который принимают уже после получения дома. */
+export function planHasBalance(plan: PaymentPlan | null): boolean {
+  return plan === 'advance' || plan === 'postpay'
+}
+
 export const CLIENT_STAGES: { key: ClientStage; label: string }[] = [
   { key: 'lead', label: 'Лид' },
   { key: 'discussion', label: 'Обсуждение' },
@@ -65,11 +85,17 @@ export interface Client {
   houses_count: number
   final_price: number | null
   installation_address: string | null
+  payment_plan: PaymentPlan | null
+  /** Сумма аванса — только для payment_plan === 'advance', меньше final_price. */
+  advance_amount: number | null
   contract_file: FileAsset | null
   house_project_file: FileAsset | null
   documents_locked_at: string | null
   is_paid: boolean | null
   payment_locked_at: string | null
+  /** Приём остатка после получения дома — стадия «Постоплата», планы advance/postpay. */
+  balance_paid: boolean | null
+  balance_paid_at: string | null
   notes: ClientNote[]
 }
 

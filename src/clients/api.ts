@@ -1,5 +1,5 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { Client, ClientCreateInput, ClientNote, OrderType } from './types'
+import { Client, ClientCreateInput, ClientNote, OrderType, PaymentPlan } from './types'
 
 const SECTION = 'clients'
 
@@ -35,6 +35,9 @@ export interface DocumentsUpdateInput {
   final_price?: number
   installation_address?: string
   houses_count?: number
+  payment_plan?: PaymentPlan
+  /** Обязателен для payment_plan === 'advance', меньше final_price. */
+  advance_amount?: number
 }
 
 /** PATCH /api/clients/:id/documents */
@@ -45,6 +48,16 @@ export function updateDocuments(id: number, patch: DocumentsUpdateInput): Promis
 /** PATCH /api/clients/:id/payment */
 export function updatePayment(id: number, is_paid: boolean): Promise<Client> {
   return apiRequest<Client>({ section: SECTION, path: `/${id}/payment`, method: 'PATCH', body: { is_paid } })
+}
+
+/** PATCH /api/clients/:id/balance-payment — приём остатка после получения дома. */
+export function markBalancePayment(id: number): Promise<Client> {
+  return apiRequest<Client>({
+    section: SECTION,
+    path: `/${id}/balance-payment`,
+    method: 'PATCH',
+    body: { balance_paid: true },
+  })
 }
 
 async function uploadFile(id: number, kind: 'contract-file' | 'house-project-file', file: File): Promise<Client> {

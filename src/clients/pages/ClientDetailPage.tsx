@@ -10,6 +10,7 @@ import { nextStageOf, stageLabel } from '../rules'
 import { ReadRow, Section } from '../components/ProjectPanel'
 import { DocumentPanel } from '../components/DocumentPanel'
 import { PaymentPanel } from '../components/PaymentPanel'
+import { BalancePaymentPanel } from '../components/BalancePaymentPanel'
 import { NotesPanel } from '../components/NotesPanel'
 import { ProjectPanel } from '../components/ProjectPanel'
 
@@ -87,6 +88,7 @@ export function ClientDetailPage() {
         <ProjectPanel client={client} />
         <DocumentPanel client={client} />
         <PaymentPanel client={client} />
+        <BalancePaymentPanel client={client} />
         <NotesPanel client={client} />
       </div>
     </div>
