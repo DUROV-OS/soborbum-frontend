@@ -1,5 +1,6 @@
-import { Wrench } from 'lucide-react'
+import { Volume2, Wrench } from 'lucide-react'
 import { downloadFileById } from '@/shared/lib/httpClient'
+import { splitVoiceReply } from '@/shared/lib/speechReply'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MessageOut, PendingActionOut } from '../types'
 import { AttachmentChip } from './AttachmentChip'
@@ -9,10 +10,13 @@ export function MessageBubble({
   message,
   pendingActions,
   onResolve,
+  preferVoiceLead = false,
 }: {
   message: MessageOut
   pendingActions: PendingActionOut[]
   onResolve: (id: number, decision: 'approve' | 'reject') => Promise<unknown>
+  /** Show explicit «Голосом» résumé above the full answer. */
+  preferVoiceLead?: boolean
 }) {
   if (message.role !== 'user' && message.role !== 'assistant') return null
 
@@ -22,6 +26,8 @@ export function MessageBubble({
   const fileBlocks = message.content.filter((block) => block.type === 'file_ref')
   const text = textBlocks.map((block) => block.text).filter(Boolean).join('\n\n')
   const relatedActions = pendingActions.filter((action) => action.message_id === message.id)
+  const voiceParts = !isUser && preferVoiceLead && text ? splitVoiceReply(text) : null
+  const displayText = voiceParts?.hasExplicit ? voiceParts.written : text
 
   if (!text && toolBlocks.length === 0 && relatedActions.length === 0 && fileBlocks.length === 0) return null
 
@@ -41,9 +47,15 @@ export function MessageBubble({
           ))}
         </div>
       )}
-      {text && (
+      {voiceParts?.hasExplicit && voiceParts.spoken && (
+        <div className="flex max-w-[85%] items-start gap-2 rounded-md border border-brand/20 bg-brand/5 px-3.5 py-2 text-[13px] leading-relaxed text-ink sm:max-w-md">
+          <Volume2 size={14} className="mt-0.5 shrink-0 text-brand" />
+          <p>{voiceParts.spoken}</p>
+        </div>
+      )}
+      {displayText && (
         <Markdown
-          text={text}
+          text={displayText}
           className={`max-w-[85%] break-words rounded-md px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-md ${
             isUser ? 'bg-brand text-white' : 'bg-surface-muted text-ink'
           }`}

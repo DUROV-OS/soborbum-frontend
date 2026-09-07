@@ -1,5 +1,6 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
-import { Paperclip, Send } from 'lucide-react'
+import { Mic, MicOff, Paperclip, Send } from 'lucide-react'
+import { useVoiceInput } from '@/shared/hooks/useVoiceInput'
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Field'
 import { FileAssetOut } from '../types'
@@ -18,6 +19,7 @@ export function ChatComposer({
   onRemoveAttachment,
   initialMessage = '',
   allowAttach = true,
+  voiceInput = false,
 }: {
   sending: boolean
   attachments: FileAssetOut[]
@@ -27,15 +29,27 @@ export function ChatComposer({
   onRemoveAttachment: (id: number) => void
   initialMessage?: string
   allowAttach?: boolean
+  /** Бесплатный голосовой ввод (Web Speech / Whisper в браузере). */
+  voiceInput?: boolean
 }) {
   const [value, setValue] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setValue(initialMessage) }, [initialMessage])
+  useEffect(() => {
+    setValue(initialMessage)
+  }, [initialMessage])
+
+  const voice = useVoiceInput((chunk) => {
+    setValue((prev) => {
+      const next = prev.trim() ? `${prev.trim()} ${chunk}` : chunk
+      return next.trim()
+    })
+  })
 
   function submit() {
     const trimmed = value.trim()
     if (sending || (!trimmed && attachments.length === 0)) return
+    voice.stop()
     onSend(trimmed)
     setValue('')
   }
@@ -54,6 +68,11 @@ export function ChatComposer({
   }
 
   const canSend = !sending && (value.trim().length > 0 || attachments.length > 0)
+  const listening = voice.phase === 'listening'
+  const transcribing = voice.phase === 'transcribing'
+  const shownValue = listening && voice.interim
+    ? `${value}${value.trim() ? ' ' : ''}${voice.interim}`
+    : value
 
   return (
     <div className="border-t border-border px-4 py-3">
@@ -69,6 +88,17 @@ export function ChatComposer({
           ))}
           {uploadingAttachment && <span className="text-[12px] text-muted">Загрузка файла…</span>}
         </div>
+      )}
+      {voiceInput && (listening || transcribing || voice.error) && (
+        <p className={`mb-2 text-[12px] ${voice.error ? 'text-danger' : 'text-muted'}`}>
+          {voice.error
+            ? voice.error
+            : listening
+              ? voice.mode === 'whisper'
+                ? 'Запись… нажмите микрофон ещё раз, чтобы распознать'
+                : 'Слушаю… говорите'
+              : 'Распознаю речь… первый раз может занять минуту (модель скачивается бесплатно)'}
+        </p>
       )}
       <div className="flex items-end gap-2">
         <input
@@ -90,17 +120,43 @@ export function ChatComposer({
             <Paperclip size={16} />
           </button>
         )}
+        {voiceInput && (
+          <button
+            type="button"
+            onClick={() => voice.toggle()}
+            disabled={sending || !voice.supported || transcribing}
+            aria-label={listening ? 'Остановить голосовой ввод' : 'Голосовой ввод'}
+            aria-pressed={listening}
+            title={
+              !voice.supported
+                ? 'Голосовой ввод недоступен в этом браузере'
+                : listening
+                  ? 'Стоп'
+                  : 'Сказать вопрос голосом'
+            }
+            className={`mb-1 shrink-0 rounded-pill p-2 disabled:opacity-50 ${
+              listening
+                ? 'bg-danger/15 text-danger hover:bg-danger/25'
+                : 'text-muted hover:bg-surface-muted hover:text-brand'
+            }`}
+          >
+            {listening ? <MicOff size={16} /> : <Mic size={16} />}
+          </button>
+        )}
         <Textarea
           rows={1}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
+          value={shownValue}
+          onChange={(e) => {
+            if (listening || transcribing) return
+            setValue(e.target.value)
+          }}
           onKeyDown={handleKeyDown}
-          placeholder="Спросите Марину…"
+          placeholder={voiceInput ? 'Спросите Марину… или нажмите микрофон' : 'Спросите Марину…'}
           aria-label="Сообщение Марине"
           className="max-h-32 resize-none"
-          disabled={sending}
+          disabled={sending || transcribing}
         />
-        <Button size="sm" onClick={submit} disabled={!canSend} aria-label="Отправить сообщение">
+        <Button size="sm" onClick={submit} disabled={!canSend || transcribing} aria-label="Отправить сообщение">
           <Send size={15} />
         </Button>
       </div>
