@@ -8,12 +8,12 @@ const SECTION = 'auth'
 export async function login(email: string, password: string): Promise<Account> {
   const token = await loginRequest(email, password)
   setToken(token)
-  return apiRequest<Account>({ section: SECTION, path: '/me' })
+  return apiRequest<Account>({ section: SECTION, path: '/me', timeoutMs: 8000 })
 }
 
 /** GET /api/auth/me */
 export function me(): Promise<Account> {
-  return apiRequest<Account>({ section: SECTION, path: '/me' })
+  return apiRequest<Account>({ section: SECTION, path: '/me', timeoutMs: 8000 })
 }
 
 /** GET /api/auth/users */

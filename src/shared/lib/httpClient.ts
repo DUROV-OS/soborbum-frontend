@@ -42,6 +42,7 @@ export interface RequestOptions {
   body?: unknown
   query?: Record<string, string | number | boolean | undefined>
   form?: FormData
+  timeoutMs?: number
 }
 
 function buildUrl(section: string, path: string, query?: RequestOptions['query']): string {
@@ -70,6 +71,7 @@ export async function apiRequest<T>(options: RequestOptions): Promise<T> {
     method: options.method ?? 'GET',
     headers,
     body,
+    signal: options.timeoutMs ? AbortSignal.timeout(options.timeoutMs) : undefined,
   })
 
   if (!response.ok) {

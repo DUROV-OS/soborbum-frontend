@@ -3,6 +3,7 @@ import {
   AnalyticsSection,
   AskRequest,
   AskResponse,
+  ConsultAskResponse,
   ChatDetailOut,
   ChatDomain,
   ChatMode,
@@ -22,6 +23,36 @@ function askPath(domain: ChatDomain): string {
 /** POST /api/ai/{domain}/ask (or /api/ai/chat/ask for domain "general") */
 export function askDomain(domain: ChatDomain, request: AskRequest): Promise<AskResponse> {
   return apiRequest<AskResponse>({ section: SECTION, path: askPath(domain), method: 'POST', body: request })
+}
+
+/** POST /api/ai/consult/ask — единый чат в «Агентах», без списка переписок */
+export function askConsult(request: AskRequest): Promise<ConsultAskResponse> {
+  return apiRequest<ConsultAskResponse>({
+    section: SECTION,
+    path: '/consult/ask',
+    method: 'POST',
+    body: request,
+    timeoutMs: 180_000,
+  })
+}
+
+/** DELETE /api/ai/consult — стереть серверную нить консультации */
+export function clearConsult(chatId?: number | null): Promise<void> {
+  return apiRequest<void>({
+    section: SECTION,
+    path: '/consult',
+    method: 'DELETE',
+    query: chatId ? { chat_id: chatId } : undefined,
+  })
+}
+
+/** POST /api/ai/consult/pending-actions/:id/approve|reject */
+export function resolveConsultAction(id: number, decision: 'approve' | 'reject'): Promise<AskResponse> {
+  return apiRequest<AskResponse>({
+    section: SECTION,
+    path: `/consult/pending-actions/${id}/${decision}`,
+    method: 'POST',
+  })
 }
 
 /** POST /api/ai/files (multipart) — вложение для чата, id передаётся в AskRequest.file_ids */

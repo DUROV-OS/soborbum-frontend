@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/auth/store'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
@@ -9,6 +10,8 @@ import { AgentConstellation } from '../components/AgentConstellation'
 import { AgentPassportCard } from '../components/AgentPassportCard'
 import { PlanLists } from '../components/PlanLists'
 import { RunTaskForm } from '../components/RunTaskForm'
+import { ConsultPanel } from '../components/ConsultPanel'
+import { ShiftBoard } from '../components/ShiftBoard'
 import { AGENTS } from '../data'
 import { AgentId } from '../types'
 
@@ -32,25 +35,63 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
     ),
   },
   {
+    title: 'Смена сама, не чат',
+    body: (
+      <p>
+        Смена идёт сама раз в час. Кнопка «Начать смену» — если нужно прямо сейчас. Одна общая модель читает
+        базу, восемь ролей — восемь инструкций. Вам только очередь да/нет.
+      </p>
+    ),
+  },
+  {
+    title: 'Консультация — один чат',
+    body: (
+      <p>
+        Вкладка «Консультация» — единый разговор, без «нового чата». Если тема сменилась, сервер забывает старую
+        нить, чтобы она не попала в базу знаний. У вас на экране переписка остаётся, пока не нажмёте «Очистить чат».
+      </p>
+    ),
+  },
+  {
     title: 'Панель администратора',
     body: (
       <p>
-        Администратору доступна вкладка «Панель»: живые следы с /api/agents/runs и контракт разметки. Gold —
-        не «агент уже обучен».
+        Администратору доступна вкладка «Панель»: живые следы, смены и контракт разметки. Gold — не «агент уже
+        обучен».
       </p>
     ),
   },
 ]
 
-type TabKey = 'team' | 'panel'
+type TabKey = 'shift' | 'consult' | 'team' | 'panel'
+
+function isTab(value: string | null): value is TabKey {
+  return value === 'shift' || value === 'consult' || value === 'team' || value === 'panel'
+}
 
 export function AgentsPage() {
   const current = useAuthStore((s) => s.current)
   const isAdmin = current?.role === 'admin'
-  const [tab, setTab] = useState<TabKey>('team')
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requested = searchParams.get('tab')
+  const [tab, setTab] = useState<TabKey>(isTab(requested) ? requested : 'shift')
   const [selectedId, setSelectedId] = useState<AgentId>('coordinator')
   const onboarding = useSectionOnboarding('agents')
   const selected = useMemo(() => AGENTS.find((agent) => agent.id === selectedId) ?? AGENTS[0], [selectedId])
+  const draftMessage = typeof location.state?.draftMessage === 'string' ? location.state.draftMessage : ''
+
+  useEffect(() => {
+    if (!isTab(requested)) return
+    if (requested === 'panel' && !isAdmin) return
+    setTab(requested)
+  }, [requested, isAdmin])
+
+  function changeTab(next: TabKey) {
+    setTab(next)
+    if (next === 'shift') setSearchParams({})
+    else setSearchParams({ tab: next })
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-7 pb-6">
@@ -61,22 +102,26 @@ export function AgentsPage() {
             Агенты<span className="text-brand">.</span>
           </h1>
           <p className="mt-2 max-w-2xl text-[13px] text-muted">
-            Восемь ролей MVP, общий контекст компании и юрист как ворота. Совет директоров эту схему не заменяет.
+            Смена идёт сама. Спросить можно во вкладке «Консультация» — один чат, без новых переписок.
           </p>
         </div>
         <HelpButton onClick={onboarding.show} />
       </div>
 
-      {isAdmin && (
-        <Tabs
-          tabs={[
-            { key: 'team', label: 'Команда' },
-            { key: 'panel', label: 'Панель' },
-          ]}
-          activeKey={tab}
-          onChange={setTab}
-        />
-      )}
+      <Tabs
+        tabs={[
+          { key: 'shift', label: 'Смена' },
+          { key: 'consult', label: 'Консультация' },
+          { key: 'team', label: 'Команда' },
+          ...(isAdmin ? [{ key: 'panel' as const, label: 'Панель' }] : []),
+        ]}
+        activeKey={tab}
+        onChange={changeTab}
+      />
+
+      {tab === 'shift' && <ShiftBoard />}
+
+      {tab === 'consult' && <ConsultPanel initialMessage={draftMessage} />}
 
       {tab === 'team' && (
         <div className="space-y-5">

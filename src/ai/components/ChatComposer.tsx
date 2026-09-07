@@ -17,6 +17,7 @@ export function ChatComposer({
   onAttach,
   onRemoveAttachment,
   initialMessage = '',
+  allowAttach = true,
 }: {
   sending: boolean
   attachments: FileAssetOut[]
@@ -25,6 +26,7 @@ export function ChatComposer({
   onAttach: (file: File) => void
   onRemoveAttachment: (id: number) => void
   initialMessage?: string
+  allowAttach?: boolean
 }) {
   const [value, setValue] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -77,15 +79,17 @@ export function ChatComposer({
           className="hidden"
           onChange={handleFilesSelected}
         />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={sending}
-          aria-label="Прикрепить файл"
-          className="mb-1 shrink-0 rounded-pill p-2 text-muted hover:bg-surface-muted hover:text-brand disabled:opacity-50"
-        >
-          <Paperclip size={16} />
-        </button>
+        {allowAttach && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+            aria-label="Прикрепить файл"
+            className="mb-1 shrink-0 rounded-pill p-2 text-muted hover:bg-surface-muted hover:text-brand disabled:opacity-50"
+          >
+            <Paperclip size={16} />
+          </button>
+        )}
         <Textarea
           rows={1}
           value={value}

@@ -2,7 +2,6 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowRight, CheckCheck, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
-import { useAiStore } from '@/ai/store'
 import { SECTIONS } from '@/shared/sections'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -12,7 +11,6 @@ import { useTodayStore } from '../store'
 export function TodayPage() {
   const { data, loading, error, load } = useTodayStore()
   const hasAccess = useAuthStore((s) => s.hasAccess)
-  const startDraft = useAiStore((s) => s.startDraft)
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
 
@@ -20,8 +18,7 @@ export function TodayPage() {
 
   function askMarina(message = prompt) {
     if (!message.trim()) return
-    startDraft('general')
-    navigate('/ai', { state: { draftMessage: message.trim() } })
+    navigate('/agents?tab=consult', { state: { draftMessage: message.trim() } })
   }
 
   function submit(event: FormEvent) {
@@ -87,7 +84,7 @@ export function TodayPage() {
               <label htmlFor="marina-prompt" className="sr-only">Вопрос Марине</label>
               <textarea id="marina-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Например: что задерживает производство?"
                 className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-white outline-none placeholder:text-white/50" />
-              <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-white/50">Откроется черновик в чате</span>
+              <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-white/50">Откроется консультация в Агентах</span>
                 <button type="submit" disabled={!prompt.trim()} aria-label="Открыть вопрос Марине" className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#c9ead8] text-[#18392d] transition-colors hover:bg-white disabled:opacity-35"><ArrowRight size={18} /></button></div>
             </form>
             <div className="mt-3 flex flex-wrap gap-2">{['С чего начать сегодня?', 'Где нужна моя помощь?'].map((text) =>

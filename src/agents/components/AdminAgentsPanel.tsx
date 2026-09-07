@@ -54,7 +54,14 @@ export function AdminAgentsPanel() {
           hint="Только юрист или владелец. Это разметка, не следы API"
           tone="warning"
         />
-        <StatWidget label="Блоков" value={totals.blocked} hint="Живые вердикты legal gate" tone="danger" />
+        <StatWidget label="Смен" value={stats?.shifts ?? 0} hint="Тики компании, не чат" tone="brand" />
+        <StatWidget
+          label="Очередь человеку"
+          value={stats?.pending_approvals ?? 0}
+          hint="Ждут да/нет"
+          tone="warning"
+        />
+        <StatWidget label="Блоков в следах" value={totals.blocked} hint="Живые вердикты legal gate" tone="danger" />
         <StatWidget label="Выпусков без риска" value={totals.released} hint={`из ${totals.runs} живых прогонов`} />
       </div>
 
@@ -69,8 +76,8 @@ export function AdminAgentsPanel() {
       </div>
 
       <p className="text-[12px] text-muted">
-        Следы и вердикты — с /api/agents/runs. Gold остаётся контрактом разметки: 50 на роль и 30 legal gold, иначе
-        не говорим «обучен».
+        Смены и очередь — с /api/agents/shifts. Следы разовых запросов — /api/agents/runs. Gold — контракт разметки,
+        не «обучен».
       </p>
     </div>
   )

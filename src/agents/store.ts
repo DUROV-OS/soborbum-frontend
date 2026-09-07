@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as agentsApi from './api'
-import { AgentRun, AgentsStats } from './types'
+import { AgentRun, AgentShift, AgentsStats } from './types'
 
 function reasonOf(error: unknown): string {
   return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось выполнить запрос'
@@ -14,7 +14,13 @@ interface AgentsState {
   lastRun: AgentRun | null
   runLoading: boolean
   runError: string | null
+  shift: AgentShift | null
+  shiftLoading: boolean
+  shiftError: string | null
   loadStats: () => Promise<void>
+  loadShift: () => Promise<void>
+  startShift: () => Promise<AgentShift | null>
+  decideApproval: (id: number, status: 'approved' | 'rejected') => Promise<void>
   submit: (text: string) => Promise<AgentRun | null>
 }
 
@@ -25,6 +31,9 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
   lastRun: null,
   runLoading: false,
   runError: null,
+  shift: null,
+  shiftLoading: false,
+  shiftError: null,
 
   loadStats: async () => {
     set({ statsLoading: true, statsError: null })
@@ -34,6 +43,42 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     } catch (error) {
       set({ statsError: reasonOf(error), statsLoading: false })
     }
+  },
+
+  loadShift: async () => {
+    const quiet = get().shift !== null
+    if (!quiet) set({ shiftLoading: true, shiftError: null })
+    try {
+      const shift = await agentsApi.getLatestShift()
+      set({ shift, shiftLoading: false, shiftError: null })
+    } catch (error) {
+      set({ shiftError: reasonOf(error), shiftLoading: false })
+    }
+  },
+
+  startShift: async () => {
+    set({ shiftLoading: true, shiftError: null })
+    try {
+      const shift = await agentsApi.createAgentShift()
+      set({ shift, shiftLoading: false })
+      if (get().stats !== null) void get().loadStats()
+      return shift
+    } catch (error) {
+      set({ shiftError: reasonOf(error), shiftLoading: false })
+      return null
+    }
+  },
+
+  decideApproval: async (id, status) => {
+    const updated = await agentsApi.decideApproval(id, status)
+    const shift = get().shift
+    if (!shift) return
+    set({
+      shift: {
+        ...shift,
+        approvals: shift.approvals.map((item) => (item.id === updated.id ? updated : item)),
+      },
+    })
   },
 
   submit: async (text: string) => {

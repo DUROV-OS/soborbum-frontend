@@ -94,4 +94,64 @@ export interface AgentsStats {
   routing: RouteShare[]
   traces: TraceRow[]
   totals: AgentsTotals
+  shifts?: number
+  pending_approvals?: number
+}
+
+export interface ShiftReview {
+  reviewer: string
+  reviewer_title: string
+  text: string
+  escalate: boolean
+  kind: string
+}
+
+export interface ShiftItem {
+  id: number
+  agent_id: AgentId
+  agent_title: string
+  daily_question: string
+  stance: string
+  citations: string[]
+  legal_verdict: LegalVerdict
+  reviews: ShiftReview[]
+}
+
+export interface ShiftApproval {
+  id: number
+  shift_id: number
+  kind: string
+  title: string
+  detail: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
+export interface ChartBar {
+  label: string
+  value: number
+}
+
+export interface ShiftChart {
+  id: string
+  title: string
+  unit: string
+  bars: ChartBar[]
+  agents?: AgentId[]
+  lead?: string
+  tone?: 'brand' | 'danger' | 'warning' | 'timber'
+}
+
+export interface AgentShift {
+  id: number
+  verdict: LegalVerdict
+  summary: string
+  claude_used: boolean
+  created_at: string
+  items: ShiftItem[]
+  approvals: ShiftApproval[]
+  charts?: ShiftChart[]
+  autorun?: boolean
+  interval_seconds?: number
+  next_tick_at?: string | null
 }

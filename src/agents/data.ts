@@ -1,4 +1,4 @@
-import { AgentPassport, GoldProgress, PlanItem } from './types'
+import { AgentId, AgentPassport, GoldProgress, PlanItem } from './types'
 
 export const AGENTS: AgentPassport[] = [
   {
@@ -75,6 +75,28 @@ export const AGENTS: AgentPassport[] = [
   },
 ]
 
+export const AGENT_WATCHES: Record<AgentId, string> = {
+  coordinator: 'Сводит картину: что сейчас главное',
+  sales: 'Смотрит зависшие сделки и оплаты',
+  marketer: 'Ищет следующий контакт с рынком на факте',
+  production: 'Смотрит, что тормозит ближайший дом',
+  warehouse: 'Смотрит, чего не хватит и что уже едет',
+  finance: 'Ищет, где утекает маржа',
+  lawyer: 'Проверяет, можно ли выпускать без вас',
+  engineer: 'Сверяет узел с техкартой',
+}
+
+export const AGENT_LIMITS: Record<AgentId, string> = {
+  coordinator: 'Не подменяет цех, склад, юриста и продажи',
+  sales: 'Не ставит окончательную цену и скидку больше 5%',
+  marketer: 'Не берёт ворованную базу и не публикует сам',
+  production: 'Не обещает дату клиенту',
+  warehouse: 'Не платит поставщику',
+  finance: 'Не ходит в банк и не ставит цену клиенту',
+  lawyer: 'Не подписывает договор и не даёт коммерческий совет',
+  engineer: 'Не запускает нестандарт как типовой узел',
+}
+
 export const SPECIALISTS = AGENTS.filter((agent) => agent.id !== 'coordinator')
 
 export const PLAN_DONE: PlanItem[] = [
@@ -120,20 +142,26 @@ export const PLAN_DONE: PlanItem[] = [
     detail: 'POST/GET /api/agents/runs — живые маршруты вместо витрины.',
     done: true,
   },
+  {
+    id: 'shift',
+    title: 'Смена компании',
+    detail: 'Восемь ролей, крест, очередь человеку. Не чатбот.',
+    done: true,
+  },
 ]
 
 export const PLAN_NEXT: PlanItem[] = [
   {
     id: 'llm',
-    title: 'Специалисты через Claude',
-    detail: 'Сейчас отвечают по паспорту. Дальше — модель с цитатами из пакета.',
+    title: 'Одна общая модель с цитатами',
+    detail: 'Не восемь обученных сетей. Ключ Claude — тот же, что у Марины. Нет ключа — паспорт + база.',
     done: false,
   },
   {
     id: 'connectors',
     title: 'amoCRM и МойСклад в gather()',
-    detail: 'Vault уже читается с диска. CRM и склад — следующий коннектор.',
-    done: false,
+    detail: 'Читает для свежести, не пишет. Без токена сделок и остатков не выдумывает.',
+    done: true,
   },
   {
     id: 'gold',
@@ -144,8 +172,8 @@ export const PLAN_NEXT: PlanItem[] = [
   {
     id: 'marina',
     title: 'Стыковка с Мариной',
-    detail: 'Марина остаётся чатом раздела. Агенты — операционная команда.',
-    done: false,
+    detail: 'Консультация живёт во вкладке Агентов: один чат, без новых переписок.',
+    done: true,
   },
 ]
 

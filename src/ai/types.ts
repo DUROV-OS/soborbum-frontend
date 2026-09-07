@@ -46,6 +46,10 @@ export interface AskResponse {
   pending_actions: PendingActionOut[]
 }
 
+export interface ConsultAskResponse extends AskResponse {
+  topic_reset: boolean
+}
+
 export interface ChatOut {
   id: number
   domain: ChatDomain
