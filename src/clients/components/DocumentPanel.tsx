@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import { Paperclip } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
-import { Field, Input } from '@/shared/ui/Field'
+import { Field, Input, Select } from '@/shared/ui/Field'
 import { FileLink } from '@/shared/ui/FileLink'
 import { useClientsStore } from '../store'
 import { isGroupEditable, isGroupVisible } from '../rules'
-import { Client, FileAsset } from '../types'
+import { Client, FileAsset, PAYMENT_PLANS, PaymentPlan, paymentPlanLabel } from '../types'
 import { ReadRow, Section } from './ProjectPanel'
 
 export function DocumentPanel({ client }: { client: Client }) {
@@ -17,17 +17,40 @@ export function DocumentPanel({ client }: { client: Client }) {
   const [housesCount, setHousesCount] = useState<number | ''>(
     client.houses_count > 1 ? client.houses_count : isMultiple ? 2 : '',
   )
+  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan | ''>(client.payment_plan ?? '')
+  const [advanceAmount, setAdvanceAmount] = useState<number | ''>(client.advance_amount ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!isGroupVisible(client, 'documents')) return null
 
+  const needsAdvance = paymentPlan === 'advance'
+  const finalPriceNum = finalPrice === '' ? null : Number(finalPrice)
+  const advanceNum = advanceAmount === '' ? null : Number(advanceAmount)
+
+  function validate(): string | null {
+    if (needsAdvance) {
+      if (advanceNum === null || advanceNum <= 0) return 'Укажите сумму аванса'
+      if (finalPriceNum !== null && advanceNum >= finalPriceNum) {
+        return 'Аванс должен быть меньше итоговой стоимости'
+      }
+    }
+    return null
+  }
+
   async function save() {
+    const localError = validate()
+    if (localError) {
+      setError(localError)
+      return
+    }
     setSaving(true)
     const result = await updateDocuments(client.id, {
       final_price: finalPrice === '' ? undefined : Number(finalPrice),
       installation_address: address || undefined,
       houses_count: isMultiple && housesCount !== '' ? Number(housesCount) : undefined,
+      payment_plan: paymentPlan || undefined,
+      advance_amount: needsAdvance && advanceNum !== null ? advanceNum : undefined,
     })
     setSaving(false)
     setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
@@ -41,6 +64,13 @@ export function DocumentPanel({ client }: { client: Client }) {
           label="Итоговая цена"
           value={client.final_price ? `${client.final_price.toLocaleString('ru-RU')} ₽` : undefined}
         />
+        <ReadRow label="Формат расчёта" value={client.payment_plan ? paymentPlanLabel(client.payment_plan) : undefined} />
+        {client.payment_plan === 'advance' && (
+          <ReadRow
+            label="Сумма аванса"
+            value={client.advance_amount ? `${client.advance_amount.toLocaleString('ru-RU')} ₽` : undefined}
+          />
+        )}
         <ReadRow label="Адрес установки" value={client.installation_address ?? undefined} />
         <ReadRow
           label="Проект дома"
@@ -75,6 +105,34 @@ export function DocumentPanel({ client }: { client: Client }) {
         <Field label="Адрес установки" required>
           <Input value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
+        <div className={needsAdvance ? '' : 'sm:col-span-2'}>
+          <Field label="Формат расчёта" required hint="Определяет, что подтверждают на «Оплате» и нужен ли приём остатка на «Постоплате».">
+            <Select
+              value={paymentPlan}
+              onChange={(e) => {
+                const next = e.target.value as PaymentPlan | ''
+                setPaymentPlan(next)
+                if (next !== 'advance') setAdvanceAmount('')
+              }}
+            >
+              <option value="">— выберите —</option>
+              {PAYMENT_PLANS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        {needsAdvance && (
+          <Field label="Сумма аванса, ₽" required hint="Меньше итоговой стоимости. Остаток принимается после получения дома.">
+            <Input
+              type="number"
+              value={advanceAmount}
+              onChange={(e) => setAdvanceAmount(e.target.value === '' ? '' : Number(e.target.value))}
+            />
+          </Field>
+        )}
         <Field label="Проект дома" required>
           <FileUploadButton
             asset={client.house_project_file}
