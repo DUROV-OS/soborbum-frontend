@@ -1,4 +1,4 @@
-import { Client, ClientStage, CLIENT_STAGES } from './types'
+import { Client, ClientStage, CLIENT_STAGES, PaymentPlan } from './types'
 
 const STAGE_ORDER = CLIENT_STAGES.map((s) => s.key)
 
@@ -36,4 +36,47 @@ export function isGroupEditable(client: Client, group: ClientFieldGroup): boolea
   if (group === 'project') return client.project_locked_at === null
   if (group === 'documents') return client.documents_locked_at === null
   return client.payment_locked_at === null
+}
+
+/**
+ * Что подтверждают на стадии «Оплата» — зависит от формата расчёта:
+ * полная предоплата — вся сумма, аванс+остаток — только аванс, оплата после
+ * получения — подтверждать нечего, переход доступен сразу. Итог всё равно
+ * проверяет бэкенд на transition; здесь — только подписи и признак,
+ * нужна ли отметка «оплата поступила».
+ */
+export interface PaymentStageRule {
+  /** Нужна ли отметка is_paid перед переходом дальше. */
+  requiresConfirmation: boolean
+  /** Подпись «оплата поступила» для текущего формата расчёта. */
+  paidLabel: string
+  /** Подпись «оплата не поступила». */
+  unpaidLabel: string
+  /** Пояснение под панелью оплаты. */
+  note: string
+}
+
+export function paymentStageRule(plan: PaymentPlan | null): PaymentStageRule {
+  if (plan === 'advance') {
+    return {
+      requiresConfirmation: true,
+      paidLabel: 'Аванс поступил',
+      unpaidLabel: 'Аванс не поступил',
+      note: 'Формат «аванс + оплата после получения»: на этой стадии подтверждается поступление аванса. Остаток принимается на «Постоплате».',
+    }
+  }
+  if (plan === 'postpay') {
+    return {
+      requiresConfirmation: false,
+      paidLabel: 'Оплата после получения',
+      unpaidLabel: 'Оплата после получения',
+      note: 'Формат «оплата после получения»: предоплата не вносится — подтверждение не требуется, переход на следующую стадию доступен сразу.',
+    }
+  }
+  return {
+    requiresConfirmation: true,
+    paidLabel: 'Вся сумма поступила',
+    unpaidLabel: 'Вся сумма не поступила',
+    note: 'Формат «полная предоплата»: перед переходом подтверждается поступление всей суммы.',
+  }
 }
