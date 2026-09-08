@@ -12,6 +12,7 @@ import { DocumentPanel } from '../components/DocumentPanel'
 import { PaymentPanel } from '../components/PaymentPanel'
 import { BalancePaymentPanel } from '../components/BalancePaymentPanel'
 import { NotesPanel } from '../components/NotesPanel'
+import { MaxChatPanel } from '../components/MaxChatPanel'
 import { ProjectPanel } from '../components/ProjectPanel'
 
 export function ClientDetailPage() {
@@ -90,6 +91,7 @@ export function ClientDetailPage() {
         <PaymentPanel client={client} />
         <BalancePaymentPanel client={client} />
         <NotesPanel client={client} />
+        <MaxChatPanel client={client} />
       </div>
     </div>
   )

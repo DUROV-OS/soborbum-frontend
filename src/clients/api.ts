@@ -45,6 +45,16 @@ export function updateDocuments(id: number, patch: DocumentsUpdateInput): Promis
   return apiRequest<Client>({ section: SECTION, path: `/${id}/documents`, method: 'PATCH', body: patch })
 }
 
+/** PATCH /api/clients/:id/max-chat — привязать/отвязать чат MAX (`null` отвязывает). */
+export function setMaxChat(id: number, maxChatId: number | null): Promise<Client> {
+  return apiRequest<Client>({
+    section: SECTION,
+    path: `/${id}/max-chat`,
+    method: 'PATCH',
+    body: { max_chat_id: maxChatId },
+  })
+}
+
 /** PATCH /api/clients/:id/payment */
 export function updatePayment(id: number, is_paid: boolean): Promise<Client> {
   return apiRequest<Client>({ section: SECTION, path: `/${id}/payment`, method: 'PATCH', body: { is_paid } })

@@ -16,6 +16,7 @@ interface ClientsState {
   updateProject: (id: number, patch: clientsApi.ProjectUpdateInput) => Promise<ActionResult>
   updateDocuments: (id: number, patch: clientsApi.DocumentsUpdateInput) => Promise<ActionResult>
   updatePayment: (id: number, isPaid: boolean) => Promise<ActionResult>
+  setMaxChat: (id: number, maxChatId: number | null) => Promise<ActionResult>
   markBalancePayment: (id: number) => Promise<ActionResult>
   uploadContractFile: (id: number, file: File) => Promise<ActionResult>
   uploadHouseProjectFile: (id: number, file: File) => Promise<ActionResult>
@@ -72,6 +73,7 @@ export const useClientsStore = create<ClientsState>((set, get) => {
     updateProject: (id, patch) => applyClientMutation(() => clientsApi.updateProject(id, patch)),
     updateDocuments: (id, patch) => applyClientMutation(() => clientsApi.updateDocuments(id, patch)),
     updatePayment: (id, isPaid) => applyClientMutation(() => clientsApi.updatePayment(id, isPaid)),
+    setMaxChat: (id, maxChatId) => applyClientMutation(() => clientsApi.setMaxChat(id, maxChatId)),
     markBalancePayment: (id) => applyClientMutation(() => clientsApi.markBalancePayment(id)),
     uploadContractFile: (id, file) => applyClientMutation(() => clientsApi.uploadContractFile(id, file)),
     uploadHouseProjectFile: (id, file) => applyClientMutation(() => clientsApi.uploadHouseProjectFile(id, file)),

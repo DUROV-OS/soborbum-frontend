@@ -76,6 +76,10 @@ export interface Client {
   phone: string
   email: string
   contacts: ClientContact[]
+  /** id чата в мессенджере MAX, к которому привязана переписка с клиентом.
+   * `null` — переписка не привязана; `0` — «Избранное». Ни к одной стадии
+   * не привязан, редактируется в любой момент. */
+  max_chat_id: number | null
   order_type: OrderType | null
   wishes_description: string | null
   estimated_price: number | null
