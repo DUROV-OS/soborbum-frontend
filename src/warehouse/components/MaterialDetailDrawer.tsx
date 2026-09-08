@@ -41,7 +41,9 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
       title={material.title}
       subtitle={
         <div className="flex items-center gap-2">
-          <span>{material.material_type}{material.size ? ` · ${material.size}` : ''}</span>
+          <span>
+            {[material.code, material.category].filter((v) => v && v !== 'без категории').join(' · ') || '—'}
+          </span>
           {material.needs_supply && <Chip tone="danger">Требуется поставка</Chip>}
         </div>
       }
@@ -50,8 +52,8 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
         <div className="grid grid-cols-1 gap-4 text-[13px] sm:grid-cols-2">
           <Row label="На складе" value={`${material.quantity_in_stock} ${material.unit}`} />
           <Row label="Суммарно запрошено" value={`${material.total_requested} ${material.unit}`} />
-          <Row label="Поставщик" value={material.supplier_name ?? '—'} />
-          <Row label="Контакт поставщика" value={material.supplier_contact ?? material.supplier_phone ?? '—'} />
+          <Row label="Склад" value={material.warehouse || '—'} />
+          <Row label="Закупочная цена" value={material.purchase_price ? `${material.purchase_price} ₽` : '—'} />
         </div>
 
         <div>

@@ -2,7 +2,6 @@ import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input } from '@/shared/ui/Field'
-import { QUICK_LOGIN } from '../demoAccounts'
 import { useAuthStore } from '../store'
 
 export function LoginPage() {
@@ -17,15 +16,6 @@ export function LoginPage() {
     e.preventDefault()
     setSubmitting(true)
     const ok = await login(email, password)
-    setSubmitting(false)
-    if (ok) navigate('/', { replace: true })
-  }
-
-  async function quickLogin(qlEmail: string, qlPassword: string) {
-    setEmail(qlEmail)
-    setPassword(qlPassword)
-    setSubmitting(true)
-    const ok = await login(qlEmail, qlPassword)
     setSubmitting(false)
     if (ok) navigate('/', { replace: true })
   }
@@ -65,22 +55,6 @@ export function LoginPage() {
             </Button>
           </div>
         </form>
-
-        <div className="mt-4 rounded-md border border-border bg-surface p-2">
-          <div className="px-2.5 py-1.5 text-[11px] text-muted">Быстрый вход (демо)</div>
-          {QUICK_LOGIN.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              onClick={() => quickLogin(account.email, account.password)}
-              disabled={submitting}
-              className="flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[13px] text-ink hover:bg-surface-muted disabled:opacity-50"
-            >
-              <span>{account.label}</span>
-              <span className="text-[12px] text-muted">{account.title}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   )

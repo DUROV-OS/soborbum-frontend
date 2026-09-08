@@ -5,16 +5,18 @@ export interface RequestBreakdownItem {
   quantity_requested: number
 }
 
+// Соответствует WarehouseMaterialOut на бэкенде. `warehouse` и `category` —
+// строковые enum'ы (русские подписи), приходят как есть.
 export interface Material {
   id: number
-  material_type: string
-  size: string | null
+  warehouse: string
+  category: string
   title: string
-  supplier_name: string | null
-  supplier_contact: string | null
-  supplier_phone: string | null
+  code: string
   unit: string
+  is_fractional: boolean
   quantity_in_stock: number
+  purchase_price: number
   threshold: number
   total_requested: number
   needs_supply: boolean
