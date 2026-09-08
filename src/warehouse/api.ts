@@ -8,20 +8,30 @@ export function listMaterials(needsSupply?: boolean): Promise<Material[]> {
   return apiRequest<Material[]>({ section: SECTION, path: '/materials', query: { needs_supply: needsSupply } })
 }
 
+/** GET /api/warehouse/warehouses — список складов (значения enum) */
+export function listWarehouses(): Promise<string[]> {
+  return apiRequest<string[]>({ section: SECTION, path: '/warehouses' })
+}
+
+/** GET /api/warehouse/categories — список категорий материалов (значения enum) */
+export function listCategories(): Promise<string[]> {
+  return apiRequest<string[]>({ section: SECTION, path: '/categories' })
+}
+
 /** GET /api/warehouse/materials/:id */
 export function getMaterial(id: number): Promise<Material> {
   return apiRequest<Material>({ section: SECTION, path: `/materials/${id}` })
 }
 
 export interface MaterialCreateInput {
-  material_type: string
-  size?: string
+  warehouse: string
+  category?: string
   title: string
-  supplier_name?: string
-  supplier_contact?: string
-  supplier_phone?: string
+  code: string
   unit: string
+  is_fractional?: boolean
   quantity_in_stock?: number
+  purchase_price?: number
   threshold?: number
 }
 
@@ -31,12 +41,12 @@ export function createMaterial(input: MaterialCreateInput): Promise<Material> {
 }
 
 export interface MaterialUpdateInput {
-  material_type?: string
-  size?: string
+  category?: string
   title?: string
-  supplier_name?: string
-  supplier_contact?: string
-  supplier_phone?: string
+  code?: string
+  unit?: string
+  is_fractional?: boolean
+  purchase_price?: number
   threshold?: number
 }
 

@@ -53,7 +53,7 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
     title: 'Поиск и фильтры',
     body: (
       <p>
-        В строке поиска можно найти материал по названию, типу, размеру или поставщику. Рядом — сортировка и
+        В строке поиска можно найти материал по названию, коду или категории. Рядом — сортировка и
         переключатель «Нужна поставка», который оставляет только позиции ниже порога.
       </p>
     ),
@@ -92,10 +92,9 @@ export function WarehousePage() {
     .filter(
       (m) =>
         !q ||
-        m.title.toLowerCase().includes(q) ||
-        m.material_type.toLowerCase().includes(q) ||
-        (m.size ?? '').toLowerCase().includes(q) ||
-        (m.supplier_name ?? '').toLowerCase().includes(q),
+        (m.title ?? '').toLowerCase().includes(q) ||
+        (m.code ?? '').toLowerCase().includes(q) ||
+        (m.category ?? '').toLowerCase().includes(q),
     )
     .sort((a, b) => {
       if (sortKey === 'name') return a.title.localeCompare(b.title, 'ru')
@@ -145,7 +144,7 @@ export function WarehousePage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Поиск по материалу, типу, поставщику…"
+              placeholder="Поиск по названию, коду, категории…"
               className="sm:max-w-xs"
             />
             <Select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} className="w-full sm:w-56">
@@ -201,13 +200,11 @@ export function WarehousePage() {
 }
 
 function MaterialCell({ material }: { material: Material }) {
+  const meta = [material.code, material.category].filter((v) => v && v !== 'без категории')
   return (
     <div>
       <div className="font-medium text-ink">{material.title}</div>
-      <div className="text-[12px] text-muted">
-        {material.material_type}
-        {material.size ? ` · ${material.size}` : ''}
-      </div>
+      {meta.length > 0 && <div className="text-[12px] text-muted">{meta.join(' · ')}</div>}
     </div>
   )
 }
