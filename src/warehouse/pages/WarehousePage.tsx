@@ -80,15 +80,21 @@ export function WarehousePage() {
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [onlyNeedsSupply, setOnlyNeedsSupply] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const onboarding = useSectionOnboarding('warehouse')
 
   useEffect(() => {
     load()
   }, [load])
 
+  const categories = Array.from(
+    new Set(materials.map((m) => (m.category ?? '').trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, 'ru'))
+
   const q = query.trim().toLowerCase()
   const visibleMaterials = materials
     .filter((m) => !onlyNeedsSupply || m.needs_supply)
+    .filter((m) => categoryFilter === 'all' || (m.category ?? '').trim() === categoryFilter)
     .filter(
       (m) =>
         !q ||
@@ -147,6 +153,18 @@ export function WarehousePage() {
               placeholder="Поиск по названию, коду, категории…"
               className="sm:max-w-xs"
             />
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full sm:w-56"
+            >
+              <option value="all">Все категории</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
             <Select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} className="w-full sm:w-56">
               {Object.entries(SORT_LABEL).map(([key, label]) => (
                 <option key={key} value={key}>
@@ -165,6 +183,17 @@ export function WarehousePage() {
           </div>
           <DataTable
             columns={[
+              {
+                header: 'Категория',
+                accessor: (m) => {
+                  const c = (m.category ?? '').trim()
+                  return c && c !== 'без категории' ? (
+                    <Chip tone="neutral">{c}</Chip>
+                  ) : (
+                    <span className="text-[12px] text-muted">—</span>
+                  )
+                },
+              },
               { header: 'Материал', accessor: (m) => <MaterialCell material={m} /> },
               { header: 'На складе', align: 'right', accessor: (m) => `${m.quantity_in_stock} ${m.unit}`, className: 'tabular' },
               { header: 'Запрошено', align: 'right', accessor: (m) => `${m.total_requested} ${m.unit}`, className: 'tabular' },
@@ -200,7 +229,7 @@ export function WarehousePage() {
 }
 
 function MaterialCell({ material }: { material: Material }) {
-  const meta = [material.code, material.category].filter((v) => v && v !== 'без категории')
+  const meta = [material.code].filter((v) => v && v !== 'без категории')
   return (
     <div>
       <div className="font-medium text-ink">{material.title}</div>
