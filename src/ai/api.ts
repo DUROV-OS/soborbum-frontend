@@ -1,4 +1,4 @@
-import { apiRequest } from '@/shared/lib/httpClient'
+import { apiRequest, streamRequest, StreamEvent } from '@/shared/lib/httpClient'
 import {
   AnalyticsSection,
   AskRequest,
@@ -23,6 +23,20 @@ function askPath(domain: ChatDomain): string {
 /** POST /api/ai/{domain}/ask (or /api/ai/chat/ask for domain "general") */
 export function askDomain(domain: ChatDomain, request: AskRequest): Promise<AskResponse> {
   return apiRequest<AskResponse>({ section: SECTION, path: askPath(domain), method: 'POST', body: request })
+}
+
+/** POST /api/ai/{domain}/ask/stream — тот же ход, токены приходят по мере генерации (SSE). */
+export function askDomainStream(
+  domain: ChatDomain,
+  request: AskRequest,
+  onEvent: (event: StreamEvent) => void,
+): Promise<void> {
+  return streamRequest({ section: SECTION, path: `${askPath(domain)}/stream`, body: request }, onEvent)
+}
+
+/** POST /api/ai/consult/ask/stream — стриминговый вариант консультации. */
+export function askConsultStream(request: AskRequest, onEvent: (event: StreamEvent) => void): Promise<void> {
+  return streamRequest({ section: SECTION, path: '/consult/ask/stream', body: request }, onEvent)
 }
 
 /** POST /api/ai/consult/ask — единый чат в «Агентах», без списка переписок */
