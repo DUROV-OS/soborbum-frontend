@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { Markdown } from '@/shared/ui/Markdown'
 import { useAiStore } from '../store'
 import { DOMAIN_LABEL, PendingActionOut } from '../types'
 import { ChatComposer } from './ChatComposer'
@@ -32,6 +33,8 @@ export function ChatPanel({
   const draftMode = useAiStore((s) => s.draftMode)
   const pendingActions = useAiStore((s) => s.pendingActions)
   const sending = useAiStore((s) => s.sending)
+  const streamBubbles = useAiStore((s) => s.streamBubbles)
+  const streamStatus = useAiStore((s) => s.streamStatus)
   const optimisticMessage = useAiStore((s) => s.optimisticMessage)
   const attachments = useAiStore((s) => s.attachments)
   const uploadingAttachment = useAiStore((s) => s.uploadingAttachment)
@@ -53,9 +56,10 @@ export function ChatPanel({
   // Актуальный попап уже показывает эти действия — не дублируем их карточками в самой переписке.
   const inlinePendingActions = pendingActions.filter((a) => !modalActions.some((m) => m.id === a.id))
 
+  const lastStreamText = streamBubbles.length ? streamBubbles[streamBubbles.length - 1].text : ''
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [chat?.messages.length, sending])
+  }, [chat?.messages.length, sending, streamBubbles.length, streamStatus, lastStreamText])
 
   if (!domain) {
     return <EmptyState icon={<Sparkles size={28} />} title="Выберите чат или начните новый" />
@@ -141,14 +145,22 @@ export function ChatPanel({
                 </div>
               </div>
             )}
-            {sending && (
+            {streamBubbles.map((bubble) => (
+              <div key={bubble.id} className="flex min-w-0 flex-col items-start">
+                <Markdown
+                  text={bubble.text + (bubble.done ? '' : ' ▋')}
+                  className="max-w-[85%] break-words rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-ink sm:max-w-md"
+                />
+              </div>
+            ))}
+            {sending && (streamStatus || streamBubbles.length === 0) && (
               <div className="flex items-center gap-1.5 rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] text-muted">
                 <span className="flex gap-0.5">
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
                 </span>
-                ИИ думает — это может занять до минуты, обновлять страницу не нужно
+                {streamStatus ?? 'ИИ думает — обновлять страницу не нужно'}
               </div>
             )}
             <div ref={bottomRef} />

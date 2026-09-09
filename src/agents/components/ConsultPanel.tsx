@@ -7,6 +7,7 @@ import { PendingActionOut } from '@/ai/types'
 import { speakPrincess, splitVoiceReply, stopSpeaking } from '@/shared/lib/speechReply'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
+import { Markdown } from '@/shared/ui/Markdown'
 import { useConsultStore } from '../consultStore'
 
 const VOICE_REPLY_KEY = 'soborbum.consult.voiceReply'
@@ -27,6 +28,8 @@ export function ConsultPanel({ initialMessage = '' }: { initialMessage?: string 
   const messages = useConsultStore((state) => state.messages)
   const pendingActions = useConsultStore((state) => state.pendingActions)
   const sending = useConsultStore((state) => state.sending)
+  const streamBubbles = useConsultStore((state) => state.streamBubbles)
+  const streamStatus = useConsultStore((state) => state.streamStatus)
   const error = useConsultStore((state) => state.error)
   const draft = useConsultStore((state) => state.draft)
   const send = useConsultStore((state) => state.send)
@@ -51,9 +54,10 @@ export function ConsultPanel({ initialMessage = '' }: { initialMessage?: string 
     if (initialMessage) setDraft(initialMessage)
   }, [initialMessage, setDraft])
 
+  const lastStreamText = streamBubbles.length ? streamBubbles[streamBubbles.length - 1].text : ''
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length, sending])
+  }, [messages.length, sending, streamBubbles.length, streamStatus, lastStreamText])
 
   useEffect(() => {
     if (!readyToSpeak.current || !voiceReply || sending) return
@@ -160,9 +164,17 @@ export function ConsultPanel({ initialMessage = '' }: { initialMessage?: string 
               preferVoiceLead={message.role === 'assistant'}
             />
           ))}
-          {sending && (
+          {streamBubbles.map((bubble) => (
+            <div key={bubble.id} className="flex min-w-0 flex-col items-start">
+              <Markdown
+                text={bubble.text + (bubble.done ? '' : ' ▋')}
+                className="max-w-[85%] break-words rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-ink sm:max-w-md"
+              />
+            </div>
+          ))}
+          {sending && (streamStatus || streamBubbles.length === 0) && (
             <div className="flex items-center gap-1.5 rounded-md bg-surface-muted px-3.5 py-2.5 text-[13px] text-muted">
-              Думаю — страницу обновлять не нужно
+              {streamStatus ?? 'Думаю — страницу обновлять не нужно'}
             </div>
           )}
           <div ref={bottomRef} />

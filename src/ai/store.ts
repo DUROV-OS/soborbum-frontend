@@ -1,9 +1,13 @@
 import { create } from 'zustand'
-import { ApiError } from '@/shared/lib/httpClient'
+import { ApiError, StreamEvent } from '@/shared/lib/httpClient'
 import * as aiApi from './api'
-import { AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, FileAssetOut, PendingActionOut } from './types'
+import { applyStreamEvent, StreamBubble } from './stream'
+import { AskRequest, AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, FileAssetOut, PendingActionOut } from './types'
 
 function reasonOf(error: unknown): string {
+  if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
+    return 'Сеть оборвалась или сервер не ответил вовремя. Обновите страницу и повторите.'
+  }
   return error instanceof ApiError || error instanceof Error ? error.message : 'Не удалось выполнить действие'
 }
 
@@ -16,6 +20,10 @@ interface AiState {
   draftMode: ChatMode
   pendingActions: PendingActionOut[]
   sending: boolean
+  /** Пузыри ответа, печатающиеся по мере генерации (SSE), до финального refreshChat. */
+  streamBubbles: StreamBubble[]
+  /** «Ищу в интернете…» и т.п. — статус текущего шага, пока текста ещё нет. */
+  streamStatus: string | null
   /** Только что отправленное сообщение, пока ответ ещё не пришёл — рисуется как временный пузырь. */
   optimisticMessage: string | null
   /** Файлы, уже загруженные на бэкенд (POST /ai/files) и ждущие следующего send(). */
@@ -58,6 +66,8 @@ export const useAiStore = create<AiState>((set, get) => {
     draftMode: 'require_approval',
     pendingActions: [],
     sending: false,
+    streamBubbles: [],
+    streamStatus: null,
     optimisticMessage: null,
     attachments: [],
     uploadingAttachment: false,
@@ -100,29 +110,89 @@ export const useAiStore = create<AiState>((set, get) => {
       if (!domain) return null
       const mode = activeChat?.mode ?? draftMode
       const placeholder = message || (attachments.length > 0 ? `📎 ${attachments.length} файл(ов)` : message)
-      set({ sending: true, error: null, optimisticMessage: placeholder, attachments: [] })
-      try {
-        const response = await aiApi.askDomain(domain, {
-          chat_id: activeChat?.id ?? null,
-          message,
-          file_ids: attachments.map((a) => a.id),
-          mode,
-        })
-        await refreshChat(response.chat_id)
-        set({ sending: false, draftDomain: null, optimisticMessage: null })
-        return response
-      } catch (error) {
-        // Файлы уже загружены на бэкенд (у них есть id) - возвращаем их в composer, чтобы
-        // не заставлять сотрудника выбирать их заново.
-        set({ sending: false, error: reasonOf(error), attachments })
-        // Сообщение пользователя (и всё, что успело сохраниться на сервере до сбоя) уже
-        // могло быть закоммичено бэкендом раньше самого падения — подтягиваем реальное
-        // состояние чата вместо того, чтобы оставить на экране только текст ошибки.
+      const request: AskRequest = {
+        chat_id: activeChat?.id ?? null,
+        message,
+        file_ids: attachments.map((a) => a.id),
+        mode,
+      }
+      set({
+        sending: true,
+        error: null,
+        optimisticMessage: placeholder,
+        attachments: [],
+        streamBubbles: [],
+        streamStatus: null,
+      })
+
+      const clearStream = () => set({ streamBubbles: [], streamStatus: null })
+      const failFrom = async (error: unknown) => {
+        // Файлы уже загружены на бэкенд (у них есть id) — возвращаем их в composer.
+        set({ sending: false, error: reasonOf(error), attachments, optimisticMessage: null })
+        clearStream()
         const chatId = get().activeChat?.id
         if (chatId) await refreshChat(chatId).catch(() => {})
         else get().loadChats().catch(() => {})
-        set({ optimisticMessage: null })
+      }
+
+      let sawByte = false
+      let doneChatId: number | null = null
+      let pendingFromStream: PendingActionOut[] = []
+      let streamError: string | null = null
+
+      try {
+        await aiApi.askDomainStream(domain, request, (event: StreamEvent) => {
+          sawByte = true
+          if (event.type === 'done') {
+            doneChatId = typeof event.chat_id === 'number' ? event.chat_id : null
+            return
+          }
+          if (event.type === 'pending_approval') {
+            pendingFromStream = (event.pending_actions as PendingActionOut[]) ?? []
+            doneChatId = typeof event.chat_id === 'number' ? event.chat_id : null
+            return
+          }
+          if (event.type === 'error') {
+            streamError = typeof event.detail === 'string' ? event.detail : 'Не удалось получить ответ'
+            return
+          }
+          set((state) => {
+            const next = applyStreamEvent(event, { bubbles: state.streamBubbles, status: state.streamStatus })
+            return { streamBubbles: next.bubbles, streamStatus: next.status }
+          })
+        })
+      } catch (error) {
+        if (sawByte) {
+          await failFrom(error)
+          return null
+        }
+        // Ни одного байта — стрим не поднялся; пробуем блокирующий эндпоинт.
+        try {
+          const response = await aiApi.askDomain(domain, request)
+          await refreshChat(response.chat_id)
+          set({ sending: false, draftDomain: null, optimisticMessage: null })
+          clearStream()
+          return response
+        } catch (fallbackError) {
+          await failFrom(fallbackError)
+          return null
+        }
+      }
+
+      if (streamError) {
+        await failFrom(new Error(streamError))
         return null
+      }
+
+      const chatId = doneChatId ?? get().activeChat?.id
+      if (chatId) await refreshChat(chatId).catch(() => {})
+      set({ sending: false, draftDomain: null, optimisticMessage: null })
+      clearStream()
+      return {
+        chat_id: chatId ?? 0,
+        status: pendingFromStream.length > 0 ? 'pending_approval' : 'completed',
+        reply: null,
+        pending_actions: pendingFromStream,
       }
     },
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as aiApi from '@/ai/api'
-import { ApiError } from '@/shared/lib/httpClient'
+import { applyStreamEvent, StreamBubble } from '@/ai/stream'
+import { ApiError, StreamEvent } from '@/shared/lib/httpClient'
 import { MessageOut, PendingActionOut } from '@/ai/types'
 
 const STORAGE_KEY = 'soborbum.consult.visible'
@@ -15,6 +16,8 @@ interface ConsultState {
   messages: MessageOut[]
   pendingActions: PendingActionOut[]
   sending: boolean
+  streamBubbles: StreamBubble[]
+  streamStatus: string | null
   error: string | null
   optimisticMessage: string | null
   draft: string
@@ -71,6 +74,8 @@ export const useConsultStore = create<ConsultState>((set, get) => ({
   messages: [],
   pendingActions: [],
   sending: false,
+  streamBubbles: [],
+  streamStatus: null,
   error: null,
   optimisticMessage: null,
   draft: '',
@@ -93,26 +98,97 @@ export const useConsultStore = create<ConsultState>((set, get) => ({
       optimisticMessage: text,
       messages: [...messages, userBubble],
       draft: '',
+      streamBubbles: [],
+      streamStatus: null,
     })
-    try {
-      const response = await aiApi.askConsult({ chat_id: chatId, message: text })
-      const assistantId = response.pending_actions[0]?.message_id ?? Date.now() + 1
+
+    const clearStream = () => set({ streamBubbles: [], streamStatus: null })
+
+    const finalize = (nextChatId: number | null, pending: PendingActionOut[]) => {
+      // Во время стрима пузыри показываются по одному; в ленту кладём одно
+      // ассистентское сообщение (так работает озвучка «Голосом: …»).
+      const joined = get().streamBubbles.map((b) => b.text.trim()).filter(Boolean).join('\n\n')
+      const base = get().messages.filter((item) => item.id !== userBubble.id)
       const nextMessages = [
-        ...get().messages.filter((item) => item.id !== userBubble.id),
+        ...base,
         userBubble,
-        ...(response.reply ? [bubble('assistant', response.reply, assistantId)] : []),
+        ...(joined ? [bubble('assistant', joined, Date.now() + 1)] : []),
       ]
+      const resolvedChatId = nextChatId ?? get().chatId
       set({
-        chatId: response.chat_id,
+        chatId: resolvedChatId,
         messages: nextMessages,
-        pendingActions: response.pending_actions,
+        pendingActions: pending,
         sending: false,
         optimisticMessage: null,
       })
-      savePersist(response.chat_id, nextMessages)
-    } catch (error) {
-      set({ sending: false, error: reasonOf(error), optimisticMessage: null })
+      clearStream()
+      savePersist(resolvedChatId, nextMessages)
     }
+
+    let sawByte = false
+    let doneChatId: number | null = null
+    let pendingFromStream: PendingActionOut[] = []
+    let streamError: string | null = null
+
+    try {
+      await aiApi.askConsultStream({ chat_id: chatId, message: text }, (event: StreamEvent) => {
+        sawByte = true
+        if (event.type === 'topic_reset') return
+        if (event.type === 'done') {
+          doneChatId = typeof event.chat_id === 'number' ? event.chat_id : null
+          return
+        }
+        if (event.type === 'pending_approval') {
+          pendingFromStream = (event.pending_actions as PendingActionOut[]) ?? []
+          doneChatId = typeof event.chat_id === 'number' ? event.chat_id : null
+          return
+        }
+        if (event.type === 'error') {
+          streamError = typeof event.detail === 'string' ? event.detail : 'Не удалось получить ответ'
+          return
+        }
+        set((state) => {
+          const next = applyStreamEvent(event, { bubbles: state.streamBubbles, status: state.streamStatus })
+          return { streamBubbles: next.bubbles, streamStatus: next.status }
+        })
+      })
+    } catch (error) {
+      if (sawByte) {
+        set({ sending: false, error: reasonOf(error), optimisticMessage: null })
+        clearStream()
+        return
+      }
+      // Стрим не поднялся — блокирующий запрос как раньше.
+      try {
+        const response = await aiApi.askConsult({ chat_id: chatId, message: text })
+        const assistantId = response.pending_actions[0]?.message_id ?? Date.now() + 1
+        const nextMessages = [
+          ...get().messages.filter((item) => item.id !== userBubble.id),
+          userBubble,
+          ...(response.reply ? [bubble('assistant', response.reply, assistantId)] : []),
+        ]
+        set({
+          chatId: response.chat_id,
+          messages: nextMessages,
+          pendingActions: response.pending_actions,
+          sending: false,
+          optimisticMessage: null,
+        })
+        savePersist(response.chat_id, nextMessages)
+      } catch (fallbackError) {
+        set({ sending: false, error: reasonOf(fallbackError), optimisticMessage: null })
+        clearStream()
+      }
+      return
+    }
+
+    if (streamError) {
+      set({ sending: false, error: streamError, optimisticMessage: null })
+      clearStream()
+      return
+    }
+    finalize(doneChatId, pendingFromStream)
   },
 
   resolveAction: async (id, decision) => {

@@ -81,6 +81,67 @@ export async function apiRequest<T>(options: RequestOptions): Promise<T> {
   return (await response.json()) as T
 }
 
+export interface StreamEvent {
+  type: string
+  [key: string]: unknown
+}
+
+/**
+ * POST that consumes a `text/event-stream` response, calling `onEvent` for every
+ * SSE `event:` / `data:` pair until the stream ends. Throws `ApiError` on a
+ * non-OK response or a body the browser can't stream — callers fall back to the
+ * blocking endpoint in that case. Keepalive comments (`: ...`) are ignored.
+ */
+export async function streamRequest(
+  options: { section: string; path: string; body?: unknown; signal?: AbortSignal },
+  onEvent: (event: StreamEvent) => void,
+): Promise<void> {
+  const headers: Record<string, string> = { Accept: 'text/event-stream' }
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+
+  const response = await fetch(buildUrl(options.section, options.path), {
+    method: 'POST',
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
+  })
+
+  if (!response.ok) throw new ApiError(response.status, await extractErrorMessage(response))
+  if (!response.body) throw new ApiError(0, 'Стриминг не поддерживается этим браузером')
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    let sep: number
+    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+      const frame = buffer.slice(0, sep)
+      buffer = buffer.slice(sep + 2)
+      if (!frame || frame.startsWith(':')) continue // keepalive / comment
+
+      let eventType = 'message'
+      const data: string[] = []
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) eventType = line.slice(6).trim()
+        else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+      }
+      if (eventType === 'end' || data.length === 0) continue
+
+      try {
+        onEvent({ type: eventType, ...(JSON.parse(data.join('\n')) as Record<string, unknown>) })
+      } catch {
+        /* skip an unparseable frame rather than kill the stream */
+      }
+    }
+  }
+}
+
 /** POST /api/auth/login (application/x-www-form-urlencoded) */
 export async function login(email: string, password: string): Promise<string> {
   const response = await fetch(`${API_BASE}/auth/login`, {
