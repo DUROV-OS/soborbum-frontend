@@ -68,8 +68,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!account) return false
     if (account.role === 'admin') return true
     // «Сегодня» доступен каждому вошедшему сотруднику; сервер отдаёт только
-    // показатели разрешённых ему разделов и не требует AI-доступа.
-    if (section === 'today' || section === 'agents') return true
+    // показатели разрешённых ему разделов и не требует AI-доступа. «Агенты» и
+    // «Все чаты» (данные MAX общие для организации) — так же для всех.
+    if (section === 'today' || section === 'agents' || section === 'chats') return true
     return account.module_access.includes(section)
   },
 
