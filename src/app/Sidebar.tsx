@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { ArrowUpRight, X } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { SECTIONS, SectionId } from '@/shared/sections'
 
 const GROUPS: { title: string; ids: SectionId[] }[] = [
-  { title: 'Рабочее пространство', ids: ['today', 'tasks', 'board', 'agents'] },
+  { title: 'Рабочее пространство', ids: ['today', 'ai', 'tasks', 'board'] },
   { title: 'Операции', ids: ['cycle', 'clients', 'production', 'warehouse', 'installation', 'marketing'] },
   { title: 'Команда', ids: ['admin'] },
 ]
@@ -24,7 +24,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           return <div key={group.title} className="mt-5"><p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-[0.13em] text-white/45">{group.title}</p>
             <ul className="space-y-1">{sections.map((section) => { const Icon = section.icon; return <li key={section.id}>
               <NavLink to={section.path} onClick={onClose} className={({ isActive }) => `group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-colors ${isActive ? 'bg-[#c9ead8] font-medium text-[#172e25]' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'}`}>
-                <Icon size={18} strokeWidth={1.6} /><span className="flex-1">{section.label}</span>
+                <Icon size={18} strokeWidth={1.6} /><span className="flex-1">{section.label}</span>{section.id === 'ai' && <ArrowUpRight size={14} className="opacity-50" />}
               </NavLink>
             </li> })}</ul></div>
         })}
