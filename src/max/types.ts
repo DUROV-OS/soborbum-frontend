@@ -40,6 +40,24 @@ export interface MaxMessage {
   attaches: MaxAttach[]
 }
 
+/** Одна строка списка чатов — GET /api/max/chats (см. `_fmt_chat`). */
+export interface MaxChatSummary {
+  id: number
+  type?: string
+  title: string | null
+  /** Непрочитанных сообщений в чате. */
+  unread: number
+  /** Unix-время последнего события в чате (мс) — по нему список отсортирован. */
+  lastEventTime: number | null
+  lastMessage: MaxMessage | null
+}
+
+/** Ответ GET /api/max/chats — все чаты, самые свежие сверху. */
+export interface MaxChatList {
+  count: number
+  chats: MaxChatSummary[]
+}
+
 /** Ответ GET /api/max/chats/:id — история одного чата. */
 export interface MaxChatHistory {
   chatId: number

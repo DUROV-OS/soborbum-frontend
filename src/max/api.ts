@@ -1,7 +1,15 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { MaxChatHistory, MaxMediaUrl, MaxSendResult } from './types'
+import { MaxChatHistory, MaxChatList, MaxMediaUrl, MaxSendResult } from './types'
 
 const SECTION = 'max'
+
+/**
+ * GET /api/max/chats — все чаты организации с последним сообщением в каждом,
+ * самые свежие сверху. `limit` — сколько первых вернуть (по умолчанию все).
+ */
+export function listChats(limit?: number): Promise<MaxChatList> {
+  return apiRequest<MaxChatList>({ section: SECTION, path: '/chats', query: { limit } })
+}
 
 export interface GetChatParams {
   /** Сколько последних сообщений вернуть (по умолчанию 50). */

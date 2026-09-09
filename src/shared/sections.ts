@@ -6,6 +6,7 @@ import {
   Landmark,
   Network,
   Megaphone,
+  MessagesSquare,
   Repeat,
   ShieldCheck,
   Sparkles,
@@ -23,6 +24,9 @@ import {
  * не знает: администраторская страница гейтится по role==='admin'.
  * 'agents' — тоже фронтовое: операционная команда из восьми ролей, не Module
  * на бэкенде. Доступен каждому вошедшему, как «Сегодня».
+ * 'chats' — фронтовое: все чаты мессенджера MAX (oneme). Данные MAX общие
+ * для организации, бэкенд отдаёт их любому авторизованному — доступен каждому
+ * вошедшему, как «Агенты».
  * 'today' доступен каждому вошедшему сотруднику; сервер отдаёт только
  * показатели разрешённых ему разделов. AI-доступ для сводки не требуется.
  */
@@ -39,6 +43,7 @@ export type SectionId =
   | 'today'
   | 'board'
   | 'agents'
+  | 'chats'
 
 export interface SectionMeta {
   id: SectionId
@@ -62,6 +67,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
   { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
   { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
+  { id: 'chats', label: 'Все чаты', path: '/chats', icon: MessagesSquare, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
