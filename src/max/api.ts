@@ -1,21 +1,7 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { MaxChatHistory, MaxSendResult } from './types'
+import { MaxChatHistory, MaxMediaUrl, MaxSendResult } from './types'
 
 const SECTION = 'max'
-
-/** Ключ localStorage: id нашего участника в MAX. Узнаём его из ответа на
- * первое отправленное сообщение (`message.sender`) и дальше используем,
- * чтобы отличать исходящие сообщения от входящих в истории. */
-const VIEWER_ID_KEY = 'soborbum.max.viewer_id'
-
-export function getMaxViewerId(): number | null {
-  const raw = localStorage.getItem(VIEWER_ID_KEY)
-  return raw === null ? null : Number(raw)
-}
-
-export function setMaxViewerId(id: number): void {
-  localStorage.setItem(VIEWER_ID_KEY, String(id))
-}
 
 export interface GetChatParams {
   /** Сколько последних сообщений вернуть (по умолчанию 50). */
@@ -40,5 +26,39 @@ export function sendMessage(chatId: number, text: string, notify = true): Promis
     path: '/messages',
     method: 'POST',
     body: { chat_id: chatId, text, notify },
+  })
+}
+
+/**
+ * GET /api/max/attachment — одноразовая ссылка на скачивание вложения типа
+ * FILE. Домен `fd.oneme.ru`, без CORS: годится только для навигации
+ * (`window.open` / `<a download>`), не для `fetch`.
+ */
+export async function getAttachmentUrl(
+  chatId: number,
+  messageId: string,
+  fileId: string,
+): Promise<string> {
+  const res = await apiRequest<{ url: string }>({
+    section: SECTION,
+    path: '/attachment',
+    query: { chat_id: chatId, message_id: messageId, file_id: fileId },
+  })
+  return res.url
+}
+
+/**
+ * GET /api/max/media — воспроизводимая ссылка на вложение VIDEO или AUDIO
+ * (голосовое). `mediaId` — `videoId` либо `audioId` из attach.
+ */
+export function getMediaUrl(
+  chatId: number,
+  messageId: string,
+  mediaId: string,
+): Promise<MaxMediaUrl> {
+  return apiRequest<MaxMediaUrl>({
+    section: SECTION,
+    path: '/media',
+    query: { chat_id: chatId, message_id: messageId, media_id: mediaId },
   })
 }

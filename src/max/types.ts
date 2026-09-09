@@ -1,24 +1,38 @@
 /** Вложение сообщения MAX. Поля приходят выборочно — бэк отдаёт только
- * непустые (см. app/max/service.py `_fmt_attach`). */
+ * непустые (см. app/max/service.py `_fmt_attach`). Все id — строки:
+ * снежинки MAX больше 2^53 и числом ломаются. */
 export interface MaxAttach {
-  type?: string
+  type?: 'FILE' | 'PHOTO' | 'VIDEO' | 'AUDIO' | 'UNSUPPORTED' | 'SHARE' | 'CONTROL' | string
   name?: string
-  fileId?: number
-  photoId?: number
-  videoId?: number
-  audioId?: number
+  fileId?: string
+  photoId?: string
+  videoId?: string
+  audioId?: string
   size?: number
+  /** PHOTO: готовый URL картинки (i.oneme.ru), грузится прямо в <img>. */
   baseUrl?: string
+  /** SHARE: внешняя ссылка. */
   url?: string
+  /** SHARE: заголовок ссылки. */
   title?: string
+  /** VIDEO/AUDIO: длительность в миллисекундах. */
+  duration?: number
+  /** VIDEO: кадр-постер, data:image/webp;base64. */
+  previewData?: string
+  /** VIDEO: URL превью-кадра (iv.okcdn.ru). */
+  thumbnail?: string
+  /** AUDIO (голосовое): картинка-волна, data:image/webp;base64. */
+  wave?: string
 }
 
-/** Одно сообщение чата MAX (см. `_fmt_msg`). `sender` — id участника,
- * `time` — Unix-время в миллисекундах. */
+/** Одно сообщение чата MAX (см. `_fmt_msg`). `sender` — id участника
+ * (строка), `time` — Unix-время в миллисекундах, `outgoing` — считает
+ * бэк по viewerId. */
 export interface MaxMessage {
   id: string
   time: number
-  sender: number
+  sender: string
+  outgoing: boolean
   type?: string
   status?: string
   text: string
@@ -30,6 +44,7 @@ export interface MaxMessage {
 export interface MaxChatHistory {
   chatId: number
   title: string | null
+  viewerId: string
   count: number
   messages: MaxMessage[]
 }
@@ -38,4 +53,12 @@ export interface MaxChatHistory {
 export interface MaxSendResult {
   chatId: number
   message: MaxMessage | null
+}
+
+/** Ответ GET /api/max/media — воспроизводимая ссылка на видео/аудио. */
+export interface MaxMediaUrl {
+  /** Прямой MP4 (okcdn для видео, v.oneme.ru для голосовых). */
+  url: string | null
+  /** Запасной веб-плеер (m.ok.ru) — если прямой ссылки нет. */
+  external: string | null
 }

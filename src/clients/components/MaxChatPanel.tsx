@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link2, Paperclip, Send } from 'lucide-react'
+import { Link2, Send } from 'lucide-react'
 import { ApiError } from '@/shared/lib/httpClient'
 import { Button } from '@/shared/ui/Button'
 import { Input, Textarea } from '@/shared/ui/Field'
@@ -7,6 +7,7 @@ import * as maxApi from '@/max/api'
 import { MaxMessage } from '@/max/types'
 import { useClientsStore } from '../store'
 import { Client } from '../types'
+import { MaxAttachList } from './MaxAttachments'
 import { Section } from './ProjectPanel'
 
 /** Как часто подтягивать новые сообщения открытого чата, мс. */
@@ -91,7 +92,6 @@ function ChatThread({
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
-  const [viewerId, setViewerId] = useState<number | null>(maxApi.getMaxViewerId())
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const pinnedToBottomRef = useRef(true)
@@ -132,10 +132,6 @@ function ChatThread({
     try {
       const result = await maxApi.sendMessage(chatId, text)
       if (result.message) {
-        if (viewerId === null) {
-          maxApi.setMaxViewerId(result.message.sender)
-          setViewerId(result.message.sender)
-        }
         setMessages((prev) => [...(prev ?? []), result.message as MaxMessage])
       }
       setDraft('')
@@ -174,7 +170,7 @@ function ChatThread({
           <p className="text-[12px] text-muted">Сообщений пока нет.</p>
         )}
         {messages?.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} outgoing={viewerId !== null && msg.sender === viewerId} />
+          <MessageBubble key={msg.id} msg={msg} chatId={chatId} outgoing={msg.outgoing} />
         ))}
       </div>
 
@@ -202,8 +198,18 @@ function ChatThread({
   )
 }
 
-function MessageBubble({ msg, outgoing }: { msg: MaxMessage; outgoing: boolean }) {
+function MessageBubble({
+  msg,
+  chatId,
+  outgoing,
+}: {
+  msg: MaxMessage
+  chatId: number
+  outgoing: boolean
+}) {
   const time = msg.time ? new Date(msg.time).toLocaleString('ru-RU') : ''
+  const renderable = msg.attaches.filter((a) => a.type !== 'CONTROL')
+  const empty = !msg.text && renderable.length === 0
   return (
     <div className={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
       <div
@@ -212,24 +218,8 @@ function MessageBubble({ msg, outgoing }: { msg: MaxMessage; outgoing: boolean }
         }`}
       >
         {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
-        {msg.attaches.map((a, i) => {
-          const label = a.name ?? a.title ?? 'Вложение'
-          return (
-            <p key={i} className="mt-1 flex items-center gap-1 text-[12px] opacity-80">
-              <Paperclip size={12} />
-              {a.url ? (
-                <a href={a.url} target="_blank" rel="noreferrer" className="underline">
-                  {label}
-                </a>
-              ) : (
-                label
-              )}
-            </p>
-          )
-        })}
-        {!msg.text && msg.attaches.length === 0 && (
-          <p className="italic opacity-70">[системное сообщение]</p>
-        )}
+        <MaxAttachList attaches={msg.attaches} chatId={chatId} messageId={msg.id} />
+        {empty && <p className="italic opacity-70">[системное сообщение]</p>}
       </div>
       {time && <span className="mt-0.5 text-[11px] text-muted">{time}</span>}
     </div>
