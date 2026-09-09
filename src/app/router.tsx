@@ -14,6 +14,7 @@ import { MarketingPage } from '@/marketing/pages/MarketingPage'
 import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
 import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
+import { AiChatPage } from '@/ai/pages/AiChatPage'
 import { BoardPage } from '@/board/pages/BoardPage'
 import { AgentsPage } from '@/agents/pages/AgentsPage'
 import { TodayPage } from '@/today/pages/TodayPage'
@@ -165,8 +166,22 @@ export function AppRouter() {
             </AccessGate>
           }
         />
-        <Route path="/ai" element={<Navigate to="/agents?tab=consult" replace />} />
-        <Route path="/ai/:chatId" element={<Navigate to="/agents?tab=consult" replace />} />
+        <Route
+          path="/ai"
+          element={
+            <AccessGate section="ai">
+              <AiChatPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/ai/:chatId"
+          element={
+            <AccessGate section="ai">
+              <AiChatPage />
+            </AccessGate>
+          }
+        />
         <Route path="/admin" element={<AccessMatrixPage />} />
         <Route path="*" element={<RootRedirect />} />
       </Route>
