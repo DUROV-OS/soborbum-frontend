@@ -18,7 +18,7 @@ import {
  */
 export type MeetingPhase = 'idle' | 'starting' | 'recording' | 'finishing' | 'saved'
 
-function micErrorMessage(error: unknown): string {
+function friendlyError(error: unknown): string {
   if (error instanceof DOMException) {
     if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
       return 'Нет доступа к микрофону. Разрешите доступ в браузере и попробуйте снова.'
@@ -28,7 +28,7 @@ function micErrorMessage(error: unknown): string {
     }
   }
   if (error instanceof ApiError || error instanceof Error) return error.message
-  return 'Не удалось запустить режим «Совещание»'
+  return 'Не удалось выполнить действие в режиме «Совещание»'
 }
 
 interface MeetingState {
@@ -76,7 +76,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     } catch (error) {
       abortRecording()
       active = null
-      set({ phase: 'idle', error: micErrorMessage(error) })
+      set({ phase: 'idle', error: friendlyError(error) })
       return
     }
 
@@ -86,7 +86,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     } catch (error) {
       abortRecording()
       active = null
-      set({ phase: 'idle', meetingId: null, startedAt: null, error: micErrorMessage(error) })
+      set({ phase: 'idle', meetingId: null, startedAt: null, error: friendlyError(error) })
     }
   },
 
@@ -108,7 +108,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     } catch (error) {
       // Сессия могла не закрыться — оставляем в recording, чтобы можно было
       // повторить «Завершить».
-      set({ phase: 'recording', error: micErrorMessage(error) })
+      set({ phase: 'recording', error: friendlyError(error) })
     }
   },
 

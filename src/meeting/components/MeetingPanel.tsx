@@ -31,6 +31,7 @@ export function MeetingPanel() {
   const startedAt = useMeetingStore((s) => s.startedAt)
   const savedMeetingId = useMeetingStore((s) => s.savedMeetingId)
   const error = useMeetingStore((s) => s.error)
+  const start = useMeetingStore((s) => s.start)
   const finish = useMeetingStore((s) => s.finish)
   const closePanel = useMeetingStore((s) => s.closePanel)
   const reset = useMeetingStore((s) => s.reset)
@@ -58,7 +59,7 @@ export function MeetingPanel() {
 
       {recording && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5" role="status" aria-live="polite">
             <span className="h-2.5 w-2.5 animate-pulse rounded-pill bg-red-500" />
             <span className="text-[14px] font-medium text-ink">Идёт запись</span>
             <span className="ml-auto tabular-nums text-[15px] text-muted">{formatClock(elapsed)}</span>
@@ -105,8 +106,18 @@ export function MeetingPanel() {
       )}
 
       {error && (
-        <div className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2.5 text-[13px] text-danger">
-          {error}
+        <div className="space-y-3">
+          <div
+            className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2.5 text-[13px] text-danger"
+            role="alert"
+          >
+            {error}
+          </div>
+          {phase === 'idle' && (
+            <Button variant="secondary" onClick={() => void start()}>
+              Попробовать снова
+            </Button>
+          )}
         </div>
       )}
     </Drawer>

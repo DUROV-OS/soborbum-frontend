@@ -97,10 +97,16 @@ function MeetingAudio({ meetingId, hasAudio }: { meetingId: number; hasAudio: bo
     let cancelled = false
     fetchMeetingAudioObjectUrl(meetingId)
       .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url) // размонтировались, пока грузилось — не течём
+          return
+        }
         objectUrl = url
-        if (!cancelled) setSrc(url)
+        setSrc(url)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить запись'))
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Не удалось загрузить запись')
+      })
     return () => {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
