@@ -10,7 +10,7 @@ import { Input, Select } from '@/shared/ui/Field'
 import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
-import { DateFilter, DEFAULT_DATE_FILTER, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
+import { DateFilter, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useTasksStore } from '../store'
 import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
@@ -82,7 +82,10 @@ export function TasksPage() {
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER)
+  // Борд задач по умолчанию — за всё время: авто-задачи из разделов (смена
+  // стадии клиента, контента, нехватка на складе) создаются без дедлайна, и
+  // период-фильтр по месяцу их полностью прятал.
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [query, setQuery] = useState('')
   const onboarding = useSectionOnboarding('tasks')
 
@@ -94,7 +97,9 @@ export function TasksPage() {
   const q = query.trim().toLowerCase()
   const filtered = tasks
     .filter((t) => sourceFilter === 'all' || sourceOf(t) === sourceFilter)
-    .filter((t) => matchesDateFilter(t.deadline, range))
+    // Нет дедлайна (авто-задачи из разделов) → фильтруем по дате создания,
+    // чтобы выбранный период их не терял целиком.
+    .filter((t) => matchesDateFilter(t.deadline ?? t.created_at, range))
     .filter((t) => !q || t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q))
 
   return (
