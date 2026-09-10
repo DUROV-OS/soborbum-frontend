@@ -283,6 +283,7 @@ export function SupplierDetailDrawer({
         supplierId={supplierId_}
         open={importOpen}
         onClose={() => setImportOpen(false)}
+        onRequestLinkChat={() => setLinkOpen(true)}
       />
     </Drawer>
   )
