@@ -89,6 +89,7 @@ function ChatThread({
 }) {
   const [messages, setMessages] = useState<MaxMessage[] | null>(null)
   const [title, setTitle] = useState<string | null>(null)
+  const [isGroup, setIsGroup] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
@@ -101,6 +102,7 @@ function ChatThread({
       const history = await maxApi.getChat(chatId, { limit: 80 })
       setMessages(history.messages)
       setTitle(history.title)
+      setIsGroup(history.isGroup)
       setError(null)
     } catch (err) {
       setError(reasonOf(err))
@@ -169,9 +171,19 @@ function ChatThread({
         {messages !== null && messages.length === 0 && (
           <p className="text-[12px] text-muted">Сообщений пока нет.</p>
         )}
-        {messages?.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} chatId={chatId} outgoing={msg.outgoing} />
-        ))}
+        {messages?.map((msg, i, arr) => {
+          const prev = i > 0 ? arr[i - 1] : null
+          const showAuthor = !prev || prev.isSystem || prev.senderId !== msg.senderId
+          return (
+            <MessageBubble
+              key={msg.id}
+              msg={msg}
+              chatId={chatId}
+              isGroup={isGroup}
+              showAuthor={showAuthor}
+            />
+          )
+        })}
       </div>
 
       {error && <p className="mb-2 text-[12px] text-danger">{error}</p>}
@@ -201,17 +213,35 @@ function ChatThread({
 function MessageBubble({
   msg,
   chatId,
-  outgoing,
+  isGroup,
+  showAuthor,
 }: {
   msg: MaxMessage
   chatId: number
-  outgoing: boolean
+  isGroup: boolean
+  showAuthor: boolean
 }) {
+  if (msg.isSystem) {
+    const who = msg.senderName
+    const what = msg.systemText ?? 'служебное сообщение'
+    return (
+      <p className="py-0.5 text-center text-[11px] text-muted">
+        {who ? `${who} ${what}` : what}
+      </p>
+    )
+  }
+
+  if (!msg.text && msg.attaches.length === 0) return null
+
   const time = msg.time ? new Date(msg.time).toLocaleString('ru-RU') : ''
-  const renderable = msg.attaches.filter((a) => a.type !== 'CONTROL')
-  const empty = !msg.text && renderable.length === 0
+  const outgoing = msg.isOutgoing
+  const authorLabel =
+    isGroup && !outgoing && showAuthor ? msg.senderName ?? 'Участник' : null
   return (
     <div className={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
+      {authorLabel && (
+        <span className="text-[11px] font-medium text-brand-dark">{authorLabel}</span>
+      )}
       <div
         className={`max-w-[80%] rounded-md px-3 py-2 text-[13px] ${
           outgoing ? 'bg-brand text-white' : 'bg-surface text-ink'
@@ -219,7 +249,6 @@ function MessageBubble({
       >
         {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
         <MaxAttachList attaches={msg.attaches} chatId={chatId} messageId={msg.id} />
-        {empty && <p className="italic opacity-70">[системное сообщение]</p>}
       </div>
       {time && <span className="mt-0.5 text-[11px] text-muted">{time}</span>}
     </div>
