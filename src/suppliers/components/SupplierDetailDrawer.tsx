@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
@@ -17,6 +17,7 @@ import {
   tierLabel,
 } from '../types'
 import { LinkMaxChatModal } from './LinkMaxChatModal'
+import { PriceListImportModal } from './PriceListImportModal'
 
 export function SupplierDetailDrawer({
   supplierId,
@@ -37,6 +38,7 @@ export function SupplierDetailDrawer({
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [linkOpen, setLinkOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [priceError, setPriceError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
 
@@ -209,11 +211,16 @@ export function SupplierDetailDrawer({
 
         {/* Прайс-лист */}
         <section>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[13px] font-medium text-ink">Прайс-лист</div>
-            <Button size="sm" variant="secondary" onClick={() => setAdding((v) => !v)}>
-              <Plus size={14} /> Строка прайса
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload size={14} /> Загрузить таблицей
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setAdding((v) => !v)}>
+                <Plus size={14} /> Строка прайса
+              </Button>
+            </div>
           </div>
 
           {adding && (
@@ -272,6 +279,11 @@ export function SupplierDetailDrawer({
       </div>
 
       <LinkMaxChatModal supplierId={supplierId_} open={linkOpen} onClose={() => setLinkOpen(false)} />
+      <PriceListImportModal
+        supplierId={supplierId_}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </Drawer>
   )
 
