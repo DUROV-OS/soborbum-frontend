@@ -25,14 +25,21 @@ export interface MaxAttach {
   wave?: string
 }
 
-/** Одно сообщение чата MAX (см. `_fmt_msg`). `sender` — id участника
- * (строка), `time` — Unix-время в миллисекундах, `outgoing` — считает
- * бэк по viewerId. */
+/** Одно сообщение чата MAX (см. `_fmt_msg`). `time` — Unix-время в
+ * миллисекундах. `isOutgoing` бэк считает по совпадению `senderId` с
+ * текущим пользователем (не по типу чата). Служебные события чата
+ * (кто-то вступил / вышел / переименовал) приходят с `isSystem: true`
+ * и текстом в `systemText`. */
 export interface MaxMessage {
   id: string
   time: number
-  sender: string
-  outgoing: boolean
+  /** Стабильный id участника MAX (строка). null у служебных без автора. */
+  senderId: string | null
+  /** Имя автора из справочника контактов. null, если контакт неизвестен. */
+  senderName: string | null
+  isOutgoing: boolean
+  isSystem: boolean
+  systemText: string | null
   type?: string
   status?: string
   text: string
@@ -63,6 +70,9 @@ export interface MaxChatHistory {
   chatId: number
   title: string | null
   viewerId: string
+  /** true — беседа на несколько человек (не диалог 1:1). У входящих
+   * сообщений в таком чате фронт подписывает автора. */
+  isGroup: boolean
   count: number
   messages: MaxMessage[]
 }
