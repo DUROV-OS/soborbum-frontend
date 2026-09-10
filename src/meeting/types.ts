@@ -8,6 +8,17 @@ export interface MeetingOut {
   finished_at: string | null
   duration_sec: number | null
   has_audio: boolean
+  /** Обстоятельства встречи (заполняет человек) */
+  location: string | null
+  participants: string | null
+  occurred_at: string | null
+}
+
+export interface MeetingUpdatePatch {
+  title?: string | null
+  location?: string | null
+  participants?: string | null
+  occurred_at?: string | null
 }
 
 export interface TranscriptLineOut {

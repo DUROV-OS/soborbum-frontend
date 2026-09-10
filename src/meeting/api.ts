@@ -1,5 +1,11 @@
 import { API_BASE, apiRequest, downloadFile, getToken } from '@/shared/lib/httpClient'
-import { MeetingDetailOut, MeetingNotesOut, MeetingOut, TranscriptLineOut } from './types'
+import {
+  MeetingDetailOut,
+  MeetingNotesOut,
+  MeetingOut,
+  MeetingUpdatePatch,
+  TranscriptLineOut,
+} from './types'
 
 export interface TranscriptLineIn {
   speaker: string
@@ -30,13 +36,13 @@ export function getMeeting(id: number): Promise<MeetingDetailOut> {
   return apiRequest<MeetingDetailOut>({ section: SECTION, path: `/meetings/${id}` })
 }
 
-/** PATCH /api/ai/meetings/:id — переименовать совещание */
-export function renameMeeting(id: number, title: string | null): Promise<MeetingOut> {
+/** PATCH /api/ai/meetings/:id — название и/или обстоятельства встречи (частичный) */
+export function updateMeeting(id: number, patch: MeetingUpdatePatch): Promise<MeetingOut> {
   return apiRequest<MeetingOut>({
     section: SECTION,
     path: `/meetings/${id}`,
     method: 'PATCH',
-    body: { title: title ?? null },
+    body: patch,
   })
 }
 

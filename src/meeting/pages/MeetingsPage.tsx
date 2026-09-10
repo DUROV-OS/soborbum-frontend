@@ -17,15 +17,28 @@ import {
   getMeeting,
   listMeetings,
   refreshNotes,
-  renameMeeting,
+  updateMeeting,
 } from '../api'
 import { NotesView } from '../components/NotesView'
 import { useMeetingStore } from '../store'
 import { MeetingDetailOut, MeetingOut } from '../types'
 
-function meetingTitle(meeting: Pick<MeetingOut, 'title' | 'started_at'>): string {
+/** Эффективная дата встречи: указанная человеком (occurred_at) либо начало записи. */
+function meetingWhen(meeting: Pick<MeetingOut, 'started_at' | 'occurred_at'>): Date {
+  return new Date(meeting.occurred_at ?? meeting.started_at)
+}
+
+function meetingTitle(meeting: Pick<MeetingOut, 'title' | 'started_at' | 'occurred_at'>): string {
   if (meeting.title) return meeting.title
-  return `Совещание от ${format(new Date(meeting.started_at), 'd MMMM yyyy', { locale: ru })}`
+  return `Совещание от ${format(meetingWhen(meeting), 'd MMMM yyyy', { locale: ru })}`
+}
+
+/** ISO → значение для <input type="datetime-local"> (локальное время). */
+function toLocalInput(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function formatDuration(seconds: number | null): string {
@@ -149,9 +162,10 @@ function MeetingList() {
               <Link to={`/meetings/${meeting.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-medium text-ink">{meetingTitle(meeting)}</div>
-                  <div className="mt-0.5 text-[12px] text-muted">
-                    {format(new Date(meeting.started_at), 'd MMM yyyy, HH:mm', { locale: ru })} ·{' '}
+                  <div className="mt-0.5 truncate text-[12px] text-muted">
+                    {format(meetingWhen(meeting), 'd MMM yyyy, HH:mm', { locale: ru })} ·{' '}
                     {formatDuration(meeting.duration_sec)}
+                    {meeting.location ? ` · ${meeting.location}` : ''}
                   </div>
                 </div>
                 <StatusChip status={meeting.status} />
@@ -341,10 +355,10 @@ function MeetingNotesSection({ meeting }: { meeting: MeetingDetailOut }) {
 
 function MeetingDetailHeader({
   meeting,
-  onRenamed,
+  onPatched,
 }: {
   meeting: MeetingDetailOut
-  onRenamed: (title: string | null) => void
+  onPatched: (patch: Partial<MeetingDetailOut>) => void
 }) {
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
@@ -356,8 +370,8 @@ function MeetingDetailHeader({
     setBusy(true)
     setError(null)
     try {
-      const updated = await renameMeeting(meeting.id, draft.trim() || null)
-      onRenamed(updated.title)
+      const updated = await updateMeeting(meeting.id, { title: draft.trim() || null })
+      onPatched({ title: updated.title })
       setEditing(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось переименовать')
@@ -433,7 +447,7 @@ function MeetingDetailHeader({
           </div>
         )}
         <p className="mt-1 text-[13px] text-muted">
-          {format(new Date(meeting.started_at), 'd MMMM yyyy, HH:mm', { locale: ru })} ·{' '}
+          {format(meetingWhen(meeting), 'd MMMM yyyy, HH:mm', { locale: ru })} ·{' '}
           {formatDuration(meeting.duration_sec)}
         </p>
         {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
@@ -451,6 +465,137 @@ function MeetingDetailHeader({
         </button>
       </div>
     </div>
+  )
+}
+
+function MeetingCircumstances({
+  meeting,
+  onPatched,
+}: {
+  meeting: MeetingDetailOut
+  onPatched: (patch: Partial<MeetingDetailOut>) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [location, setLocation] = useState(meeting.location ?? '')
+  const [participants, setParticipants] = useState(meeting.participants ?? '')
+  const [when, setWhen] = useState(toLocalInput(meeting.occurred_at))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function reset() {
+    setLocation(meeting.location ?? '')
+    setParticipants(meeting.participants ?? '')
+    setWhen(toLocalInput(meeting.occurred_at))
+  }
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    try {
+      const updated = await updateMeeting(meeting.id, {
+        location: location.trim() || null,
+        participants: participants.trim() || null,
+        occurred_at: when ? new Date(when).toISOString() : null,
+      })
+      onPatched({
+        location: updated.location,
+        participants: updated.participants,
+        occurred_at: updated.occurred_at,
+      })
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const empty = !meeting.location && !meeting.participants && !meeting.occurred_at
+
+  return (
+    <section className="rounded-md border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[14px] font-medium text-ink">Обстоятельства встречи</h2>
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => {
+              reset()
+              setEditing(true)
+            }}
+            className="text-[12px] text-brand-dark hover:underline"
+          >
+            {empty ? 'Заполнить' : 'Изменить'}
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-2">
+          <label className="block text-[12px] text-muted">
+            Где
+            <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Переговорная, Zoom, объект…"
+              className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-[13px] text-ink"
+            />
+          </label>
+          <label className="block text-[12px] text-muted">
+            Когда
+            <input
+              type="datetime-local"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-[13px] text-ink"
+            />
+          </label>
+          <label className="block text-[12px] text-muted">
+            С кем
+            <input
+              value={participants}
+              onChange={(e) => setParticipants(e.target.value)}
+              placeholder="Игорь, Пётр, снабженец…"
+              className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-[13px] text-ink"
+            />
+          </label>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" size="sm" onClick={() => void save()} disabled={busy}>
+              {busy ? 'Сохраняем…' : 'Сохранить'}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+              Отмена
+            </Button>
+          </div>
+          {error && <p className="text-[12px] text-danger">{error}</p>}
+        </div>
+      ) : empty ? (
+        <p className="text-[13px] text-muted">Не заполнены.</p>
+      ) : (
+        <dl className="space-y-1 text-[13px]">
+          {meeting.occurred_at && (
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-muted">Когда</dt>
+              <dd className="text-ink">
+                {format(new Date(meeting.occurred_at), 'd MMMM yyyy, HH:mm', { locale: ru })}
+              </dd>
+            </div>
+          )}
+          {meeting.location && (
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-muted">Где</dt>
+              <dd className="text-ink">{meeting.location}</dd>
+            </div>
+          )}
+          {meeting.participants && (
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-muted">С кем</dt>
+              <dd className="text-ink">{meeting.participants}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </section>
   )
 }
 
@@ -484,7 +629,12 @@ function MeetingDetail({ id }: { id: number }) {
         <>
           <MeetingDetailHeader
             meeting={meeting}
-            onRenamed={(title) => setMeeting((m) => (m ? { ...m, title } : m))}
+            onPatched={(patch) => setMeeting((m) => (m ? { ...m, ...patch } : m))}
+          />
+
+          <MeetingCircumstances
+            meeting={meeting}
+            onPatched={(patch) => setMeeting((m) => (m ? { ...m, ...patch } : m))}
           />
 
           <section className="rounded-md border border-border bg-surface p-4">
