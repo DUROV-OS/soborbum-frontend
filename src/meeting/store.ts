@@ -103,12 +103,12 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     }
   }
 
-  async function flushTranscript(): Promise<void> {
-    if (flushing) return
+  async function flushTranscript(): Promise<boolean> {
+    if (flushing) return false
     const { meetingId, transcript } = get()
-    if (meetingId === null) return
+    if (meetingId === null) return true
     const pending = transcript.filter((line) => !line.synced)
-    if (pending.length === 0) return
+    if (pending.length === 0) return true
 
     flushing = true
     try {
@@ -126,10 +126,20 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
           }),
         }
       })
+      return true
     } catch {
-      // не страшно — попробуем в следующий тик / на finish
+      // не страшно — строки остаются несинхронизированными, попробуем ещё раз
+      return false
     } finally {
       flushing = false
+    }
+  }
+
+  /** На finish пытаемся дослать остаток настойчивее — потом сессия закроется. */
+  async function drainTranscript(attempts = 3): Promise<void> {
+    for (let i = 0; i < attempts; i += 1) {
+      if (await flushTranscript()) return
+      await new Promise((resolve) => setTimeout(resolve, 600))
     }
   }
 
@@ -222,7 +232,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       set({ phase: 'finishing', error: null, interim: '' })
 
       stopSideEffects()
-      await flushTranscript().catch(() => {})
+      await drainTranscript().catch(() => {})
 
       try {
         const recording = active

@@ -44,20 +44,20 @@ function LiveTranscript() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [transcript.length, interim])
 
-  if (speechNotice) {
-    return (
-      <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning-bg px-3 py-2.5 text-[13px] text-warning">
-        <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-        <span>{speechNotice}</span>
-      </div>
-    )
-  }
-
   const options = speakerOptions(transcript)
 
   return (
     <div>
       <div className="mb-2 text-[12px] font-medium uppercase tracking-wide text-muted">Транскрипт</div>
+
+      {speechNotice && (
+        <div className="mb-2 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-bg px-3 py-2.5 text-[13px] text-warning">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          <span>{speechNotice}</span>
+        </div>
+      )}
+
+      {(!speechNotice || transcript.length > 0) && (
       <div
         ref={scrollRef}
         className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border bg-surface-muted/40 p-3"
@@ -91,6 +91,7 @@ function LiveTranscript() {
 
         {interim && <p className="text-[13px] italic text-muted">{interim}</p>}
       </div>
+      )}
     </div>
   )
 }
