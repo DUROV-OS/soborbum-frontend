@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
 import { TranscriptLine, useMeetingStore } from '../store'
+import { NotesView } from './NotesView'
 
 function useElapsedSeconds(startedAt: number | null, running: boolean): number {
   const [now, setNow] = useState(() => Date.now())
@@ -96,6 +97,38 @@ function LiveTranscript() {
   )
 }
 
+function MeetingNotesBlock() {
+  const notes = useMeetingStore((s) => s.notes)
+  const aiEnabled = useMeetingStore((s) => s.notesAiEnabled)
+  const refreshing = useMeetingStore((s) => s.notesRefreshing)
+  const request = useMeetingStore((s) => s.requestNotesRefresh)
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[12px] font-medium uppercase tracking-wide text-muted">
+          Заметки Марины
+        </span>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={request}
+            disabled={refreshing}
+            className="text-[12px] text-brand-dark hover:underline disabled:opacity-50"
+          >
+            {refreshing ? 'Обновляем…' : 'Обновить'}
+          </button>
+        )}
+      </div>
+      {aiEnabled ? (
+        <NotesView notes={notes} />
+      ) : (
+        <p className="text-[13px] text-muted">ИИ-заметки отключены: не задан ключ.</p>
+      )}
+    </div>
+  )
+}
+
 export function MeetingPanel() {
   const phase = useMeetingStore((s) => s.phase)
   const panelOpen = useMeetingStore((s) => s.panelOpen)
@@ -141,6 +174,7 @@ export function MeetingPanel() {
           </p>
 
           <LiveTranscript />
+          <MeetingNotesBlock />
 
           <Button variant="danger" onClick={() => void finish()} disabled={phase === 'finishing'}>
             {phase === 'finishing' ? 'Сохраняем…' : 'Завершить'}

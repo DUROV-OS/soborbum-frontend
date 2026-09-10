@@ -4,9 +4,11 @@ import {
   appendTranscript,
   createMeeting,
   finishMeeting,
+  refreshNotes,
   updateLineSpeaker,
   uploadMeetingAudio,
 } from './api'
+import { MeetingNotesOut } from './types'
 import {
   ActiveRecording,
   abortRecording,
@@ -34,6 +36,8 @@ export type MeetingPhase = 'idle' | 'starting' | 'recording' | 'finishing' | 'sa
 const SPEAKER_PAUSE_MS = 2500
 /** Как часто досылаем накопленные реплики на бэк. */
 const FLUSH_INTERVAL_MS = 3000
+/** Сколько новых реплик должно накопиться, чтобы авто-пересчитать заметки. */
+const NOTES_NEW_LINES_THRESHOLD = 8
 
 export interface TranscriptLine {
   localId: string
@@ -80,9 +84,15 @@ interface MeetingState {
   /** Проставлено, если распознавание недоступно/запрещено (запись всё равно идёт). */
   speechNotice: string | null
 
+  notes: MeetingNotesOut | null
+  /** false — бэк ответил 409 (нет ключа ИИ): авто-пересчёт и кнопку отключаем. */
+  notesAiEnabled: boolean
+  notesRefreshing: boolean
+
   start: () => Promise<void>
   finish: () => Promise<void>
   setLineSpeaker: (localId: string, speaker: string) => void
+  requestNotesRefresh: () => void
   openPanel: () => void
   closePanel: () => void
   reset: () => void
@@ -92,6 +102,7 @@ let active: ActiveRecording | null = null
 let transcriber: LiveTranscription | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
 let flushing = false
+let linesAtLastNotesRefresh = 0
 
 export const useMeetingStore = create<MeetingState>((set, get) => {
   function stopSideEffects() {
@@ -126,6 +137,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
           }),
         }
       })
+      maybeAutoRefreshNotes()
       return true
     } catch {
       // не страшно — строки остаются несинхронизированными, попробуем ещё раз
@@ -140,6 +152,33 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     for (let i = 0; i < attempts; i += 1) {
       if (await flushTranscript()) return
       await new Promise((resolve) => setTimeout(resolve, 600))
+    }
+  }
+
+  async function refreshNotesNow(): Promise<void> {
+    const { meetingId, notesAiEnabled, notesRefreshing, transcript } = get()
+    if (meetingId === null || !notesAiEnabled || notesRefreshing) return
+    set({ notesRefreshing: true })
+    const linesNow = transcript.length
+    try {
+      const notes = await refreshNotes(meetingId)
+      set({ notes })
+      linesAtLastNotesRefresh = linesNow
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        set({ notesAiEnabled: false }) // нет ключа ИИ — больше не дёргаем
+      }
+      // прочее — молча, попробуем в следующий раз
+    } finally {
+      set({ notesRefreshing: false })
+    }
+  }
+
+  function maybeAutoRefreshNotes() {
+    const { notesAiEnabled, transcript } = get()
+    if (!notesAiEnabled) return
+    if (transcript.length - linesAtLastNotesRefresh >= NOTES_NEW_LINES_THRESHOLD) {
+      void refreshNotesNow()
     }
   }
 
@@ -168,6 +207,9 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     transcript: [],
     interim: '',
     speechNotice: null,
+    notes: null,
+    notesAiEnabled: true,
+    notesRefreshing: false,
 
     start: async () => {
       const { phase } = get()
@@ -175,6 +217,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         set({ panelOpen: true })
         return
       }
+      linesAtLastNotesRefresh = 0
       set({
         phase: 'starting',
         panelOpen: true,
@@ -183,6 +226,9 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         transcript: [],
         interim: '',
         speechNotice: null,
+        notes: null,
+        notesAiEnabled: true,
+        notesRefreshing: false,
       })
 
       if (!isRecordingSupported()) {
@@ -243,6 +289,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
           await uploadMeetingAudio(meetingId, blob, `meeting-${meetingId}.${ext}`)
         }
         await finishMeeting(meetingId)
+        // Бэк на finish уже пересчитал заметки по всему транскрипту — подтянем их.
+        await refreshNotesNow().catch(() => {})
         set({ phase: 'saved', savedMeetingId: meetingId, meetingId: null, startedAt: null })
       } catch (error) {
         // Сессия могла не закрыться — возвращаем в recording, чтобы можно было
@@ -265,6 +313,10 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       }
     },
 
+    requestNotesRefresh: () => {
+      void refreshNotesNow()
+    },
+
     openPanel: () => set({ panelOpen: true }),
     closePanel: () => set({ panelOpen: false }),
 
@@ -272,6 +324,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       stopSideEffects()
       abortRecording()
       active = null
+      linesAtLastNotesRefresh = 0
       set({
         phase: 'idle',
         panelOpen: false,
@@ -282,6 +335,9 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         transcript: [],
         interim: '',
         speechNotice: null,
+        notes: null,
+        notesAiEnabled: true,
+        notesRefreshing: false,
       })
     },
   }
