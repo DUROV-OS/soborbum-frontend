@@ -15,6 +15,7 @@ import { CycleDetailPage } from '@/cycles/pages/CycleDetailPage'
 import { CyclesListPage } from '@/cycles/pages/CyclesListPage'
 import { WarehousePage } from '@/warehouse/pages/WarehousePage'
 import { AiChatPage } from '@/ai/pages/AiChatPage'
+import { MeetingsPage } from '@/meeting/pages/MeetingsPage'
 import { BoardPage } from '@/board/pages/BoardPage'
 import { AgentsPage } from '@/agents/pages/AgentsPage'
 import { AllChatsPage } from '@/max/pages/AllChatsPage'
@@ -196,6 +197,22 @@ export function AppRouter() {
           element={
             <AccessGate section="ai">
               <AiChatPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/meetings"
+          element={
+            <AccessGate section="ai">
+              <MeetingsPage />
+            </AccessGate>
+          }
+        />
+        <Route
+          path="/meetings/:id"
+          element={
+            <AccessGate section="ai">
+              <MeetingsPage />
             </AccessGate>
           }
         />
