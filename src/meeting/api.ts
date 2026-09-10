@@ -5,6 +5,7 @@ export interface TranscriptLineIn {
   speaker: string
   text: string
   at_ms: number
+  is_assistant_query?: boolean
 }
 
 const SECTION = 'ai'

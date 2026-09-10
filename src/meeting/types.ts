@@ -15,6 +15,7 @@ export interface TranscriptLineOut {
   speaker: string
   text: string
   at_ms: number
+  is_assistant_query: boolean
 }
 
 export interface MeetingNotesOut {
