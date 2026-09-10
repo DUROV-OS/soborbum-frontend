@@ -28,6 +28,8 @@ interface SuppliersState {
     patch: Partial<suppliersApi.PriceItemInput>,
   ) => Promise<ActionResult>
   removePriceItem: (id: number, itemId: number) => Promise<ActionResult>
+  addNote: (id: number, text: string) => Promise<ActionResult>
+  removeNote: (id: number, noteId: number) => Promise<ActionResult>
   importPriceList: (id: number, file: File) => Promise<ActionResult & { result?: PriceListImportResult }>
   aiFillCategory: (id: number) => Promise<ActionResult & { filled?: number; skipped?: number }>
   draftLeadTimeQuestion: (id: number) => Promise<ActionResult & { draft?: LeadTimeQuestionDraft }>
@@ -107,6 +109,24 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => {
       try {
         await suppliersApi.deletePriceItem(id, itemId)
         await get().load()
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    addNote: async (id, text) => {
+      try {
+        replace(await suppliersApi.addNote(id, text))
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    removeNote: async (id, noteId) => {
+      try {
+        replace(await suppliersApi.deleteNote(id, noteId))
         return { ok: true }
       } catch (error) {
         return { ok: false, reason: reasonOf(error) }

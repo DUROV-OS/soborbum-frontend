@@ -98,6 +98,20 @@ export function importPriceList(id: number, file: File): Promise<PriceListImport
   })
 }
 
+/** POST /api/warehouse/suppliers/:id/notes */
+export function addNote(id: number, text: string): Promise<Supplier> {
+  return apiRequest<Supplier>({ section: SECTION, path: `/suppliers/${id}/notes`, method: 'POST', body: { text } })
+}
+
+/** DELETE /api/warehouse/suppliers/:id/notes/:noteId */
+export function deleteNote(id: number, noteId: number): Promise<Supplier> {
+  return apiRequest<Supplier>({
+    section: SECTION,
+    path: `/suppliers/${id}/notes/${noteId}`,
+    method: 'DELETE',
+  })
+}
+
 /** POST /api/warehouse/suppliers/:id/price-items/ai-fill-category */
 export function aiFillCategory(id: number): Promise<AiFillCategoryResult> {
   return apiRequest<AiFillCategoryResult>({
