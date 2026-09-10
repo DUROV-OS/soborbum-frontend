@@ -68,7 +68,7 @@ export function WorkPage() {
               <NavLink
                 key={section.id}
                 to={section.path}
-                className="group flex min-h-[220px] flex-col rounded-xl border border-border bg-surface p-5 shadow-card transition-colors hover:border-brand/40 hover:shadow-panel"
+                className="group flex min-h-[240px] flex-col rounded-xl border border-border bg-surface p-5 shadow-card transition-colors hover:border-brand/40 hover:shadow-panel"
               >
                 <div className="flex items-start gap-3">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-brand-dark">
@@ -84,12 +84,12 @@ export function WorkPage() {
                   </div>
                 </div>
 
-                <div className={`mt-4 flex-1 rounded-lg border-l-[3px] p-3 ${HEAT_BLOCK[heat]}`}>
-                  <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${HEAT_TEXT[heat]}`}>
-                    <Sparkles size={12} className="text-ai-accent" />
+                <div className={`mt-4 flex-1 rounded-lg border-l-[3px] p-3.5 ${HEAT_BLOCK[heat]}`}>
+                  <div className={`mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold ${HEAT_TEXT[heat]}`}>
+                    <Sparkles size={14} className="text-ai-accent" />
                     стоит заняться:
                   </div>
-                  <p className="text-[12px] leading-relaxed text-ink">{advice}</p>
+                  <p className="text-[15px] leading-relaxed text-ink">{advice}</p>
                 </div>
               </NavLink>
             )
