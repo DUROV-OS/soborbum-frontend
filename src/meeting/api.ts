@@ -30,6 +30,21 @@ export function getMeeting(id: number): Promise<MeetingDetailOut> {
   return apiRequest<MeetingDetailOut>({ section: SECTION, path: `/meetings/${id}` })
 }
 
+/** PATCH /api/ai/meetings/:id — переименовать совещание */
+export function renameMeeting(id: number, title: string | null): Promise<MeetingOut> {
+  return apiRequest<MeetingOut>({
+    section: SECTION,
+    path: `/meetings/${id}`,
+    method: 'PATCH',
+    body: { title: title ?? null },
+  })
+}
+
+/** DELETE /api/ai/meetings/:id — удалить совещание с транскриптом и заметками */
+export function deleteMeeting(id: number): Promise<void> {
+  return apiRequest<void>({ section: SECTION, path: `/meetings/${id}`, method: 'DELETE' })
+}
+
 /** POST /api/ai/meetings/:id/audio — загрузка записанного блоба целиком */
 export function uploadMeetingAudio(id: number, blob: Blob, filename: string): Promise<MeetingOut> {
   const form = new FormData()

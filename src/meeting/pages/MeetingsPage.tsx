@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ArrowLeft, Mic, Sparkles } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Check, Mic, Pencil, Sparkles, Trash2, X } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '@/shared/lib/httpClient'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
@@ -11,11 +11,13 @@ import { LoadingState } from '@/shared/ui/LoadingState'
 import { Markdown } from '@/shared/ui/Markdown'
 import {
   askMeeting,
+  deleteMeeting,
   downloadMeetingDocument,
   fetchMeetingAudioObjectUrl,
   getMeeting,
   listMeetings,
   refreshNotes,
+  renameMeeting,
 } from '../api'
 import { NotesView } from '../components/NotesView'
 import { useMeetingStore } from '../store'
@@ -91,6 +93,7 @@ function StartMeetingCircle() {
 function MeetingList() {
   const [meetings, setMeetings] = useState<MeetingOut[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<number | null>(null)
   const phase = useMeetingStore((s) => s.phase)
 
   useEffect(() => {
@@ -99,6 +102,20 @@ function MeetingList() {
       .then(setMeetings)
       .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить совещания'))
   }, [phase])
+
+  async function handleDelete(id: number, title: string) {
+    if (!window.confirm(`Удалить совещание «${title}»? Транскрипт и заметки тоже удалятся.`)) return
+    setRemoving(id)
+    setError(null)
+    try {
+      await deleteMeeting(id)
+      setMeetings((list) => (list ? list.filter((m) => m.id !== id) : list))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить совещание')
+    } finally {
+      setRemoving(null)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -128,11 +145,8 @@ function MeetingList() {
       {meetings && meetings.length > 0 && (
         <ul className="divide-y divide-border rounded-md border border-border bg-surface">
           {meetings.map((meeting) => (
-            <li key={meeting.id}>
-              <Link
-                to={`/meetings/${meeting.id}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-muted"
-              >
+            <li key={meeting.id} className="flex items-center gap-2 pr-2 hover:bg-surface-muted">
+              <Link to={`/meetings/${meeting.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-medium text-ink">{meetingTitle(meeting)}</div>
                   <div className="mt-0.5 text-[12px] text-muted">
@@ -142,6 +156,15 @@ function MeetingList() {
                 </div>
                 <StatusChip status={meeting.status} />
               </Link>
+              <button
+                type="button"
+                onClick={() => void handleDelete(meeting.id, meetingTitle(meeting))}
+                disabled={removing === meeting.id}
+                aria-label="Удалить совещание"
+                className="shrink-0 rounded-sm p-1.5 text-muted hover:bg-danger-bg hover:text-danger disabled:opacity-50"
+              >
+                <Trash2 size={15} />
+              </button>
             </li>
           ))}
         </ul>
@@ -316,6 +339,121 @@ function MeetingNotesSection({ meeting }: { meeting: MeetingDetailOut }) {
   )
 }
 
+function MeetingDetailHeader({
+  meeting,
+  onRenamed,
+}: {
+  meeting: MeetingDetailOut
+  onRenamed: (title: string | null) => void
+}) {
+  const navigate = useNavigate()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(meeting.title ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    try {
+      const updated = await renameMeeting(meeting.id, draft.trim() || null)
+      onRenamed(updated.title)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось переименовать')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm('Удалить это совещание? Транскрипт и заметки тоже удалятся.')) return
+    setBusy(true)
+    setError(null)
+    try {
+      await deleteMeeting(meeting.id)
+      navigate('/meetings', { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void save()
+                if (e.key === 'Escape') setEditing(false)
+              }}
+              placeholder="Название совещания"
+              className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-[18px] font-medium text-ink"
+            />
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={busy}
+              aria-label="Сохранить"
+              className="rounded-sm p-1 text-success hover:bg-success-bg disabled:opacity-50"
+            >
+              <Check size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false)
+                setDraft(meeting.title ?? '')
+              }}
+              aria-label="Отмена"
+              className="rounded-sm p-1 text-muted hover:bg-surface-muted"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-[20px] font-medium text-ink">{meetingTitle(meeting)}</h1>
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(meeting.title ?? '')
+                setEditing(true)
+              }}
+              aria-label="Переименовать"
+              className="shrink-0 rounded-sm p-1 text-muted hover:bg-surface-muted hover:text-ink"
+            >
+              <Pencil size={14} />
+            </button>
+          </div>
+        )}
+        <p className="mt-1 text-[13px] text-muted">
+          {format(new Date(meeting.started_at), 'd MMMM yyyy, HH:mm', { locale: ru })} ·{' '}
+          {formatDuration(meeting.duration_sec)}
+        </p>
+        {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <StatusChip status={meeting.status} />
+        <button
+          type="button"
+          onClick={() => void remove()}
+          disabled={busy}
+          aria-label="Удалить совещание"
+          className="rounded-sm p-1.5 text-muted hover:bg-danger-bg hover:text-danger disabled:opacity-50"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function MeetingDetail({ id }: { id: number }) {
   const [meeting, setMeeting] = useState<MeetingDetailOut | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -344,16 +482,10 @@ function MeetingDetail({ id }: { id: number }) {
 
       {meeting && (
         <>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-[20px] font-medium text-ink">{meetingTitle(meeting)}</h1>
-              <p className="mt-1 text-[13px] text-muted">
-                {format(new Date(meeting.started_at), 'd MMMM yyyy, HH:mm', { locale: ru })} ·{' '}
-                {formatDuration(meeting.duration_sec)}
-              </p>
-            </div>
-            <StatusChip status={meeting.status} />
-          </div>
+          <MeetingDetailHeader
+            meeting={meeting}
+            onRenamed={(title) => setMeeting((m) => (m ? { ...m, title } : m))}
+          />
 
           <section className="rounded-md border border-border bg-surface p-4">
             <h2 className="mb-3 text-[14px] font-medium text-ink">Запись</h2>
