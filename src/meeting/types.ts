@@ -8,7 +8,9 @@ export interface MeetingOut {
   finished_at: string | null
   duration_sec: number | null
   has_audio: boolean
-  /** Обстоятельства встречи (заполняет человек) */
+  /** Тема, цели и обстоятельства встречи (заполняет человек) */
+  topic: string | null
+  goals: string | null
   location: string | null
   participants: string | null
   occurred_at: string | null
@@ -16,6 +18,8 @@ export interface MeetingOut {
 
 export interface MeetingUpdatePatch {
   title?: string | null
+  topic?: string | null
+  goals?: string | null
   location?: string | null
   participants?: string | null
   occurred_at?: string | null

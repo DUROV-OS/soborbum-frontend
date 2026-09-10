@@ -476,6 +476,8 @@ function MeetingCircumstances({
   onPatched: (patch: Partial<MeetingDetailOut>) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [topic, setTopic] = useState(meeting.topic ?? '')
+  const [goals, setGoals] = useState(meeting.goals ?? '')
   const [location, setLocation] = useState(meeting.location ?? '')
   const [participants, setParticipants] = useState(meeting.participants ?? '')
   const [when, setWhen] = useState(toLocalInput(meeting.occurred_at))
@@ -483,6 +485,8 @@ function MeetingCircumstances({
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
+    setTopic(meeting.topic ?? '')
+    setGoals(meeting.goals ?? '')
     setLocation(meeting.location ?? '')
     setParticipants(meeting.participants ?? '')
     setWhen(toLocalInput(meeting.occurred_at))
@@ -493,11 +497,15 @@ function MeetingCircumstances({
     setError(null)
     try {
       const updated = await updateMeeting(meeting.id, {
+        topic: topic.trim() || null,
+        goals: goals.trim() || null,
         location: location.trim() || null,
         participants: participants.trim() || null,
         occurred_at: when ? new Date(when).toISOString() : null,
       })
       onPatched({
+        topic: updated.topic,
+        goals: updated.goals,
         location: updated.location,
         participants: updated.participants,
         occurred_at: updated.occurred_at,
@@ -510,12 +518,17 @@ function MeetingCircumstances({
     }
   }
 
-  const empty = !meeting.location && !meeting.participants && !meeting.occurred_at
+  const empty =
+    !meeting.topic &&
+    !meeting.goals &&
+    !meeting.location &&
+    !meeting.participants &&
+    !meeting.occurred_at
 
   return (
     <section className="rounded-md border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[14px] font-medium text-ink">Обстоятельства встречи</h2>
+        <h2 className="text-[14px] font-medium text-ink">Тема, цели и обстоятельства встречи</h2>
         {!editing && (
           <button
             type="button"
@@ -532,6 +545,25 @@ function MeetingCircumstances({
 
       {editing ? (
         <div className="space-y-2">
+          <label className="block text-[12px] text-muted">
+            Тема
+            <input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="О чём переговоры"
+              className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-[13px] text-ink"
+            />
+          </label>
+          <label className="block text-[12px] text-muted">
+            Цели
+            <textarea
+              value={goals}
+              onChange={(e) => setGoals(e.target.value)}
+              rows={2}
+              placeholder="Чего хотим добиться на этих переговорах"
+              className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-[13px] text-ink"
+            />
+          </label>
           <label className="block text-[12px] text-muted">
             Где
             <input
@@ -573,6 +605,18 @@ function MeetingCircumstances({
         <p className="text-[13px] text-muted">Не заполнены.</p>
       ) : (
         <dl className="space-y-1 text-[13px]">
+          {meeting.topic && (
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-muted">Тема</dt>
+              <dd className="text-ink">{meeting.topic}</dd>
+            </div>
+          )}
+          {meeting.goals && (
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-muted">Цели</dt>
+              <dd className="whitespace-pre-wrap text-ink">{meeting.goals}</dd>
+            </div>
+          )}
           {meeting.occurred_at && (
             <div className="flex gap-2">
               <dt className="w-16 shrink-0 text-muted">Когда</dt>
