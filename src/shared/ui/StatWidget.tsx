@@ -4,6 +4,7 @@ import { ChipTone } from './Chip'
 const toneClasses: Record<ChipTone, string> = {
   neutral: 'text-ink',
   brand: 'text-brand-dark',
+  ai: 'text-ai-accent',
   success: 'text-success',
   warning: 'text-warning',
   danger: 'text-danger',

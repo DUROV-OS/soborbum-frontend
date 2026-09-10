@@ -1,10 +1,11 @@
 import { ReactNode } from 'react'
 
-export type ChipTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info'
+export type ChipTone = 'neutral' | 'brand' | 'ai' | 'success' | 'warning' | 'danger' | 'info'
 
 const toneClasses: Record<ChipTone, string> = {
   neutral: 'bg-surface-muted text-muted',
   brand: 'bg-brand/10 text-brand-dark',
+  ai: 'bg-ai/10 text-ai-accent',
   success: 'bg-success-bg text-success',
   warning: 'bg-warning-bg text-warning',
   danger: 'bg-danger-bg text-danger',

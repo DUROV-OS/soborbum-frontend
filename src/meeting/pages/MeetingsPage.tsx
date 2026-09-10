@@ -77,8 +77,8 @@ function StartMeetingCircle() {
         onClick={() => (busy ? openPanel() : void start())}
         className={`flex h-36 w-36 flex-col items-center justify-center gap-2 rounded-full border-2 text-center transition-colors ${
           busy
-            ? 'border-amber-400 bg-amber-50 text-amber-700'
-            : 'border-amber-300 bg-amber-50/60 text-amber-700 hover:bg-amber-100'
+            ? 'border-ai/40 bg-ai-bg text-ai-accent'
+            : 'border-ai/30 bg-ai-bg/60 text-ai-accent hover:bg-ai/15'
         }`}
       >
         {busy ? (
@@ -245,7 +245,7 @@ function AskMarina({ meetingId, aiEnabled }: { meetingId: number; aiEnabled: boo
   return (
     <section className="rounded-md border border-border bg-surface p-4">
       <h2 className="mb-1 flex items-center gap-1.5 text-[14px] font-medium text-ink">
-        <Sparkles size={15} className="text-amber-600" />
+        <Sparkles size={15} className="text-ai-accent" />
         Спросить Марину
       </h2>
       <p className="mb-3 text-[12px] text-muted">

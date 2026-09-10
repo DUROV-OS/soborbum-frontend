@@ -79,21 +79,21 @@ export function TodayPage() {
             </ul>}
           </section>
 
-          {hasAccess('ai') && <section className="flex flex-col rounded-2xl bg-[#182b2b] p-5 text-white sm:p-6" aria-labelledby="marina-title">
-            <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/5"><Sparkles size={22} className="text-[#bce4ce]" /></div>
-              <div><h2 id="marina-title" className="text-[21px] font-medium tracking-tight">Марина</h2><p className="text-[12px] text-white/60">Ваш AI-помощник</p></div></div>
-            <p className="mb-5 mt-6 text-[19px] font-medium leading-snug tracking-tight">С чего начнём?<br /><span className="text-white/60">Задайте вопрос о работе компании.</span></p>
-            <form onSubmit={submit} className="rounded-xl border border-white/20 bg-white/[0.06] p-3">
+          {hasAccess('ai') && <section className="flex flex-col rounded-2xl border border-ai/30 bg-ai-bg p-5 text-ink sm:p-6" aria-labelledby="marina-title">
+            <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ai/15"><Sparkles size={22} className="text-ai-accent" /></div>
+              <div><h2 id="marina-title" className="text-[21px] font-medium tracking-tight">Марина</h2><p className="text-[12px] text-muted">Ваш AI-помощник</p></div></div>
+            <p className="mb-5 mt-6 text-[19px] font-medium leading-snug tracking-tight">С чего начнём?<br /><span className="text-muted">Задайте вопрос о работе компании.</span></p>
+            <form onSubmit={submit} className="rounded-xl border border-ai/25 bg-surface p-3">
               <label htmlFor="marina-prompt" className="sr-only">Вопрос Марине</label>
               <textarea id="marina-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Например: что задерживает производство?"
-                className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-white outline-none placeholder:text-white/50" />
-              <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-white/50">Откроется черновик в чате</span>
-                <button type="submit" disabled={!prompt.trim()} aria-label="Открыть вопрос Марине" className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#c9ead8] text-[#18392d] transition-colors hover:bg-white disabled:opacity-35"><ArrowRight size={18} /></button></div>
+                className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-ink outline-none placeholder:text-muted" />
+              <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-muted">Откроется черновик в чате</span>
+                <button type="submit" disabled={!prompt.trim()} aria-label="Открыть вопрос Марине" className="flex h-9 w-9 items-center justify-center rounded-lg bg-ai text-ink transition-colors hover:bg-ai-accent hover:text-white disabled:opacity-35"><ArrowRight size={18} /></button></div>
             </form>
             <div className="mt-3 flex flex-wrap gap-2">{['С чего начать сегодня?', 'Где нужна моя помощь?'].map((text) =>
-              <button key={text} type="button" onClick={() => askMarina(text)} className="rounded-lg border border-white/15 px-3 py-2 text-left text-[12px] text-white/75 hover:bg-white/10">{text}</button>)}</div>
-            <div className="mt-auto pt-6"><p className="flex items-start gap-2 border-t border-white/10 pt-4 text-[12px] leading-relaxed text-white/65"><ShieldCheck size={16} className="mt-0.5 shrink-0 text-[#bce4ce]" />Изменения данных — после вашего подтверждения.</p>
-              {data.ai_configured === false && <p className="mt-3 text-[12px] text-[#f0cf95]">Подключение Марины ещё не настроено. Сводка компании доступна.</p>}</div>
+              <button key={text} type="button" onClick={() => askMarina(text)} className="rounded-lg border border-ai/25 bg-surface px-3 py-2 text-left text-[12px] text-ink hover:bg-ai/10">{text}</button>)}</div>
+            <div className="mt-auto pt-6"><p className="flex items-start gap-2 border-t border-ai/20 pt-4 text-[12px] leading-relaxed text-muted"><ShieldCheck size={16} className="mt-0.5 shrink-0 text-ai-accent" />Изменения данных — после вашего подтверждения.</p>
+              {data.ai_configured === false && <p className="mt-3 text-[12px] text-warning">Подключение Марины ещё не настроено. Сводка компании доступна.</p>}</div>
           </section>}
         </div>
 

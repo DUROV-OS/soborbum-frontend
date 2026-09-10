@@ -54,7 +54,7 @@ function LiveTranscript() {
     <div>
       <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-muted">
         Транскрипт
-        {capturing && <span className="normal-case text-amber-600">· на паузе (пишется вопрос)</span>}
+        {capturing && <span className="normal-case text-ai-accent">· на паузе (пишется вопрос)</span>}
       </div>
 
       {speechNotice && (
@@ -115,8 +115,8 @@ function AskMarinaBox() {
 
   if (st === 'capturing') {
     return (
-      <div className="mb-3 space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
-        <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+      <div className="mb-3 space-y-2 rounded-md border border-ai/30 bg-ai-bg p-3">
+        <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-ai-accent">
           <Volume2 size={13} className="animate-pulse" />
           Говорите вопрос — совещание на паузе
         </div>
@@ -163,19 +163,19 @@ function AssistantAnswerBlock() {
   if ((st === 'idle' || st === 'capturing') && !answer) return null
 
   return (
-    <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+    <div className="mb-3 rounded-md border border-ai/25 bg-ai-bg/60 p-3">
       <div className="mb-1 flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-ai-accent">
           <Sparkles size={13} />
           Ответ Марины
           {st === 'thinking' && (
-            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+            <span className="inline-flex items-center gap-1 normal-case text-ai-accent">
               <Loader2 size={12} className="animate-spin" />
               думает…
             </span>
           )}
           {st === 'answering' && (
-            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+            <span className="inline-flex items-center gap-1 normal-case text-ai-accent">
               <Volume2 size={12} className="animate-pulse" />
               отвечает
             </span>
@@ -186,14 +186,14 @@ function AssistantAnswerBlock() {
             type="button"
             onClick={dismiss}
             aria-label="Скрыть ответ"
-            className="text-amber-600 hover:text-amber-800"
+            className="text-ai-accent hover:text-ai-accent"
           >
             <X size={14} />
           </button>
         )}
       </div>
       {st === 'thinking' && !answer ? (
-        <p className="text-[13px] text-amber-700">Думаю над вашим вопросом…</p>
+        <p className="text-[13px] text-ai-accent">Думаю над вашим вопросом…</p>
       ) : answer ? (
         <div className="text-[13px] text-ink">
           <Markdown text={answer} />

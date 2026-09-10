@@ -48,8 +48,8 @@ export function MessageBubble({
         </div>
       )}
       {voiceParts?.hasExplicit && voiceParts.spoken && (
-        <div className="flex max-w-[85%] items-start gap-2 rounded-md border border-brand/20 bg-brand/5 px-3.5 py-2 text-[13px] leading-relaxed text-ink sm:max-w-md">
-          <Volume2 size={14} className="mt-0.5 shrink-0 text-brand" />
+        <div className="flex max-w-[85%] items-start gap-2 rounded-md border border-ai/25 bg-ai/10 px-3.5 py-2 text-[13px] leading-relaxed text-ink sm:max-w-md">
+          <Volume2 size={14} className="mt-0.5 shrink-0 text-ai-accent" />
           <p>{voiceParts.spoken}</p>
         </div>
       )}

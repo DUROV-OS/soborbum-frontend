@@ -60,7 +60,7 @@ export function SectionAnalyticsCard({ section }: { section: AnalyticsSection })
     <div className={`mb-5 rounded-md border ${SECTION_BORDER[section]} bg-surface p-4`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
-          <Sparkles size={15} className="text-brand-dark" />
+          <Sparkles size={15} className="text-ai" />
           ИИ-резюме
         </div>
         <div className="flex items-center gap-2">
