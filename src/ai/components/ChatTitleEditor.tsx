@@ -49,7 +49,7 @@ export function ChatTitleEditor({
     <button
       type="button"
       onClick={startEditing}
-      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink hover:text-brand-dark"
+      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink hover:text-ai-accent"
     >
       {title ?? 'Без названия'}
       <Pencil size={12} className="text-muted" />

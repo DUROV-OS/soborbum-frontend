@@ -109,7 +109,7 @@ export function AiChatPage() {
                 type="button"
                 onClick={() => setDomain(d)}
                 className={`rounded-pill px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                  d === domain ? 'bg-brand/10 text-brand-dark' : 'text-muted hover:bg-surface-muted hover:text-ink'
+                  d === domain ? 'bg-ai/10 text-ai-accent' : 'text-muted hover:bg-surface-muted hover:text-ink'
                 }`}
               >
                 {DOMAIN_LABEL[d]}
@@ -117,7 +117,7 @@ export function AiChatPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" className="flex-1" onClick={handleNewChat}>
+            <Button variant="ai" size="sm" className="flex-1" onClick={handleNewChat}>
               <Plus size={14} />
               Новый чат
             </Button>
@@ -137,7 +137,7 @@ export function AiChatPage() {
                 type="button"
                 onClick={() => navigate(`/ai/${c.id}`)}
                 className={`group flex items-start justify-between gap-2 rounded-sm px-3 py-2 text-left transition-colors ${
-                  String(c.id) === chatId ? 'bg-brand/10' : 'hover:bg-surface-muted'
+                  String(c.id) === chatId ? 'bg-ai/10' : 'hover:bg-surface-muted'
                 }`}
               >
                 <div className="min-w-0">

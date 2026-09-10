@@ -103,7 +103,7 @@ export function ChatPanel({
               <ArrowLeft size={16} />
             </button>
           )}
-          <Chip tone="brand">Марина · {DOMAIN_LABEL[domain]}</Chip>
+          <Chip tone="ai">Марина · {DOMAIN_LABEL[domain]}</Chip>
           {contextLabel && <Chip tone="neutral">{contextLabel}</Chip>}
           {chat && <ChatTitleEditor title={chat.title} onRename={(title) => renameChat(chat.id, title)} />}
         </div>

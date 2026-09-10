@@ -4,8 +4,8 @@ import { useMeetingStore } from '../store'
 
 /**
  * Кнопка «Совещание» в Topbar рядом с выбором аккаунта. Видна только при
- * доступе к разделу «Марина». Оранжевый ИИ-акцент — временно на amber-*,
- * подгонится под палитру из задачи 0008.
+ * доступе к разделу «Марина». Оранжевый ИИ-акцент — токены --ai / --ai-accent
+ * (палитра задачи 0008).
  */
 export function MeetingButton() {
   const hasAccess = useAuthStore((s) => s.hasAccess)
@@ -25,8 +25,8 @@ export function MeetingButton() {
       aria-pressed={busy}
       className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-[13px] font-medium transition-colors ${
         busy
-          ? 'border-amber-300 bg-amber-50 text-amber-700'
-          : 'border-amber-200 text-amber-700 hover:bg-amber-50'
+          ? 'border-ai/30 bg-ai-bg text-ai-accent'
+          : 'border-ai/25 text-ai-accent hover:bg-ai-bg'
       }`}
     >
       <Mic size={14} />

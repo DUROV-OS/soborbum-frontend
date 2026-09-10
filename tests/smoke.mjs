@@ -25,6 +25,12 @@ const overview = {
   ],
   widgets: [widget('production', 'Производственных заказов', '4'), widget('production', 'Модули ждут материалы', '2', 'warning'), widget('tasks', 'Открытых задач', '8'), widget('tasks', 'Просроченных задач', '3', 'warning'), widget('warehouse', 'Позиций на складе', '24'), widget('warehouse', 'Позиций требуют пополнения', '3', 'warning')],
 }
+const agentStats = {
+  week: [], routing: [], traces: [],
+  legal: { allow: 0, allow_with_conditions: 0, escalate_human: 0, block: 0 },
+  totals: { runs: 0, blocked: 0, escalated: 0, released: 0 },
+  shifts: 0, pending_approvals: 0,
+}
 
 async function openAs(user, route = '/today', viewport = { width: 1440, height: 1100 }) {
   const context = await browser.newContext({ viewport })
@@ -50,6 +56,14 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
     else if (url.pathname === '/api/auth/users/2/access') { status = 403; body = { detail: 'Изменение доступа отклонено сервером' } }
     else if (url.pathname === '/api/dashboard/today') body = user.role === 'admin' ? overview : { ...overview, actions: [], widgets: overview.widgets.filter(w => w.section === 'production'), summary: 'По доступным данным отклонений для очереди внимания нет.' }
     else if (url.pathname === '/api/production/') body = [{ id: 7, cycle_id: 11, cycle_status: 'production', created_at: '2026-09-05T08:00:00Z', module_count: 4 }]
+    else if (url.pathname === '/api/dashboard/aktualnoe') body = user.role === 'admin'
+      ? { generated_at: '2026-09-05T09:30:00Z', ai_configured: false, degraded: true, items: [
+          { cycle_id: 11, client_name: 'Иванов И.', stage: 'Согласование', percent: 55, phrase: 'правят планировку' },
+          { cycle_id: 12, client_name: 'Петров П.', stage: 'Производство', percent: 40, phrase: 'собирают модули' },
+          { cycle_id: 13, client_name: 'Сидоров С.', stage: 'Монтаж', percent: 85, phrase: 'финишная отделка' },
+        ] }
+      : { generated_at: '2026-09-05T09:30:00Z', ai_configured: false, degraded: false, items: [] }
+    else if (url.pathname === '/api/agents/stats') body = agentStats
     else if (url.pathname === '/api/ai/chats') body = []
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -62,7 +76,9 @@ try {
   const employee = await openAs(worker)
   await employee.page.getByRole('heading', { name: 'Главное на сегодня.' }).waitFor()
   assert.equal(await employee.page.getByRole('heading', { name: 'Марина', exact: true }).count(), 0)
-  await employee.page.getByRole('navigation').getByRole('link', { name: 'Производство', exact: true }).click()
+  await employee.page.getByRole('navigation').getByRole('link', { name: 'Работа', exact: true }).click()
+  await employee.page.getByRole('heading', { name: 'Работа', exact: true }).waitFor()
+  await employee.page.getByRole('link', { name: /Производство/ }).click()
   await employee.page.getByRole('button', { name: 'Заказ №11' }).waitFor()
   assert(employee.requests.includes('GET /api/production/'))
   assert(!employee.requests.some(request => request.includes('/api/cycles')))

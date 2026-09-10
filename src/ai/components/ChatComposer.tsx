@@ -115,7 +115,7 @@ export function ChatComposer({
             onClick={() => fileInputRef.current?.click()}
             disabled={sending}
             aria-label="Прикрепить файл"
-            className="mb-1 shrink-0 rounded-pill p-2 text-muted hover:bg-surface-muted hover:text-brand disabled:opacity-50"
+            className="mb-1 shrink-0 rounded-pill p-2 text-muted hover:bg-surface-muted hover:text-ai disabled:opacity-50"
           >
             <Paperclip size={16} />
           </button>
@@ -137,7 +137,7 @@ export function ChatComposer({
             className={`mb-1 shrink-0 rounded-pill p-2 disabled:opacity-50 ${
               listening
                 ? 'bg-danger/15 text-danger hover:bg-danger/25'
-                : 'text-muted hover:bg-surface-muted hover:text-brand'
+                : 'text-muted hover:bg-surface-muted hover:text-ai'
             }`}
           >
             {listening ? <MicOff size={16} /> : <Mic size={16} />}
@@ -156,7 +156,7 @@ export function ChatComposer({
           className="max-h-32 resize-none"
           disabled={sending || transcribing}
         />
-        <Button size="sm" onClick={submit} disabled={!canSend || transcribing} aria-label="Отправить сообщение">
+        <Button variant="ai" size="sm" onClick={submit} disabled={!canSend || transcribing} aria-label="Отправить сообщение">
           <Send size={15} />
         </Button>
       </div>

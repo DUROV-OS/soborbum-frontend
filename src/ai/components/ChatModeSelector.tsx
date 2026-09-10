@@ -11,7 +11,7 @@ export function ChatModeSelector({ mode, onChange }: { mode: ChatMode; onChange:
           type="button"
           onClick={() => onChange(m)}
           className={`rounded-pill px-2.5 py-1 text-[12px] font-medium transition-colors ${
-            m === (mode === 'auto_approve' ? 'require_approval' : mode) ? 'bg-brand text-white' : 'text-muted hover:text-ink'
+            m === (mode === 'auto_approve' ? 'require_approval' : mode) ? 'bg-ai text-ink' : 'text-muted hover:text-ink'
           }`}
         >
           {MODE_LABEL[m]}

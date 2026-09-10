@@ -21,7 +21,7 @@ export function AskAiButton({
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="ai" size="sm" onClick={() => setOpen(true)}>
         <Sparkles size={14} />
         Спросить ИИ
       </Button>

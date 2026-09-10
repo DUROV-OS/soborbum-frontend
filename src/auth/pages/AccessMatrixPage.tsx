@@ -55,13 +55,18 @@ export function AccessMatrixPage() {
 
   const workers = accounts.filter((a) => a.role === 'worker')
 
-  function toggle(accountId: number, section: SectionId, hasIt: boolean) {
+  async function toggle(accountId: number, section: SectionId, hasIt: boolean) {
     const account = accounts.find((a) => a.id === accountId)
     if (!account) return
     const next = hasIt
       ? account.module_access.filter((s) => s !== section)
       : [...account.module_access, section]
-    updateAccess(accountId, next)
+    setError(null)
+    try {
+      await updateAccess(accountId, next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось изменить доступ')
+    }
   }
 
   return (
@@ -122,9 +127,10 @@ export function AccessMatrixPage() {
                     <td key={section.id} className="px-3 py-3 text-center">
                       <input
                         type="checkbox"
+                        aria-label={`${account.full_name}: ${section.label}`}
                         checked={hasIt}
                         onChange={() => toggle(account.id, section.id, hasIt)}
-                        className="h-4 w-4 accent-[#395b4b]"
+                        className="h-4 w-4 accent-[rgb(var(--brand))]"
                       />
                     </td>
                   )
@@ -195,7 +201,13 @@ function CreateAccountModal({
       title="Новый сотрудник"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              reset()
+              onClose()
+            }}
+          >
             Отмена
           </Button>
           <Button onClick={handleSubmit} disabled={!fullName || !email || !password || saving}>
@@ -212,7 +224,7 @@ function CreateAccountModal({
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mail@example.com" />
         </Field>
         <Field label="Пароль" required>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Field label="Доступ к разделам">
           <div className="flex flex-col gap-2">
@@ -228,7 +240,7 @@ function CreateAccountModal({
                         : prev.filter((s) => s !== section.id),
                     )
                   }
-                  className="h-4 w-4 accent-[#395b4b]"
+                  className="h-4 w-4 accent-[rgb(var(--brand))]"
                 />
                 {section.label}
               </label>
