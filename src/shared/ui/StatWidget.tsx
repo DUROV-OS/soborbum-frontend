@@ -29,7 +29,7 @@ export function StatWidget({
   const Wrapper = onClick ? 'button' : 'div'
   return (
     <Wrapper
-      className={`w-full rounded-md border border-border bg-surface p-4 text-left ${
+      className={`w-full rounded-md border border-border bg-surface p-4 text-left shadow-card ${
         onClick ? 'transition-colors hover:border-brand/40' : ''
       }`}
       {...(onClick ? { type: 'button', onClick } : {})}

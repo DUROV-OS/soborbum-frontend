@@ -48,7 +48,7 @@ export function WorkPage() {
               <NavLink
                 key={section.id}
                 to={section.path}
-                className="group flex items-start gap-3 rounded-md border border-border bg-surface p-4 transition-colors hover:border-brand/40"
+                className="group flex items-start gap-3 rounded-md border border-border bg-surface p-4 shadow-card transition-colors hover:border-brand/40 hover:shadow-panel"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-muted text-brand-dark">
                   <Icon size={20} strokeWidth={1.7} />

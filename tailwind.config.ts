@@ -61,6 +61,7 @@ export default {
       },
       boxShadow: {
         panel: '0 1px 0 0 rgb(var(--border))',
+        card: '0 1px 2px 0 rgb(var(--ink) / 0.06), 0 1px 3px 0 rgb(var(--ink) / 0.04)',
       },
     },
   },
