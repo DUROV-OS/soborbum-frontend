@@ -4,7 +4,7 @@ import { ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
-import { Field, Input, Select } from '@/shared/ui/Field'
+import { Field, Input, Select, Textarea } from '@/shared/ui/Field'
 import { useSuppliersStore } from '../store'
 import {
   CONTACT_KIND_LABEL,
@@ -29,6 +29,8 @@ export function SupplierDetailDrawer({
   const supplier = useSuppliersStore((s) => s.suppliers.find((x) => x.id === supplierId))
   const update = useSuppliersStore((s) => s.update)
   const removePriceItem = useSuppliersStore((s) => s.removePriceItem)
+  const addNote = useSuppliersStore((s) => s.addNote)
+  const removeNote = useSuppliersStore((s) => s.removeNote)
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
@@ -41,6 +43,8 @@ export function SupplierDetailDrawer({
   const [importOpen, setImportOpen] = useState(false)
   const [priceError, setPriceError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [noteBusy, setNoteBusy] = useState(false)
 
   useEffect(() => {
     if (!supplier) return
@@ -51,6 +55,7 @@ export function SupplierDetailDrawer({
     setProfileError(null)
     setPriceError(null)
     setAdding(false)
+    setNoteDraft('')
   }, [supplier])
 
   const profileDirty = useMemo(() => {
@@ -93,6 +98,14 @@ export function SupplierDetailDrawer({
     setPriceError(result.ok ? null : result.reason ?? 'Не удалось удалить строку')
   }
 
+  async function saveNote() {
+    if (!noteDraft.trim()) return
+    setNoteBusy(true)
+    const result = await addNote(supplierId_, noteDraft.trim())
+    setNoteBusy(false)
+    if (result.ok) setNoteDraft('')
+  }
+
   return (
     <Drawer
       open={supplierId !== null}
@@ -104,7 +117,10 @@ export function SupplierDetailDrawer({
           <Chip tone={supplier.status === 'active' ? 'success' : 'neutral'}>
             {SUPPLIER_STATUS_LABEL[supplier.status]}
           </Chip>
-          <span>{supplier.price_items_count} позиций прайса</span>
+          <span>
+            {supplier.price_items_count} позиций прайса
+            {supplier.notes.length > 0 && ` · ${supplier.notes.length} заметок`}
+          </span>
         </div>
       }
     >
@@ -207,6 +223,50 @@ export function SupplierDetailDrawer({
               </Button>
             </div>
           )}
+        </section>
+
+        {/* Заметки */}
+        <section>
+          <div className="mb-2 text-[13px] font-medium text-ink">Заметки</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Textarea
+                rows={2}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Напр.: завышает цены на метизы; долго отвечает; сменился менеджер"
+              />
+              <Button
+                size="sm"
+                className="self-start"
+                disabled={!noteDraft.trim() || noteBusy}
+                onClick={saveNote}
+              >
+                {noteBusy ? '…' : 'Добавить'}
+              </Button>
+            </div>
+            {supplier.notes.length === 0 && (
+              <p className="text-[12px] text-muted">Заметок пока нет.</p>
+            )}
+            {supplier.notes.map((note) => (
+              <div key={note.id} className="flex items-start justify-between gap-2 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                  <div className="whitespace-pre-wrap text-[13px] text-ink">{note.text}</div>
+                  <div className="mt-0.5 text-[11px] text-muted">
+                    {note.author_name ?? 'сотрудник'} · {new Date(note.created_at).toLocaleString('ru-RU')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeNote(supplierId_, note.id)}
+                  aria-label="Удалить заметку"
+                  className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Прайс-лист */}
