@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Loader2, Mic, Sparkles, Volume2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
@@ -40,6 +40,7 @@ function LiveTranscript() {
   const transcript = useMeetingStore((s) => s.transcript)
   const interim = useMeetingStore((s) => s.interim)
   const speechNotice = useMeetingStore((s) => s.speechNotice)
+  const capturing = useMeetingStore((s) => s.assistantState === 'capturing')
   const setLineSpeaker = useMeetingStore((s) => s.setLineSpeaker)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -51,7 +52,10 @@ function LiveTranscript() {
 
   return (
     <div>
-      <div className="mb-2 text-[12px] font-medium uppercase tracking-wide text-muted">Транскрипт</div>
+      <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-muted">
+        Транскрипт
+        {capturing && <span className="normal-case text-amber-600">· на паузе (пишется вопрос)</span>}
+      </div>
 
       {speechNotice && (
         <div className="mb-2 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-bg px-3 py-2.5 text-[13px] text-warning">
@@ -102,60 +106,43 @@ function LiveTranscript() {
 function AskMarinaBox() {
   const st = useMeetingStore((s) => s.assistantState)
   const notice = useMeetingStore((s) => s.voiceTriggerNotice)
-  const ask = useMeetingStore((s) => s.askMarina)
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
+  const questionInterim = useMeetingStore((s) => s.questionInterim)
+  const startAsking = useMeetingStore((s) => s.startAskingMarina)
+  const finishAsking = useMeetingStore((s) => s.finishAskingMarina)
+  const cancelAsking = useMeetingStore((s) => s.cancelAskingMarina)
 
-  const busy = st !== 'idle'
   if (notice) return null
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    const text = q.trim()
-    if (!text || busy) return
-    void ask(text)
-    setQ('')
-    setOpen(false)
-  }
-
-  if (!open) {
+  if (st === 'capturing') {
     return (
-      <div className="mb-3">
-        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} disabled={busy}>
-          <Sparkles size={14} />
-          {busy ? 'Марина думает…' : 'Спросить Марину'}
-        </Button>
+      <div className="mb-3 space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+        <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+          <Volume2 size={13} className="animate-pulse" />
+          Говорите вопрос — совещание на паузе
+        </div>
+        <p className="min-h-[1.2em] text-[13px] italic text-ink">
+          {questionInterim || 'Слушаю…'}
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" onClick={finishAsking}>
+            Готово
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={cancelAsking}>
+            Отмена
+          </Button>
+        </div>
       </div>
     )
   }
 
+  const busy = st === 'thinking' || st === 'answering'
   return (
-    <form onSubmit={submit} className="mb-3 space-y-2 rounded-md border border-amber-200 bg-amber-50/50 p-3">
-      <textarea
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        rows={2}
-        placeholder="Вопрос по совещанию…"
-        className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-ink"
-      />
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={busy || !q.trim()}>
-          Спросить
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setOpen(false)
-            setQ('')
-          }}
-        >
-          Отмена
-        </Button>
-      </div>
-    </form>
+    <div className="mb-3">
+      <Button variant="secondary" size="sm" onClick={startAsking} disabled={busy}>
+        <Sparkles size={14} />
+        {busy ? 'Марина думает…' : 'Спросить Марину голосом'}
+      </Button>
+    </div>
   )
 }
 
@@ -173,7 +160,7 @@ function AssistantAnswerBlock() {
       </div>
     )
   }
-  if (st === 'idle' && !answer) return null
+  if ((st === 'idle' || st === 'capturing') && !answer) return null
 
   return (
     <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
@@ -206,7 +193,7 @@ function AssistantAnswerBlock() {
         )}
       </div>
       {st === 'thinking' && !answer ? (
-        <p className="text-[13px] text-amber-700">Уже думаю…</p>
+        <p className="text-[13px] text-amber-700">Думаю над вашим вопросом…</p>
       ) : answer ? (
         <div className="text-[13px] text-ink">
           <Markdown text={answer} />
@@ -291,8 +278,9 @@ export function MeetingPanel() {
             <span className="ml-auto tabular-nums text-[15px] text-muted">{formatClock(elapsed)}</span>
           </div>
           <p className="text-[13px] text-muted">
-            Запись продолжается, даже если открыть другой раздел. Кнопка «Спросить Марину»
-            ниже — короткий ответ голосом, развёрнутый текстом в заметках.
+            Запись продолжается, даже если открыть другой раздел. «Спросить Марину голосом»
+            (в заметках) — совещание встаёт на паузу, вы задаёте вопрос голосом, дальше
+            короткий ответ голосом и развёрнутый текстом.
           </p>
 
           <VoicePicker />

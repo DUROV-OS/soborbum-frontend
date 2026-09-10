@@ -36,10 +36,15 @@ function tone(freq: number, startOffset: number, durationMs: number) {
   osc.stop(t0 + dur + 0.03)
 }
 
-/** Услышала имя — восходящий сигнал. */
+/** Начали задавать вопрос — восходящий сигнал. */
 export function chimeListening() {
   tone(880, 0, 120)
   tone(1245, 0.13, 150)
+}
+
+/** Приняла вопрос, ушла думать — короткий одиночный сигнал. */
+export function chimeThinking() {
+  tone(988, 0, 160)
 }
 
 /** Закончила думать — нисходящий сигнал. */

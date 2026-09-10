@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import { speakPrincess, splitVoiceReply, stopSpeaking } from '@/shared/lib/speechReply'
-import { chimeReady } from './earcon'
+import { chimeListening, chimeReady, chimeThinking } from './earcon'
 import { initVoiceFromStorage } from './voice'
 import {
   appendTranscript,
@@ -42,9 +42,18 @@ const SPEAKER_PAUSE_MS = 2500
 const FLUSH_INTERVAL_MS = 3000
 /** Сколько новых реплик должно накопиться, чтобы авто-пересчитать заметки. */
 const NOTES_NEW_LINES_THRESHOLD = 8
+/** Тишина после последней речи в вопросе — считаем, что вопрос закончился. */
+const QUESTION_SILENCE_MS = 2200
+/** Предохранитель: не пишем вопрос дольше этого. */
+const QUESTION_MAX_MS = 25000
 
-/** Что сейчас делает Марина по вопросу из панели. */
-export type AssistantState = 'idle' | 'thinking' | 'answering'
+/**
+ * idle      — обычный режим
+ * capturing — записываем голосовой вопрос (совещание на паузе)
+ * thinking  — Марина думает над вопросом
+ * answering — Марина озвучивает ответ
+ */
+export type AssistantState = 'idle' | 'capturing' | 'thinking' | 'answering'
 
 export interface TranscriptLine {
   localId: string
@@ -98,17 +107,23 @@ interface MeetingState {
 
   /** Ответ Марины на последний вопрос из панели (markdown). */
   assistantAnswer: string | null
-  /** idle → thinking → answering → idle */
+  /** idle → capturing → thinking → answering → idle */
   assistantState: AssistantState
-  /** Разовая пометка, если вопросы Марине недоступны (нет ключа ИИ). */
+  /** Живой текст записываемого голосового вопроса. */
+  questionInterim: string
+  /** Разовая пометка, если вопросы Марине недоступны (нет ключа ИИ / браузера). */
   voiceTriggerNotice: string | null
 
   start: () => Promise<void>
   finish: () => Promise<void>
   setLineSpeaker: (localId: string, speaker: string) => void
   requestNotesRefresh: () => void
-  /** Явный вопрос Марине из панели (кнопка). */
-  askMarina: (question: string) => Promise<void>
+  /** Нажали «Спросить Марину»: сигнал, пауза совещания, запись голосового вопроса. */
+  startAskingMarina: () => void
+  /** Вопрос закончен (кнопка «Готово» или тишина): фраза, сигнал, возобновление, ответ. */
+  finishAskingMarina: () => void
+  /** Отмена записи вопроса без отправки. */
+  cancelAskingMarina: () => void
   dismissAssistantAnswer: () => void
   openPanel: () => void
   closePanel: () => void
@@ -120,6 +135,11 @@ let transcriber: LiveTranscription | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
 let flushing = false
 let linesAtLastNotesRefresh = 0
+/** Пока true — финальные реплики уходят в вопрос, а не в транскрипт совещания. */
+let capturingQuestion = false
+let questionBuffer = ''
+let qSilenceTimer: ReturnType<typeof setTimeout> | null = null
+let qMaxTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useMeetingStore = create<MeetingState>((set, get) => {
   function stopSideEffects() {
@@ -129,6 +149,9 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       clearInterval(flushTimer)
       flushTimer = null
     }
+    capturingQuestion = false
+    questionBuffer = ''
+    clearQuestionTimers()
     stopSpeaking()
   }
 
@@ -200,22 +223,77 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     }
   }
 
-  /**
-   * Явный вопрос Марине из панели (кнопка). Логика та же: коротко голосом,
-   * развёрнуто текстом. Запись и транскрипция при этом не прерываются.
-   */
-  async function askMarina(question: string): Promise<void> {
-    const trimmed = question.trim()
-    const { meetingId, assistantState } = get()
-    if (!trimmed || meetingId === null || assistantState !== 'idle') return
+  function clearQuestionTimers() {
+    if (qSilenceTimer !== null) {
+      clearTimeout(qSilenceTimer)
+      qSilenceTimer = null
+    }
+    if (qMaxTimer !== null) {
+      clearTimeout(qMaxTimer)
+      qMaxTimer = null
+    }
+  }
 
-    set({ assistantState: 'thinking', assistantAnswer: null, error: null })
-    void speakPrincess('Уже думаю').catch(() => {})
+  /** Любая речь в режиме записи вопроса — сдвигаем таймер «тишины». */
+  function bumpQuestionSilence() {
+    if (!capturingQuestion) return
+    if (qSilenceTimer !== null) clearTimeout(qSilenceTimer)
+    qSilenceTimer = setTimeout(() => {
+      finishAskingMarina()
+    }, QUESTION_SILENCE_MS)
+  }
+
+  function startAskingMarina() {
+    const { phase, assistantState, speechNotice } = get()
+    if (phase !== 'recording' || assistantState !== 'idle') return
+    if (speechNotice) {
+      set({ voiceTriggerNotice: 'Голосовой вопрос недоступен в этом браузере.' })
+      return
+    }
+    chimeListening() // сигнал: начали задавать вопрос
+    questionBuffer = ''
+    capturingQuestion = true // финальные реплики теперь идут в вопрос, не в транскрипт
+    set({ assistantState: 'capturing', questionInterim: '', assistantAnswer: null, error: null })
+    qMaxTimer = setTimeout(() => finishAskingMarina(), QUESTION_MAX_MS)
+    bumpQuestionSilence()
+  }
+
+  function cancelAskingMarina() {
+    if (get().assistantState !== 'capturing') return
+    capturingQuestion = false
+    clearQuestionTimers()
+    questionBuffer = ''
+    set({ assistantState: 'idle', questionInterim: '' })
+  }
+
+  async function finishAskingMarina(): Promise<void> {
+    if (get().assistantState !== 'capturing') return
+    capturingQuestion = false // совещание снова пишется
+    clearQuestionTimers()
+    const question = questionBuffer.trim()
+    questionBuffer = ''
+    set({ questionInterim: '' })
+
+    const { meetingId } = get()
+    if (meetingId === null) {
+      set({ assistantState: 'idle' })
+      return
+    }
+    if (!question) {
+      set({ assistantState: 'idle' })
+      void speakPrincess('Не расслышала вопрос, попробуйте ещё раз').catch(() => {})
+      return
+    }
+
+    // Вопрос закончился — фраза, сигнал, дальше думаем (запись уже возобновлена).
+    void speakPrincess('Продолжайте диалог, я уже думаю над вашим вопросом').catch(() => {})
+    chimeThinking()
+    set({ assistantState: 'thinking' })
 
     let written: string
     let spoken: string
     try {
-      const res = await askMeeting(meetingId, trimmed)
+      const res = await askMeeting(meetingId, question)
       const parts = splitVoiceReply(res.answer_markdown)
       written = parts.written
       spoken = parts.spoken
@@ -238,7 +316,23 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     set({ assistantState: 'idle' })
   }
 
+  function handleInterim(text: string) {
+    if (capturingQuestion) {
+      set({ questionInterim: text })
+      bumpQuestionSilence()
+    } else {
+      set({ interim: text })
+    }
+  }
+
   function handleFinalSegment(segment: FinalSegment) {
+    if (capturingQuestion) {
+      // Реплика — часть голосового вопроса, в транскрипт совещания не попадает.
+      questionBuffer = `${questionBuffer} ${segment.text}`.trim()
+      set({ questionInterim: '' })
+      bumpQuestionSilence()
+      return
+    }
     set((s) => {
       const prev = s.transcript[s.transcript.length - 1]
       const line: TranscriptLine = {
@@ -268,6 +362,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     notesRefreshing: false,
     assistantAnswer: null,
     assistantState: 'idle' as const,
+    questionInterim: '',
     voiceTriggerNotice: null,
 
     start: async () => {
@@ -277,6 +372,9 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         return
       }
       linesAtLastNotesRefresh = 0
+      capturingQuestion = false
+      questionBuffer = ''
+      clearQuestionTimers()
       initVoiceFromStorage()
       set({
         phase: 'starting',
@@ -291,6 +389,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         notesRefreshing: false,
         assistantAnswer: null,
         assistantState: 'idle',
+        questionInterim: '',
         voiceTriggerNotice: null,
       })
 
@@ -327,7 +426,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       transcriber = startTranscription({
         startedAt,
         onFinal: handleFinalSegment,
-        onInterim: (text) => set({ interim: text }),
+        onInterim: handleInterim,
         onUnavailable: (reason) => set({ speechNotice: reason, interim: '' }),
       })
       flushTimer = setInterval(() => {
@@ -380,7 +479,11 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       void refreshNotesNow()
     },
 
-    askMarina: (question) => askMarina(question),
+    startAskingMarina,
+    finishAskingMarina: () => {
+      void finishAskingMarina()
+    },
+    cancelAskingMarina,
 
     dismissAssistantAnswer: () => set({ assistantAnswer: null }),
 
@@ -408,6 +511,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         notesRefreshing: false,
         assistantAnswer: null,
         assistantState: 'idle',
+        questionInterim: '',
         voiceTriggerNotice: null,
       })
     },
