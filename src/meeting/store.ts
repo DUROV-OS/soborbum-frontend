@@ -251,8 +251,28 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       return
     }
     chimeListening() // сигнал: начали задавать вопрос
+
+    // Не потерять то, что говорилось до нажатия: недоговорённый interim
+    // фиксируем как строку транскрипта — иначе следующий финал уедет в вопрос.
+    set((s) => {
+      const pending = s.interim.trim()
+      if (!pending) return { interim: '' }
+      const prev = s.transcript[s.transcript.length - 1]
+      const line: TranscriptLine = {
+        localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        lineId: null,
+        speaker: nextSpeaker(prev, 0),
+        text: pending,
+        atMs: Math.max(0, Date.now() - (s.startedAt ?? Date.now())),
+        synced: false,
+      }
+      return { transcript: [...s.transcript, line], interim: '' }
+    })
+
     questionBuffer = ''
     capturingQuestion = true // финальные реплики теперь идут в вопрос, не в транскрипт
+    transcriber?.restart() // чистая граница между речью совещания и вопросом
+    void flushTranscript() // и сразу сохранить всё сказанное до вопроса
     set({ assistantState: 'capturing', questionInterim: '', assistantAnswer: null, error: null })
     qMaxTimer = setTimeout(() => finishAskingMarina(), QUESTION_MAX_MS)
     bumpQuestionSilence()
@@ -263,6 +283,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     capturingQuestion = false
     clearQuestionTimers()
     questionBuffer = ''
+    transcriber?.restart()
     set({ assistantState: 'idle', questionInterim: '' })
   }
 
@@ -282,6 +303,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     if (get().assistantState !== 'capturing') return
     capturingQuestion = false // совещание снова пишется
     clearQuestionTimers()
+    transcriber?.restart() // чистая граница: дальше речь снова идёт в транскрипт
     const question = questionBuffer.trim()
     questionBuffer = ''
     set({ questionInterim: '' })

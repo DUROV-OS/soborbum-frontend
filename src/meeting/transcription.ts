@@ -35,6 +35,8 @@ export interface LiveTranscription {
   stop: () => void
   /** Пауза на время, пока говорит Марина (иначе микрофон дерётся с TTS). */
   setPaused: (paused: boolean) => void
+  /** Оборвать текущую сессию распознавания и поднять новую (чистая граница). */
+  restart: () => void
 }
 
 const RESTART_DELAY_MS = 400
@@ -45,7 +47,7 @@ export function speechRecognitionAvailable(): boolean {
   return getSpeechRecognitionCtor() !== null
 }
 
-const NO_OP: LiveTranscription = { stop: () => {}, setPaused: () => {} }
+const NO_OP: LiveTranscription = { stop: () => {}, setPaused: () => {}, restart: () => {} }
 
 export function startTranscription(opts: StartOptions): LiveTranscription {
   const Ctor = getSpeechRecognitionCtor()
@@ -178,6 +180,17 @@ export function startTranscription(opts: StartOptions): LiveTranscription {
         lastActivity = Date.now()
         scheduleRestart()
       }
+    },
+    restart: () => {
+      if (stopped || paused) return
+      try {
+        recognition.abort()
+      } catch {
+        /* noop */
+      }
+      running = false
+      lastActivity = Date.now()
+      scheduleRestart()
     },
   }
 }
