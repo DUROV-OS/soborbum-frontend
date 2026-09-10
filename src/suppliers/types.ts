@@ -45,6 +45,34 @@ export interface Supplier {
   price_items_count: number
 }
 
+/** Ответ POST /api/warehouse/suppliers/:id/price-items/import (задача 0011-g). */
+export interface PriceListImportResult {
+  supplier: Supplier
+  imported: number
+  skipped: number
+  /** Разметку колонок сделал ИИ (true) или словарь-эвристика (false). */
+  ai_used: boolean
+  note: string
+  column_mapping: {
+    material: string | null
+    price: string | null
+    category: string | null
+    lead_time: string | null
+    qty_breaks: string[]
+  }
+  /** Необязательные поля, для которых в файле не нашлось колонки. */
+  missing_fields: string[]
+  /** id созданной задачи «дозаполнить прайс», если понадобилась. */
+  task_id: number | null
+}
+
+export const IMPORT_FIELD_LABEL: Record<string, string> = {
+  material: 'Материал',
+  price: 'Цена',
+  category: 'Категория',
+  lead_time: 'Срок поставки',
+}
+
 export const SUPPLIER_STATUS_LABEL: Record<SupplierStatus, string> = {
   active: 'Активный',
   archived: 'В архиве',

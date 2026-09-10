@@ -1,5 +1,5 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { PriceTier, Supplier } from './types'
+import { PriceListImportResult, PriceTier, Supplier } from './types'
 
 // Раздел «Поставщики» смонтирован на бэке под /api/warehouse.
 const SECTION = 'warehouse'
@@ -77,6 +77,18 @@ export function deletePriceItem(id: number, itemId: number): Promise<void> {
     section: SECTION,
     path: `/suppliers/${id}/price-items/${itemId}`,
     method: 'DELETE',
+  })
+}
+
+/** POST /api/warehouse/suppliers/:id/price-items/import — таблица xlsx/csv */
+export function importPriceList(id: number, file: File): Promise<PriceListImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiRequest<PriceListImportResult>({
+    section: SECTION,
+    path: `/suppliers/${id}/price-items/import`,
+    method: 'POST',
+    form,
   })
 }
 

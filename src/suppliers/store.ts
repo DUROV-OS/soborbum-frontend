@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as suppliersApi from './api'
-import { Supplier } from './types'
+import { PriceListImportResult, Supplier } from './types'
 
 export interface ActionResult {
   ok: boolean
@@ -28,6 +28,7 @@ interface SuppliersState {
     patch: Partial<suppliersApi.PriceItemInput>,
   ) => Promise<ActionResult>
   removePriceItem: (id: number, itemId: number) => Promise<ActionResult>
+  importPriceList: (id: number, file: File) => Promise<ActionResult & { result?: PriceListImportResult }>
   linkChat: (id: number, chatId: number) => Promise<ActionResult>
   unlinkChat: (id: number) => Promise<ActionResult>
 }
@@ -103,6 +104,16 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => {
         await suppliersApi.deletePriceItem(id, itemId)
         await get().load()
         return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    importPriceList: async (id, file) => {
+      try {
+        const result = await suppliersApi.importPriceList(id, file)
+        replace(result.supplier)
+        return { ok: true, result }
       } catch (error) {
         return { ok: false, reason: reasonOf(error) }
       }
