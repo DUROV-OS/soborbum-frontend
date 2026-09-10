@@ -218,7 +218,14 @@ export function AppRouter() {
             </AccessGate>
           }
         />
-        <Route path="/admin" element={<AccessMatrixPage />} />
+        <Route
+          path="/admin"
+          element={
+            <AccessGate section="admin">
+              <AccessMatrixPage />
+            </AccessGate>
+          }
+        />
         <Route path="*" element={<RootRedirect />} />
       </Route>
     </Routes>

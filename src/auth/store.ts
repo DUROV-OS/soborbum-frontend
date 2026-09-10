@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const current = await authApi.me()
       set({ current, booting: false })
-      get().loadAccounts().catch(() => {})
+      if (current.role === 'admin') get().loadAccounts().catch(() => {})
     } catch {
       setToken(null)
       set({ current: null, booting: false })
@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const current = await authApi.login(email, password)
       set({ current })
-      get().loadAccounts().catch(() => {})
+      if (current.role === 'admin') get().loadAccounts().catch(() => {})
       return true
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Не удалось войти' })
@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ current: null, accounts: [] })
   },
 
-  /** GET /auth/users требует роль admin — для рабочих аккаунтов тихо остаётся пустым (см. вызовы в bootstrap/login). */
+  /** GET /auth/users требует роль admin — в bootstrap/login вызывается только для админа, у рабочих список остаётся пустым. */
   loadAccounts: async () => {
     const accounts = await authApi.listAccounts()
     set({ accounts })
