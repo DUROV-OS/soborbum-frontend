@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import * as suppliersApi from './api'
-import { PriceListImportResult, Supplier } from './types'
+import { LeadTimeQuestionDraft, PriceListImportResult, Supplier } from './types'
 
 export interface ActionResult {
   ok: boolean
@@ -29,6 +29,10 @@ interface SuppliersState {
   ) => Promise<ActionResult>
   removePriceItem: (id: number, itemId: number) => Promise<ActionResult>
   importPriceList: (id: number, file: File) => Promise<ActionResult & { result?: PriceListImportResult }>
+  aiFillCategory: (id: number) => Promise<ActionResult & { filled?: number; skipped?: number }>
+  draftLeadTimeQuestion: (id: number) => Promise<ActionResult & { draft?: LeadTimeQuestionDraft }>
+  sendLeadTimeQuestion: (id: number, message: string) => Promise<ActionResult>
+  createBackfillTask: (id: number, missingFields: string[]) => Promise<ActionResult & { taskId?: number }>
   linkChat: (id: number, chatId: number) => Promise<ActionResult>
   unlinkChat: (id: number) => Promise<ActionResult>
 }
@@ -114,6 +118,43 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => {
         const result = await suppliersApi.importPriceList(id, file)
         replace(result.supplier)
         return { ok: true, result }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    aiFillCategory: async (id) => {
+      try {
+        const res = await suppliersApi.aiFillCategory(id)
+        replace(res.supplier)
+        return { ok: true, filled: res.filled, skipped: res.skipped }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    draftLeadTimeQuestion: async (id) => {
+      try {
+        return { ok: true, draft: await suppliersApi.draftLeadTimeQuestion(id) }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    sendLeadTimeQuestion: async (id, message) => {
+      try {
+        await suppliersApi.sendLeadTimeQuestion(id, message)
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
+
+    createBackfillTask: async (id, missingFields) => {
+      try {
+        const res = await suppliersApi.createBackfillTask(id, missingFields)
+        replace(res.supplier)
+        return { ok: true, taskId: res.task_id }
       } catch (error) {
         return { ok: false, reason: reasonOf(error) }
       }

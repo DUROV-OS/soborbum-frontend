@@ -1,5 +1,11 @@
 import { apiRequest } from '@/shared/lib/httpClient'
-import { PriceListImportResult, PriceTier, Supplier } from './types'
+import {
+  AiFillCategoryResult,
+  LeadTimeQuestionDraft,
+  PriceListImportResult,
+  PriceTier,
+  Supplier,
+} from './types'
 
 // Раздел «Поставщики» смонтирован на бэке под /api/warehouse.
 const SECTION = 'warehouse'
@@ -89,6 +95,44 @@ export function importPriceList(id: number, file: File): Promise<PriceListImport
     path: `/suppliers/${id}/price-items/import`,
     method: 'POST',
     form,
+  })
+}
+
+/** POST /api/warehouse/suppliers/:id/price-items/ai-fill-category */
+export function aiFillCategory(id: number): Promise<AiFillCategoryResult> {
+  return apiRequest<AiFillCategoryResult>({
+    section: SECTION,
+    path: `/suppliers/${id}/price-items/ai-fill-category`,
+    method: 'POST',
+  })
+}
+
+/** POST /api/warehouse/suppliers/:id/price-items/lead-time-question/draft */
+export function draftLeadTimeQuestion(id: number): Promise<LeadTimeQuestionDraft> {
+  return apiRequest<LeadTimeQuestionDraft>({
+    section: SECTION,
+    path: `/suppliers/${id}/price-items/lead-time-question/draft`,
+    method: 'POST',
+  })
+}
+
+/** POST /api/warehouse/suppliers/:id/price-items/lead-time-question/send */
+export function sendLeadTimeQuestion(id: number, message: string): Promise<{ sent: boolean; chat_id: number }> {
+  return apiRequest<{ sent: boolean; chat_id: number }>({
+    section: SECTION,
+    path: `/suppliers/${id}/price-items/lead-time-question/send`,
+    method: 'POST',
+    body: { message },
+  })
+}
+
+/** POST /api/warehouse/suppliers/:id/price-items/backfill-task */
+export function createBackfillTask(id: number, missingFields: string[]): Promise<{ task_id: number; supplier: Supplier }> {
+  return apiRequest<{ task_id: number; supplier: Supplier }>({
+    section: SECTION,
+    path: `/suppliers/${id}/price-items/backfill-task`,
+    method: 'POST',
+    body: { missing_fields: missingFields },
   })
 }
 

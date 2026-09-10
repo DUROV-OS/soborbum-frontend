@@ -62,8 +62,20 @@ export interface PriceListImportResult {
   }
   /** Необязательные поля, для которых в файле не нашлось колонки. */
   missing_fields: string[]
-  /** id созданной задачи «дозаполнить прайс», если понадобилась. */
-  task_id: number | null
+  /** Есть смысл предложить задачу «дозаполнить» (не хватает полей / есть пропуски). */
+  backfill_suggested: boolean
+}
+
+export interface AiFillCategoryResult {
+  supplier: Supplier
+  filled: number
+  skipped: number
+}
+
+export interface LeadTimeQuestionDraft {
+  message: string
+  materials: string[]
+  chat_id: number
 }
 
 export const IMPORT_FIELD_LABEL: Record<string, string> = {
