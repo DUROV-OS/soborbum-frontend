@@ -106,36 +106,45 @@ function LiveTranscript() {
 }
 
 function AssistantAnswerBlock() {
-  const thinking = useMeetingStore((s) => s.assistantThinking)
-  const speaking = useMeetingStore((s) => s.assistantSpeaking)
+  const st = useMeetingStore((s) => s.assistantState)
   const answer = useMeetingStore((s) => s.assistantAnswer)
   const notice = useMeetingStore((s) => s.voiceTriggerNotice)
   const dismiss = useMeetingStore((s) => s.dismissAssistantAnswer)
 
   if (notice) {
     return (
-      <div className="flex items-start gap-2 rounded-md border border-border bg-surface-muted/40 px-3 py-2.5 text-[13px] text-muted">
+      <div className="mb-3 flex items-start gap-2 rounded-md border border-border bg-surface-muted/40 px-3 py-2.5 text-[13px] text-muted">
         <AlertTriangle size={15} className="mt-0.5 shrink-0" />
         <span>{notice}</span>
       </div>
     )
   }
-  if (!thinking && !answer) return null
+  if (st === 'idle' && !answer) return null
+
+  const label =
+    st === 'armed'
+      ? 'слушает вопрос…'
+      : st === 'thinking'
+        ? 'думает…'
+        : st === 'answering'
+          ? 'отвечает'
+          : null
 
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3">
+    <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
       <div className="mb-1 flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-amber-700">
           <Sparkles size={13} />
           Ответ Марины
-          {speaking && (
+          {label && (
             <span className="inline-flex items-center gap-1 normal-case text-amber-600">
-              <Volume2 size={12} className="animate-pulse" />
-              отвечает
+              {(st === 'answering' || st === 'armed') && <Volume2 size={12} className="animate-pulse" />}
+              {st === 'thinking' && <Loader2 size={12} className="animate-spin" />}
+              {label}
             </span>
           )}
         </span>
-        {answer && !thinking && (
+        {answer && st === 'idle' && (
           <button
             type="button"
             onClick={dismiss}
@@ -146,15 +155,14 @@ function AssistantAnswerBlock() {
           </button>
         )}
       </div>
-      {thinking ? (
-        <p className="flex items-center gap-2 text-[13px] text-amber-700">
-          <Loader2 size={14} className="animate-spin" />
-          Марина думает…
-        </p>
-      ) : (
+      {st === 'thinking' && !answer ? (
+        <p className="text-[13px] text-amber-700">Уже думаю…</p>
+      ) : answer ? (
         <div className="text-[13px] text-ink">
-          <Markdown text={answer ?? ''} />
+          <Markdown text={answer} />
         </div>
+      ) : (
+        <p className="text-[13px] text-amber-700">Слушаю…</p>
       )}
     </div>
   )
@@ -183,6 +191,8 @@ function MeetingNotesBlock() {
           </button>
         )}
       </div>
+      {/* Развёрнутый ответ Марины на голосовой вопрос — здесь, в разделе заметок */}
+      <AssistantAnswerBlock />
       {aiEnabled ? (
         <NotesView notes={notes} />
       ) : (
@@ -236,7 +246,6 @@ export function MeetingPanel() {
             следующем шаге фичи.
           </p>
 
-          <AssistantAnswerBlock />
           <LiveTranscript />
           <MeetingNotesBlock />
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import { speakPrincess, splitVoiceReply, stopSpeaking } from '@/shared/lib/speechReply'
+import { chimeListening, chimeReady } from './earcon'
 import {
   appendTranscript,
   askMeeting,
@@ -40,6 +41,15 @@ const SPEAKER_PAUSE_MS = 2500
 const FLUSH_INTERVAL_MS = 3000
 /** Сколько новых реплик должно накопиться, чтобы авто-пересчитать заметки. */
 const NOTES_NEW_LINES_THRESHOLD = 8
+/** Ждём продолжения вопроса после «Марина …» столько мс, если тело уже есть. */
+const ARM_GAP_WITH_BODY_MS = 1400
+/** …и столько, если сказали только «Марина» без вопроса. */
+const ARM_GAP_EMPTY_MS = 3000
+/** Предохранитель: не держим «слушаю» дольше этого. */
+const ARM_MAX_MS = 15000
+
+/** Что сейчас делает Марина по голосовому обращению. */
+export type AssistantState = 'idle' | 'armed' | 'thinking' | 'answering'
 
 export interface TranscriptLine {
   localId: string
@@ -64,6 +74,12 @@ export function detectMarinaTrigger(text: string): string | null {
   const m = trimmed.match(/^марина(?![а-яёa-z])/iu)
   if (!m) return null
   return trimmed.slice(m[0].length).replace(/^[\s,!.:;—–-]+/u, '').trim()
+}
+
+/** Убирает ведущее «Марина …» из продолжения вопроса, если оно повторилось. */
+function stripLeadMarina(text: string): string {
+  const body = detectMarinaTrigger(text)
+  return body === null ? text.trim() : body
 }
 
 function friendlyError(error: unknown): string {
@@ -108,8 +124,8 @@ interface MeetingState {
 
   /** Ответ Марины на последнее голосовое обращение «Марина, …» (markdown). */
   assistantAnswer: string | null
-  assistantThinking: boolean
-  assistantSpeaking: boolean
+  /** idle → armed (услышала имя) → thinking → answering → idle */
+  assistantState: AssistantState
   /** Разовая пометка, если голосовой вызов недоступен (нет ключа ИИ). */
   voiceTriggerNotice: string | null
 
@@ -128,8 +144,9 @@ let transcriber: LiveTranscription | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
 let flushing = false
 let linesAtLastNotesRefresh = 0
-let askQueue: string[] = []
-let askProcessing = false
+let armTimer: ReturnType<typeof setTimeout> | null = null
+let armMaxTimer: ReturnType<typeof setTimeout> | null = null
+let pendingQuestion = ''
 
 export const useMeetingStore = create<MeetingState>((set, get) => {
   function stopSideEffects() {
@@ -139,7 +156,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       clearInterval(flushTimer)
       flushTimer = null
     }
-    askQueue = []
+    clearArmTimers()
+    pendingQuestion = ''
     stopSpeaking()
   }
 
@@ -216,53 +234,106 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     }
   }
 
-  async function processAskQueue(): Promise<void> {
-    if (askProcessing) return
-    const { meetingId } = get()
-    if (meetingId === null) return
-    askProcessing = true
-    try {
-      while (askQueue.length > 0) {
-        const question = askQueue.shift() as string
-        if (!question) {
-          // «Марина» без вопроса — просто отзовёмся
-          await speakPrincess('Слушаю').catch(() => {})
-          continue
-        }
-        set({ assistantThinking: true, error: null })
-        let written: string
-        let spoken: string
-        try {
-          const res = await askMeeting(meetingId, question)
-          const parts = splitVoiceReply(res.answer_markdown)
-          written = parts.written
-          spoken = parts.spoken
-        } catch (error) {
-          set({ assistantThinking: false })
-          if (error instanceof ApiError && error.status === 503) {
-            askQueue = []
-            set({ voiceTriggerNotice: 'Голосовой вызов Марины отключён: не задан ключ ИИ.' })
-            return
-          }
-          set({ assistantAnswer: '_Не удалось получить ответ. Попробуйте ещё раз._' })
-          continue
-        }
-        set({ assistantThinking: false, assistantAnswer: written, assistantSpeaking: true })
-        await new Promise<void>((resolve) => {
-          void speakPrincess(spoken, { onEnd: resolve, onError: resolve })
-        })
-        set({ assistantSpeaking: false })
-      }
-    } finally {
-      askProcessing = false
-      set({ assistantSpeaking: false })
+  function clearArmTimers() {
+    if (armTimer !== null) {
+      clearTimeout(armTimer)
+      armTimer = null
+    }
+    if (armMaxTimer !== null) {
+      clearTimeout(armMaxTimer)
+      armMaxTimer = null
     }
   }
 
+  function scheduleArmFire(gapMs: number) {
+    if (armTimer !== null) clearTimeout(armTimer)
+    armTimer = setTimeout(() => {
+      void fireQuestion()
+    }, gapMs)
+  }
+
+  /** Услышали «Марина …» — сигнал и режим сбора вопроса. */
+  function armQuestion(body: string) {
+    pendingQuestion = body
+    set({ assistantState: 'armed', assistantAnswer: null, error: null })
+    chimeListening()
+    scheduleArmFire(body ? ARM_GAP_WITH_BODY_MS : ARM_GAP_EMPTY_MS)
+    armMaxTimer = setTimeout(() => {
+      void fireQuestion()
+    }, ARM_MAX_MS)
+  }
+
+  async function fireQuestion(): Promise<void> {
+    clearArmTimers()
+    const question = pendingQuestion.trim()
+    pendingQuestion = ''
+    const { meetingId } = get()
+    if (meetingId === null) {
+      set({ assistantState: 'idle' })
+      return
+    }
+    if (!question) {
+      set({ assistantState: 'idle' })
+      void speakPrincess('Слушаю').catch(() => {})
+      return
+    }
+
+    // Вопрос закончился — «Уже думаю» и уходим думать. Запись/транскрипция
+    // при этом не прекращаются; новые «Марина …» игнорируются, пока не idle.
+    set({ assistantState: 'thinking', assistantAnswer: null })
+    void speakPrincess('Уже думаю').catch(() => {})
+
+    let written: string
+    let spoken: string
+    try {
+      const res = await askMeeting(meetingId, question)
+      const parts = splitVoiceReply(res.answer_markdown)
+      written = parts.written
+      spoken = parts.spoken
+    } catch (error) {
+      set({ assistantState: 'idle' })
+      if (error instanceof ApiError && error.status === 503) {
+        set({ voiceTriggerNotice: 'Голосовой вызов Марины отключён: не задан ключ ИИ.' })
+      } else {
+        set({ assistantAnswer: '_Не удалось получить ответ. Попробуйте ещё раз._' })
+      }
+      return
+    }
+
+    // Закончила думать — сигнал, короткий ответ голосом, развёрнутый — текстом.
+    chimeReady()
+    set({ assistantState: 'answering', assistantAnswer: written })
+    await new Promise<void>((resolve) => {
+      void speakPrincess(spoken, { onEnd: resolve, onError: resolve })
+    })
+    set({ assistantState: 'idle' })
+  }
+
   function handleFinalSegment(segment: FinalSegment) {
-    const trigger = detectMarinaTrigger(segment.text)
-    set((state) => {
-      const prev = state.transcript[state.transcript.length - 1]
+    const state = get()
+    const st = state.assistantState
+    const voiceOff = state.voiceTriggerNotice !== null
+
+    let partOfQuestion = false
+    if (!voiceOff) {
+      if (st === 'idle') {
+        const body = detectMarinaTrigger(segment.text)
+        if (body !== null) {
+          partOfQuestion = true
+          armQuestion(body)
+        }
+      } else if (st === 'armed') {
+        // продолжение вопроса в следующей реплике
+        partOfQuestion = true
+        const extra = stripLeadMarina(segment.text)
+        pendingQuestion = `${pendingQuestion} ${extra}`.trim()
+        scheduleArmFire(ARM_GAP_WITH_BODY_MS)
+      }
+      // thinking / answering — Марина занята, реплику не трогаем
+    }
+
+    set((s) => {
+      const prev = s.transcript[s.transcript.length - 1]
       const line: TranscriptLine = {
         localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         lineId: null,
@@ -270,14 +341,10 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         text: segment.text,
         atMs: segment.atMs,
         synced: false,
-        isAssistantQuery: trigger !== null,
+        isAssistantQuery: partOfQuestion,
       }
-      return { transcript: [...state.transcript, line] }
+      return { transcript: [...s.transcript, line] }
     })
-    if (trigger !== null && get().voiceTriggerNotice === null) {
-      askQueue.push(trigger)
-      void processAskQueue()
-    }
   }
 
   return {
@@ -294,8 +361,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     notesAiEnabled: true,
     notesRefreshing: false,
     assistantAnswer: null,
-    assistantThinking: false,
-    assistantSpeaking: false,
+    assistantState: 'idle' as const,
     voiceTriggerNotice: null,
 
     start: async () => {
@@ -305,7 +371,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         return
       }
       linesAtLastNotesRefresh = 0
-      askQueue = []
+      clearArmTimers()
+      pendingQuestion = ''
       set({
         phase: 'starting',
         panelOpen: true,
@@ -318,8 +385,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         notesAiEnabled: true,
         notesRefreshing: false,
         assistantAnswer: null,
-        assistantThinking: false,
-        assistantSpeaking: false,
+        assistantState: 'idle',
         voiceTriggerNotice: null,
       })
 
@@ -420,7 +486,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       abortRecording()
       active = null
       linesAtLastNotesRefresh = 0
-      askQueue = []
+      clearArmTimers()
+      pendingQuestion = ''
       set({
         phase: 'idle',
         panelOpen: false,
@@ -435,8 +502,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         notesAiEnabled: true,
         notesRefreshing: false,
         assistantAnswer: null,
-        assistantThinking: false,
-        assistantSpeaking: false,
+        assistantState: 'idle',
         voiceTriggerNotice: null,
       })
     },
