@@ -1,6 +1,7 @@
 import { Menu } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { RoleSwitcher } from '@/auth/pages/RoleSwitcher'
+import { MeetingButton } from '@/meeting/components/MeetingButton'
 import { SECTIONS } from '@/shared/sections'
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
@@ -20,7 +21,10 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </button>
         <span className="truncate text-[13px] font-medium text-muted">{section?.label ?? 'Durov OS'}</span>
       </div>
-      <RoleSwitcher />
+      <div className="flex shrink-0 items-center gap-3">
+        <MeetingButton />
+        <RoleSwitcher />
+      </div>
     </header>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { MeetingPanel } from '@/meeting/components/MeetingPanel'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
@@ -27,6 +28,7 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      <MeetingPanel />
     </div>
   )
 }
