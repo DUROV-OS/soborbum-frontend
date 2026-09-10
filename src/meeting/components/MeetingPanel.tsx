@@ -6,6 +6,7 @@ import { Drawer } from '@/shared/ui/Drawer'
 import { Markdown } from '@/shared/ui/Markdown'
 import { TranscriptLine, useMeetingStore } from '../store'
 import { NotesView } from './NotesView'
+import { VoicePicker } from './VoicePicker'
 
 function useElapsedSeconds(startedAt: number | null, running: boolean): number {
   const [now, setNow] = useState(() => Date.now())
@@ -242,9 +243,11 @@ export function MeetingPanel() {
             <span className="ml-auto tabular-nums text-[15px] text-muted">{formatClock(elapsed)}</span>
           </div>
           <p className="text-[13px] text-muted">
-            Запись продолжается, даже если открыть другой раздел. Заметки Марины появятся в
-            следующем шаге фичи.
+            Запись продолжается, даже если открыть другой раздел. Скажите «Марина, …» —
+            она ответит голосом и текстом в заметках.
           </p>
+
+          <VoicePicker />
 
           <LiveTranscript />
           <MeetingNotesBlock />

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import { speakPrincess, splitVoiceReply, stopSpeaking } from '@/shared/lib/speechReply'
 import { chimeListening, chimeReady } from './earcon'
+import { initVoiceFromStorage } from './voice'
 import {
   appendTranscript,
   askMeeting,
@@ -373,6 +374,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       linesAtLastNotesRefresh = 0
       clearArmTimers()
       pendingQuestion = ''
+      initVoiceFromStorage()
       set({
         phase: 'starting',
         panelOpen: true,

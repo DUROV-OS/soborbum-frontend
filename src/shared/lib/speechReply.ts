@@ -12,6 +12,27 @@ const MALE_NAME = /male|man|boy|dmitri|yuri|yury|pavel|nicholas|google.*(рус�
 
 let currentAudio: HTMLAudioElement | null = null
 
+/**
+ * Встраиваемый выбор голоса. Пустой = поведение по умолчанию (нейро-Светлана
+ * с фолбэком на «принцессу» браузера — как в разделе «Агенты»).
+ * neuralVoice — имя Edge TTS voice для backend /ai/tts/speak.
+ * systemVoiceURI — voiceURI системного голоса speechSynthesis (нейро пропускаем).
+ */
+export interface VoicePreference {
+  neuralVoice?: string
+  systemVoiceURI?: string
+}
+
+let preferredVoice: VoicePreference = {}
+
+export function setPreferredVoice(pref: VoicePreference): void {
+  preferredVoice = pref ?? {}
+}
+
+export function getPreferredVoice(): VoicePreference {
+  return preferredVoice
+}
+
 export function speechSynthesisAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
@@ -46,14 +67,14 @@ export function stopSpeaking(): void {
   }
 }
 
-async function fetchNeuralMp3(text: string): Promise<Blob> {
+async function fetchNeuralMp3(text: string, voice?: string): Promise<Blob> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   const response = await fetch(`${API_BASE}/ai/tts/speak`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(voice ? { text, voice } : { text }),
     signal: AbortSignal.timeout(45_000),
   })
   if (!response.ok) throw new Error(`tts ${response.status}`)
@@ -67,6 +88,7 @@ function speakBrowserFallback(
     onEnd?: () => void
     onError?: () => void
   },
+  systemVoiceURI?: string,
 ): void {
   if (!speechSynthesisAvailable() || !text.trim()) {
     options?.onEnd?.()
@@ -79,7 +101,10 @@ function speakBrowserFallback(
     utterance.rate = 0.84
     utterance.pitch = 1.22
     utterance.volume = 1
-    const voice = pickPrincessVoice(window.speechSynthesis.getVoices())
+    const voices = window.speechSynthesis.getVoices()
+    const voice =
+      (systemVoiceURI && voices.find((v) => v.voiceURI === systemVoiceURI)) ||
+      pickPrincessVoice(voices)
     if (voice) {
       utterance.voice = voice
       if (voice.lang) utterance.lang = voice.lang
@@ -109,6 +134,8 @@ export async function speakPrincess(
     onStart?: () => void
     onEnd?: () => void
     onError?: () => void
+    /** Переопределить голос на этот вызов; иначе берётся setPreferredVoice(). */
+    voice?: VoicePreference
   },
 ): Promise<void> {
   const cleaned = text.trim()
@@ -116,9 +143,17 @@ export async function speakPrincess(
     options?.onEnd?.()
     return
   }
+  const pref = options?.voice ?? preferredVoice
   stopSpeaking()
+
+  // Явно выбран системный голос — нейро не трогаем.
+  if (pref.systemVoiceURI) {
+    speakBrowserFallback(cleaned, options, pref.systemVoiceURI)
+    return
+  }
+
   try {
-    const blob = await fetchNeuralMp3(cleaned)
+    const blob = await fetchNeuralMp3(cleaned, pref.neuralVoice)
     const url = URL.createObjectURL(blob)
     const audio = new Audio(url)
     currentAudio = audio
@@ -131,11 +166,11 @@ export async function speakPrincess(
     audio.onerror = () => {
       URL.revokeObjectURL(url)
       if (currentAudio === audio) currentAudio = null
-      speakBrowserFallback(cleaned, options)
+      speakBrowserFallback(cleaned, options, pref.systemVoiceURI)
     }
     await audio.play()
   } catch {
-    speakBrowserFallback(cleaned, options)
+    speakBrowserFallback(cleaned, options, pref.systemVoiceURI)
   }
 }
 
