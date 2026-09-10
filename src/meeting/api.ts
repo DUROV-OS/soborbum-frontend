@@ -1,5 +1,11 @@
 import { API_BASE, apiRequest, getToken } from '@/shared/lib/httpClient'
-import { MeetingDetailOut, MeetingOut } from './types'
+import { MeetingDetailOut, MeetingOut, TranscriptLineOut } from './types'
+
+export interface TranscriptLineIn {
+  speaker: string
+  text: string
+  at_ms: number
+}
 
 const SECTION = 'ai'
 
@@ -33,6 +39,26 @@ export function uploadMeetingAudio(id: number, blob: Blob, filename: string): Pr
 /** POST /api/ai/meetings/:id/finish */
 export function finishMeeting(id: number): Promise<MeetingOut> {
   return apiRequest<MeetingOut>({ section: SECTION, path: `/meetings/${id}/finish`, method: 'POST' })
+}
+
+/** POST /api/ai/meetings/:id/transcript — батч распознанных реплик, вернёт созданные строки по порядку */
+export function appendTranscript(id: number, lines: TranscriptLineIn[]): Promise<TranscriptLineOut[]> {
+  return apiRequest<TranscriptLineOut[]>({
+    section: SECTION,
+    path: `/meetings/${id}/transcript`,
+    method: 'POST',
+    body: { lines },
+  })
+}
+
+/** PATCH /api/ai/meetings/:id/transcript/:lineId — ручная правка спикера строки */
+export function updateLineSpeaker(id: number, lineId: number, speaker: string): Promise<TranscriptLineOut> {
+  return apiRequest<TranscriptLineOut>({
+    section: SECTION,
+    path: `/meetings/${id}/transcript/${lineId}`,
+    method: 'PATCH',
+    body: { speaker },
+  })
 }
 
 /**

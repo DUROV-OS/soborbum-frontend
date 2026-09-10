@@ -10,10 +10,17 @@ export interface MeetingOut {
   has_audio: boolean
 }
 
+export interface TranscriptLineOut {
+  id: number
+  speaker: string
+  text: string
+  at_ms: number
+}
+
 export interface MeetingDetailOut extends MeetingOut {
   audio_url: string | null
-  /** Наполняется в 0004-b (реплики) и 0004-c (заметки); в 0004-a всегда пусто. */
-  transcript: unknown[]
+  transcript: TranscriptLineOut[]
+  /** Заметки Марины — 0004-c. */
   notes: Record<string, unknown> | null
   ai_enabled: boolean
 }

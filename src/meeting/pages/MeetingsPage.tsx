@@ -21,6 +21,14 @@ function formatDuration(seconds: number | null): string {
   return mm > 0 ? `${mm} мин ${ss} с` : `${ss} с`
 }
 
+function formatClock(totalSeconds: number): string {
+  const mm = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, '0')
+  const ss = (totalSeconds % 60).toString().padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
 function StatusChip({ status }: { status: MeetingOut['status'] }) {
   return status === 'recording' ? (
     <Chip tone="warning">идёт запись</Chip>
@@ -163,9 +171,25 @@ function MeetingDetail({ id }: { id: number }) {
             <MeetingAudio meetingId={meeting.id} hasAudio={meeting.has_audio} />
           </section>
 
-          <section className="rounded-md border border-dashed border-border bg-surface p-4 text-[13px] text-muted">
-            <h2 className="mb-1 text-[14px] font-medium text-ink">Транскрипт</h2>
-            Появится в следующем шаге фичи (0004-b).
+          <section className="rounded-md border border-border bg-surface p-4">
+            <h2 className="mb-3 text-[14px] font-medium text-ink">Транскрипт</h2>
+            {meeting.transcript.length === 0 ? (
+              <p className="text-[13px] text-muted">Транскрипт не записан.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {meeting.transcript.map((line) => (
+                  <div key={line.id} className="text-[13px]">
+                    <div className="flex items-center gap-2 text-[11px] text-muted">
+                      <span className="font-medium">{line.speaker}</span>
+                      <span className="tabular-nums">
+                        {formatClock(Math.floor(line.at_ms / 1000))}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-ink">{line.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="rounded-md border border-dashed border-border bg-surface p-4 text-[13px] text-muted">
