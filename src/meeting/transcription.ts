@@ -6,6 +6,12 @@
  * Транскрибация идёт целиком в браузере; на бэк уходят уже готовые реплики
  * (см. store.ts / api.ts). Диаризации у API нет — «Спикер N» назначает стор
  * по паузам.
+ *
+ * Chrome капризен: после onend вызывать start() сразу нельзя (InvalidStateError),
+ * а иногда распознавание молча зависает (ни onresult, ни onend) — например
+ * когда параллельно играет speechSynthesis. Поэтому здесь: перезапуск с
+ * задержкой и повтором + сторож, который принудительно поднимает поток, если
+ * давно не было результатов.
  */
 import { getSpeechRecognitionCtor, SpeechRecognitionLike } from '@/shared/lib/speechRecognition'
 
@@ -27,13 +33,19 @@ export interface StartOptions {
 
 export interface LiveTranscription {
   stop: () => void
+  /** Пауза на время, пока говорит Марина (иначе микрофон дерётся с TTS). */
+  setPaused: (paused: boolean) => void
 }
+
+const RESTART_DELAY_MS = 400
+/** Нет ни одного результата столько времени → принудительный перезапуск. */
+const WATCHDOG_MS = 12000
 
 export function speechRecognitionAvailable(): boolean {
   return getSpeechRecognitionCtor() !== null
 }
 
-const NO_OP: LiveTranscription = { stop: () => {} }
+const NO_OP: LiveTranscription = { stop: () => {}, setPaused: () => {} }
 
 export function startTranscription(opts: StartOptions): LiveTranscription {
   const Ctor = getSpeechRecognitionCtor()
@@ -51,9 +63,33 @@ export function startTranscription(opts: StartOptions): LiveTranscription {
   recognition.maxAlternatives = 1
 
   let stopped = false
+  let paused = false
+  let running = false
   let lastFinalEnd = opts.startedAt
+  let lastActivity = Date.now()
+  let restartTimer: ReturnType<typeof setTimeout> | null = null
+
+  function safeStart() {
+    if (stopped || paused || running) return
+    try {
+      recognition.start()
+      running = true
+    } catch {
+      // ещё не отпустил прошлую сессию — попробуем позже
+      scheduleRestart()
+    }
+  }
+
+  function scheduleRestart() {
+    if (restartTimer !== null || stopped || paused) return
+    restartTimer = setTimeout(() => {
+      restartTimer = null
+      safeStart()
+    }, RESTART_DELAY_MS)
+  }
 
   recognition.onresult = (event) => {
+    lastActivity = Date.now()
     let interim = ''
     for (let i = event.resultIndex; i < event.results.length; i += 1) {
       const piece = event.results[i]
@@ -83,30 +119,38 @@ export function startTranscription(opts: StartOptions): LiveTranscription {
       )
       return
     }
-    // 'no-speech' | 'aborted' | 'network' — не фатально, onend перезапустит.
+    // 'no-speech' | 'aborted' | 'network' — не фатально, onend/сторож поднимут.
   }
 
   recognition.onend = () => {
+    running = false
     opts.onInterim('')
-    if (stopped) return
-    // Браузер сам глушит continuous-распознавание через ~1 мин тишины —
-    // поднимаем заново, пока идёт совещание.
-    try {
-      recognition.start()
-    } catch {
-      /* уже запущено */
-    }
+    if (stopped || paused) return
+    scheduleRestart()
   }
 
-  try {
-    recognition.start()
-  } catch {
-    /* уже запущено */
-  }
+  // Сторож: если поток «завис» (нет результатов, но и onend не пришёл),
+  // принудительно перезапускаем. Это и есть страховка от долгих провалов.
+  const watchdog = setInterval(() => {
+    if (stopped || paused) return
+    if (Date.now() - lastActivity < WATCHDOG_MS) return
+    lastActivity = Date.now()
+    try {
+      recognition.abort() // спровоцирует onend → scheduleRestart
+    } catch {
+      /* noop */
+    }
+    running = false
+    scheduleRestart()
+  }, 4000)
+
+  safeStart()
 
   return {
     stop: () => {
       stopped = true
+      clearInterval(watchdog)
+      if (restartTimer !== null) clearTimeout(restartTimer)
       recognition.onresult = null
       recognition.onerror = null
       recognition.onend = null
@@ -114,6 +158,25 @@ export function startTranscription(opts: StartOptions): LiveTranscription {
         recognition.abort()
       } catch {
         /* noop */
+      }
+    },
+    setPaused: (next: boolean) => {
+      if (next === paused) return
+      paused = next
+      if (paused) {
+        if (restartTimer !== null) {
+          clearTimeout(restartTimer)
+          restartTimer = null
+        }
+        try {
+          recognition.abort()
+        } catch {
+          /* noop */
+        }
+        running = false
+      } else {
+        lastActivity = Date.now()
+        scheduleRestart()
       }
     },
   }

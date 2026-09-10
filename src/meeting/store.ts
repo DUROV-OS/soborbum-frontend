@@ -266,6 +266,18 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     set({ assistantState: 'idle', questionInterim: '' })
   }
 
+  /** Проговорить фразу, приглушив микрофон на это время (иначе TTS попадёт в транскрипт). */
+  async function speakWithMicPause(text: string): Promise<void> {
+    transcriber?.setPaused(true)
+    try {
+      await new Promise<void>((resolve) => {
+        void speakPrincess(text, { onEnd: resolve, onError: resolve })
+      })
+    } finally {
+      transcriber?.setPaused(false)
+    }
+  }
+
   async function finishAskingMarina(): Promise<void> {
     if (get().assistantState !== 'capturing') return
     capturingQuestion = false // совещание снова пишется
@@ -281,14 +293,15 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     }
     if (!question) {
       set({ assistantState: 'idle' })
-      void speakPrincess('Не расслышала вопрос, попробуйте ещё раз').catch(() => {})
+      void speakWithMicPause('Не расслышала вопрос, попробуйте ещё раз')
       return
     }
 
-    // Вопрос закончился — фраза, сигнал, дальше думаем (запись уже возобновлена).
-    void speakPrincess('Продолжайте диалог, я уже думаю над вашим вопросом').catch(() => {})
-    chimeThinking()
+    // Вопрос закончился — фраза (микрофон на паузе на время фразы), сигнал,
+    // дальше думаем: запись совещания уже идёт, микрофон снова активен.
     set({ assistantState: 'thinking' })
+    await speakWithMicPause('Продолжайте диалог, я уже думаю над вашим вопросом')
+    chimeThinking()
 
     let written: string
     let spoken: string
@@ -310,9 +323,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     // Закончила думать — сигнал, короткий ответ голосом, развёрнутый — текстом.
     chimeReady()
     set({ assistantState: 'answering', assistantAnswer: written })
-    await new Promise<void>((resolve) => {
-      void speakPrincess(spoken, { onEnd: resolve, onError: resolve })
-    })
+    await speakWithMicPause(spoken)
     set({ assistantState: 'idle' })
   }
 
