@@ -23,6 +23,15 @@ export default {
           dark: withOpacity('--brand-dark'),
           light: withOpacity('--brand-2'),
         },
+        sidebar: {
+          DEFAULT: withOpacity('--sidebar'),
+          accent: withOpacity('--sidebar-accent'),
+        },
+        ai: {
+          DEFAULT: withOpacity('--ai'),
+          accent: withOpacity('--ai-accent'),
+          bg: withOpacity('--ai-bg'),
+        },
         timber: {
           DEFAULT: withOpacity('--timber'),
           dark: withOpacity('--timber-dark'),
