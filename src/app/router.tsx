@@ -20,6 +20,8 @@ import { BoardPage } from '@/board/pages/BoardPage'
 import { AgentsPage } from '@/agents/pages/AgentsPage'
 import { AllChatsPage } from '@/max/pages/AllChatsPage'
 import { WorkPage } from '@/work/pages/WorkPage'
+import { AccountingPage } from '@/accounting/pages/AccountingPage'
+import { SuppliersPage } from '@/suppliers/pages/SuppliersPage'
 import { TodayPage } from '@/today/pages/TodayPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -154,6 +156,8 @@ export function AppRouter() {
           }
         />
         <Route path="/work" element={<WorkPage />} />
+        <Route path="/accounting" element={<AccountingPage />} />
+        <Route path="/suppliers" element={<SuppliersPage />} />
         <Route
           path="/board"
           element={

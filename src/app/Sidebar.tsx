@@ -3,17 +3,18 @@ import { ArrowUpRight, X } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { SECTIONS, SectionId, WORK_SECTION_IDS } from '@/shared/sections'
 
-/** Верхнеуровневое меню — ровно семь пунктов, единым списком, без подгрупп. */
-const MENU: SectionId[] = ['today', 'tasks', 'work', 'ai', 'chats', 'board', 'admin']
+/** Верхнеуровневое меню — единым списком, без подгрупп. */
+const MENU: SectionId[] = ['today', 'tasks', 'work', 'ai', 'board', 'admin']
 
-/** Пути операционных разделов — по ним «Работа» тоже считается активной. */
+/** Пути разделов из хаба «Работа» — по ним «Работа» тоже считается активной. */
 const WORK_PATHS = ['/work', ...WORK_SECTION_IDS.map((id) => SECTIONS.find((s) => s.id === id)!.path)]
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const hasAccess = useAuthStore((s) => s.hasAccess)
   const { pathname } = useLocation()
 
-  // «Работа» видна, если доступен хотя бы один операционный раздел.
+  // «Работа» видна, если доступен хотя бы один вложенный раздел
+  // (MAX доступен всем вошедшим — значит хаб виден всегда).
   const showWork = WORK_SECTION_IDS.some((id) => hasAccess(id))
   const canSee = (id: SectionId) => (id === 'work' ? showWork : hasAccess(id))
   const items = MENU.flatMap((id) => {
@@ -25,45 +26,45 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   return (
     <aside
       aria-label="Главное меню"
-      className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-60 shrink-0 flex-col bg-sidebar text-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+      className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col bg-sidebar text-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
     >
-      <div className="flex h-20 shrink-0 items-center justify-between px-6">
-        <NavLink to="/today" onClick={onClose} className="text-[22px] font-semibold tracking-tight">
+      <div className="flex h-24 shrink-0 items-center justify-between px-7">
+        <NavLink to="/today" onClick={onClose} className="text-[24px] font-semibold tracking-tight">
           Durov OS<span className="text-white/55">.</span>
         </NavLink>
         <button type="button" onClick={onClose} aria-label="Закрыть меню" className="rounded-lg p-2 text-white/60 lg:hidden">
           <X size={18} />
         </button>
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
-        <ul className="space-y-1">
+      <nav className="flex-1 overflow-y-auto px-4 pb-4 pt-1">
+        <ul className="space-y-1.5">
           {items.map((section) => {
             const Icon = section.icon
             return (
-              <li key={section.id} className={section.id === 'admin' ? 'mt-2 border-t border-white/10 pt-2' : undefined}>
+              <li key={section.id} className={section.id === 'admin' ? 'mt-3 border-t border-white/10 pt-3' : undefined}>
                 <NavLink
                   to={section.path}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-colors ${
+                    `group flex min-h-[52px] items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] transition-colors ${
                       (section.id === 'work' ? workActive : isActive)
                         ? 'bg-white font-medium text-sidebar'
                         : 'text-white/75 hover:bg-sidebar-accent hover:text-white'
                     }`
                   }
                 >
-                  <Icon size={18} strokeWidth={1.6} />
+                  <Icon size={20} strokeWidth={1.6} />
                   <span className="flex-1">{section.label}</span>
-                  {section.id === 'ai' && <ArrowUpRight size={14} className="opacity-50" />}
+                  {section.id === 'ai' && <ArrowUpRight size={15} className="opacity-50" />}
                 </NavLink>
               </li>
             )
           })}
         </ul>
       </nav>
-      <div className="m-4 rounded-xl border border-white/15 p-4">
-        <p className="text-[12px] font-medium text-white/85">Больше времени на главное</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-white/50">Люди, процессы и решения — в одном рабочем пространстве.</p>
+      <div className="m-5 rounded-xl border border-white/15 p-4">
+        <p className="text-[13px] font-medium text-white/85">Больше времени на главное</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-white/50">Люди, процессы и решения — в одном рабочем пространстве.</p>
       </div>
     </aside>
   )

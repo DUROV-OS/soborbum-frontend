@@ -2,8 +2,10 @@ import {
   Activity,
   Boxes,
   Briefcase,
+  Calculator,
   ClipboardList,
   Factory,
+  Handshake,
   Landmark,
   Network,
   Megaphone,
@@ -53,6 +55,8 @@ export type SectionId =
   | 'agents'
   | 'chats'
   | 'meetings'
+  | 'accounting'
+  | 'suppliers'
 
 export interface SectionMeta {
   id: SectionId
@@ -79,11 +83,17 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
   { id: 'chats', label: 'MAX', path: '/chats', icon: MessagesSquare, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
-  { id: 'meetings', label: 'Совещания', path: '/meetings', icon: Mic, notAssignable: true },
+  { id: 'meetings', label: 'Совещание', path: '/meetings', icon: Mic, notAssignable: true },
+  { id: 'accounting', label: 'Бухгалтерия', path: '/accounting', icon: Calculator, notAssignable: true },
+  { id: 'suppliers', label: 'Поставщики', path: '/suppliers', icon: Handshake, notAssignable: true },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
 
-/** Операционные разделы, сведённые под пункт меню «Работа». */
+/**
+ * Разделы, сведённые под пункт меню «Работа» (хаб). Операционные разделы +
+ * MAX, «Совещание» и мок-разделы «Бухгалтерия»/«Поставщики». Порядок плиток
+ * на странице «Работа» задаётся отдельно (WorkPage).
+ */
 export const WORK_SECTION_IDS: SectionId[] = [
   'cycle',
   'clients',
@@ -91,6 +101,10 @@ export const WORK_SECTION_IDS: SectionId[] = [
   'warehouse',
   'installation',
   'marketing',
+  'meetings',
+  'chats',
+  'accounting',
+  'suppliers',
 ]
 
 export const ASSIGNABLE_SECTIONS = SECTIONS.filter((s) => !s.adminOnly && !s.notAssignable)
