@@ -64,6 +64,11 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
         ] }
       : { generated_at: '2026-09-05T09:30:00Z', ai_configured: false, degraded: false, items: [] }
     else if (url.pathname === '/api/agents/stats') body = agentStats
+    else if (url.pathname === '/api/tasks/') body = [
+      // задача-ссылка смены стадии клиента: без дедлайна, создана давно —
+      // должна быть видна в борде задач при фильтрах по умолчанию (регрессия 0013)
+      { id: 501, title: 'Клиент «Иванов И.»: перевести со стадии на следующую', description: null, deadline: null, status: 'ready', created_at: '2026-06-01T08:00:00Z', module_id: null, link_type: 'client_stage', link_id: 11, link_meta: { stage: 'contract' }, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
+    ]
     else if (url.pathname === '/api/ai/chats') body = []
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -107,6 +112,10 @@ try {
   await owner.page.getByRole('tab', { name: 'Панель' }).click()
   await owner.page.getByRole('heading', { name: 'Разметка до «обучен»' }).waitFor()
   checks.push('Admin opens Agents map and the telemetry panel')
+
+  await owner.page.goto(baseURL + '/tasks')
+  await owner.page.getByText('Клиент «Иванов И.»: перевести со стадии на следующую', { exact: true }).waitFor()
+  checks.push('Client-stage link task (no deadline) is visible on the tasks board by default')
 
   await owner.page.goto(baseURL + '/admin')
   await owner.page.getByRole('button', { name: 'Новый сотрудник' }).click()
