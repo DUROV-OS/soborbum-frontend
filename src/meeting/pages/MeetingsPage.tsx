@@ -3,12 +3,21 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { ArrowLeft, Mic, Sparkles } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '@/shared/lib/httpClient'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { LoadingState } from '@/shared/ui/LoadingState'
 import { Markdown } from '@/shared/ui/Markdown'
-import { askMeeting, fetchMeetingAudioObjectUrl, getMeeting, listMeetings } from '../api'
+import {
+  askMeeting,
+  downloadMeetingDocument,
+  fetchMeetingAudioObjectUrl,
+  getMeeting,
+  listMeetings,
+  refreshNotes,
+} from '../api'
+import { NotesView } from '../components/NotesView'
 import { useMeetingStore } from '../store'
 import { MeetingDetailOut, MeetingOut } from '../types'
 
@@ -235,6 +244,78 @@ function AskMarina({ meetingId, aiEnabled }: { meetingId: number; aiEnabled: boo
   )
 }
 
+function MeetingNotesSection({ meeting }: { meeting: MeetingDetailOut }) {
+  const [notes, setNotes] = useState(meeting.notes)
+  const [busy, setBusy] = useState<'notes' | 'doc' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleRefresh() {
+    setBusy('notes')
+    setError(null)
+    try {
+      setNotes(await refreshNotes(meeting.id))
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.status === 409
+          ? 'ИИ-заметки отключены: не задан ключ.'
+          : 'Не удалось обновить заметки.',
+      )
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleDownload() {
+    setBusy('doc')
+    setError(null)
+    try {
+      const date = format(new Date(meeting.started_at), 'yyyy-MM-dd')
+      await downloadMeetingDocument(meeting.id, `meeting-${meeting.id}-${date}.md`)
+    } catch {
+      setError('Не удалось скачать документ.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <section className="rounded-md border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-[14px] font-medium text-ink">Заметки Марины</h2>
+        <div className="flex items-center gap-3">
+          {meeting.ai_enabled && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={busy !== null}
+              className="text-[12px] text-brand-dark hover:underline disabled:opacity-50"
+            >
+              {busy === 'notes' ? 'Обновляем…' : 'Обновить'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={busy !== null}
+            className="text-[12px] text-brand-dark hover:underline disabled:opacity-50"
+          >
+            {busy === 'doc' ? 'Готовим…' : 'Документ для базы знаний'}
+          </button>
+        </div>
+      </div>
+
+      {!meeting.ai_enabled && (
+        <p className="mb-2 text-[13px] text-muted">
+          ИИ-заметки отключены: не задан ключ. Документ для базы знаний соберётся с транскриптом и
+          пустыми секциями заметок.
+        </p>
+      )}
+      {meeting.ai_enabled && <NotesView notes={notes} />}
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+    </section>
+  )
+}
+
 function MeetingDetail({ id }: { id: number }) {
   const [meeting, setMeeting] = useState<MeetingDetailOut | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -300,12 +381,9 @@ function MeetingDetail({ id }: { id: number }) {
             )}
           </section>
 
-          <AskMarina meetingId={meeting.id} aiEnabled={meeting.ai_enabled} />
+          <MeetingNotesSection meeting={meeting} />
 
-          <section className="rounded-md border border-dashed border-border bg-surface p-4 text-[13px] text-muted">
-            <h2 className="mb-1 text-[14px] font-medium text-ink">Заметки Марины</h2>
-            Появятся в следующем шаге фичи (0004-c).
-          </section>
+          <AskMarina meetingId={meeting.id} aiEnabled={meeting.ai_enabled} />
         </>
       )}
     </div>
