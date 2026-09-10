@@ -117,7 +117,7 @@ export function AiChatPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" className="flex-1" onClick={handleNewChat}>
+            <Button variant="ai" size="sm" className="flex-1" onClick={handleNewChat}>
               <Plus size={14} />
               Новый чат
             </Button>

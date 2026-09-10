@@ -156,7 +156,7 @@ export function ChatComposer({
           className="max-h-32 resize-none"
           disabled={sending || transcribing}
         />
-        <Button size="sm" onClick={submit} disabled={!canSend || transcribing} aria-label="Отправить сообщение">
+        <Button variant="ai" size="sm" onClick={submit} disabled={!canSend || transcribing} aria-label="Отправить сообщение">
           <Send size={15} />
         </Button>
       </div>
