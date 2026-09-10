@@ -38,8 +38,9 @@ const ONBOARDING_PAGES: OnboardingPage[] = [
 function previewText(chat: MaxChatSummary): string {
   const msg = chat.lastMessage
   if (!msg) return 'Нет сообщений'
+  if (msg.isSystem) return msg.systemText ?? 'служебное сообщение'
   const body = msg.text.trim() || (msg.attaches?.length ? '📎 Вложение' : '—')
-  return msg.outgoing ? `Вы: ${body}` : body
+  return msg.isOutgoing ? `Вы: ${body}` : body
 }
 
 function relTime(ms: number | null): string {
@@ -241,9 +242,19 @@ export function AllChatsPage() {
               {history && history.messages.length === 0 && !historyLoading && (
                 <p className="text-center text-[12px] text-muted">В этом чате пока нет сообщений</p>
               )}
-              {history?.messages.map((m) => (
-                <MaxMessageItem key={m.id} message={m} chatId={activeId} />
-              ))}
+              {history?.messages.map((m, i) => {
+                const prev = i > 0 ? history.messages[i - 1] : null
+                const showAuthor = !prev || prev.isSystem || prev.senderId !== m.senderId
+                return (
+                  <MaxMessageItem
+                    key={m.id}
+                    message={m}
+                    chatId={activeId}
+                    isGroup={history.isGroup}
+                    showAuthor={showAuthor}
+                  />
+                )
+              })}
             </div>
 
             <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-border p-3">

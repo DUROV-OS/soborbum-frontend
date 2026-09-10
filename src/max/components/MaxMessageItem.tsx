@@ -146,15 +146,46 @@ function Attachment({ attach, chatId, messageId }: { attach: MaxAttach; chatId: 
   )
 }
 
-export function MaxMessageItem({ message, chatId }: { message: MaxMessage; chatId: number }) {
+export function MaxMessageItem({
+  message,
+  chatId,
+  isGroup = false,
+  showAuthor = true,
+}: {
+  message: MaxMessage
+  chatId: number
+  /** Беседа на несколько человек — тогда у входящих подписываем автора. */
+  isGroup?: boolean
+  /** false — предыдущее сообщение того же автора, подпись не повторяем. */
+  showAuthor?: boolean
+}) {
+  // Служебное событие чата (вступил / вышел / переименовал) — отдельной
+  // строкой по центру, не как чей-то пузырь.
+  if (message.isSystem) {
+    const who = message.senderName
+    const what = message.systemText ?? 'служебное сообщение'
+    return (
+      <p className="py-0.5 text-center text-[11px] text-muted">
+        {who ? `${who} ${what}` : what}
+      </p>
+    )
+  }
+
   const hasText = message.text.trim().length > 0
   const attaches = message.attaches ?? []
   if (!hasText && attaches.length === 0) return null
 
-  const outgoing = message.outgoing
+  const outgoing = message.isOutgoing
+  // Автор виден только у входящих в групповом чате и только на первом
+  // сообщении из подряд идущих от одного человека.
+  const authorLabel =
+    isGroup && !outgoing && showAuthor ? message.senderName ?? 'Участник' : null
 
   return (
     <div className={`flex min-w-0 flex-col gap-1 ${outgoing ? 'items-end' : 'items-start'}`}>
+      {authorLabel && (
+        <span className="px-1 text-[11px] font-medium text-brand-dark">{authorLabel}</span>
+      )}
       <div
         className={`flex max-w-[85%] flex-col gap-2 rounded-md px-3 py-2 text-[13px] leading-relaxed sm:max-w-md ${
           outgoing ? 'bg-brand text-white' : 'bg-surface-muted text-ink'
