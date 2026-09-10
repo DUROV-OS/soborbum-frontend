@@ -71,6 +71,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // показатели разрешённых ему разделов и не требует AI-доступа. «Агенты» и
     // «Все чаты» (данные MAX общие для организации) — так же для всех.
     if (section === 'today' || section === 'agents' || section === 'chats') return true
+    // «Совещания» — часть доступа к «Марине», отдельного гранта нет.
+    if (section === 'meetings') return account.module_access.includes('ai')
     return account.module_access.includes(section)
   },
 

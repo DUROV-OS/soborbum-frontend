@@ -1,0 +1,345 @@
+import { useEffect, useRef, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Loader2, Mic, Sparkles, Volume2, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Button } from '@/shared/ui/Button'
+import { Drawer } from '@/shared/ui/Drawer'
+import { Markdown } from '@/shared/ui/Markdown'
+import { TranscriptLine, useMeetingStore } from '../store'
+import { NotesView } from './NotesView'
+import { VoicePicker } from './VoicePicker'
+
+function useElapsedSeconds(startedAt: number | null, running: boolean): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!running || startedAt === null) return
+    setNow(Date.now())
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [running, startedAt])
+  if (startedAt === null) return 0
+  return Math.max(0, Math.floor((now - startedAt) / 1000))
+}
+
+function formatClock(total: number): string {
+  const mm = Math.floor(total / 60)
+    .toString()
+    .padStart(2, '0')
+  const ss = (total % 60).toString().padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
+const SPEAKER_CHOICES = ['Спикер 1', 'Спикер 2', 'Спикер 3', 'Спикер 4']
+
+function speakerOptions(lines: TranscriptLine[]): string[] {
+  const set = new Set<string>(SPEAKER_CHOICES)
+  lines.forEach((line) => set.add(line.speaker))
+  return [...set]
+}
+
+function LiveTranscript() {
+  const transcript = useMeetingStore((s) => s.transcript)
+  const interim = useMeetingStore((s) => s.interim)
+  const speechNotice = useMeetingStore((s) => s.speechNotice)
+  const capturing = useMeetingStore((s) => s.assistantState === 'capturing')
+  const setLineSpeaker = useMeetingStore((s) => s.setLineSpeaker)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [transcript.length, interim])
+
+  const options = speakerOptions(transcript)
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-muted">
+        Транскрипт
+        {capturing && <span className="normal-case text-amber-600">· на паузе (пишется вопрос)</span>}
+      </div>
+
+      {speechNotice && (
+        <div className="mb-2 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-bg px-3 py-2.5 text-[13px] text-warning">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          <span>{speechNotice}</span>
+        </div>
+      )}
+
+      {(!speechNotice || transcript.length > 0) && (
+      <div
+        ref={scrollRef}
+        className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border bg-surface-muted/40 p-3"
+      >
+        {transcript.length === 0 && !interim && (
+          <p className="text-[13px] text-muted">Начните говорить — реплики появятся здесь.</p>
+        )}
+
+        {transcript.map((line) => (
+          <div key={line.localId} className="text-[13px]">
+            <div className="flex items-center gap-1.5">
+              <select
+                value={line.speaker}
+                onChange={(e) => setLineSpeaker(line.localId, e.target.value)}
+                aria-label="Спикер реплики"
+                className="rounded-sm border border-border bg-surface px-1 py-0.5 text-[11px] text-muted"
+              >
+                {options.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <span className="tabular-nums text-[11px] text-muted">
+                {formatClock(Math.floor(line.atMs / 1000))}
+              </span>
+            </div>
+            <p className="mt-0.5 text-ink">{line.text}</p>
+          </div>
+        ))}
+
+        {interim && <p className="text-[13px] italic text-muted">{interim}</p>}
+      </div>
+      )}
+    </div>
+  )
+}
+
+function AskMarinaBox() {
+  const st = useMeetingStore((s) => s.assistantState)
+  const notice = useMeetingStore((s) => s.voiceTriggerNotice)
+  const questionInterim = useMeetingStore((s) => s.questionInterim)
+  const startAsking = useMeetingStore((s) => s.startAskingMarina)
+  const finishAsking = useMeetingStore((s) => s.finishAskingMarina)
+  const cancelAsking = useMeetingStore((s) => s.cancelAskingMarina)
+
+  if (notice) return null
+
+  if (st === 'capturing') {
+    return (
+      <div className="mb-3 space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+        <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+          <Volume2 size={13} className="animate-pulse" />
+          Говорите вопрос — совещание на паузе
+        </div>
+        <p className="min-h-[1.2em] text-[13px] italic text-ink">
+          {questionInterim || 'Слушаю…'}
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" onClick={finishAsking}>
+            Готово
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={cancelAsking}>
+            Отмена
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const busy = st === 'thinking' || st === 'answering'
+  return (
+    <div className="mb-3">
+      <Button variant="secondary" size="sm" onClick={startAsking} disabled={busy}>
+        <Sparkles size={14} />
+        {busy ? 'Марина думает…' : 'Спросить Марину голосом'}
+      </Button>
+    </div>
+  )
+}
+
+function AssistantAnswerBlock() {
+  const st = useMeetingStore((s) => s.assistantState)
+  const answer = useMeetingStore((s) => s.assistantAnswer)
+  const notice = useMeetingStore((s) => s.voiceTriggerNotice)
+  const dismiss = useMeetingStore((s) => s.dismissAssistantAnswer)
+
+  if (notice) {
+    return (
+      <div className="mb-3 flex items-start gap-2 rounded-md border border-border bg-surface-muted/40 px-3 py-2.5 text-[13px] text-muted">
+        <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+        <span>{notice}</span>
+      </div>
+    )
+  }
+  if ((st === 'idle' || st === 'capturing') && !answer) return null
+
+  return (
+    <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+          <Sparkles size={13} />
+          Ответ Марины
+          {st === 'thinking' && (
+            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+              <Loader2 size={12} className="animate-spin" />
+              думает…
+            </span>
+          )}
+          {st === 'answering' && (
+            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+              <Volume2 size={12} className="animate-pulse" />
+              отвечает
+            </span>
+          )}
+        </span>
+        {answer && st === 'idle' && (
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Скрыть ответ"
+            className="text-amber-600 hover:text-amber-800"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {st === 'thinking' && !answer ? (
+        <p className="text-[13px] text-amber-700">Думаю над вашим вопросом…</p>
+      ) : answer ? (
+        <div className="text-[13px] text-ink">
+          <Markdown text={answer} />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function MeetingNotesBlock() {
+  const notes = useMeetingStore((s) => s.notes)
+  const aiEnabled = useMeetingStore((s) => s.notesAiEnabled)
+  const refreshing = useMeetingStore((s) => s.notesRefreshing)
+  const request = useMeetingStore((s) => s.requestNotesRefresh)
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[12px] font-medium uppercase tracking-wide text-muted">
+          Заметки Марины
+        </span>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={request}
+            disabled={refreshing}
+            className="text-[12px] text-brand-dark hover:underline disabled:opacity-50"
+          >
+            {refreshing ? 'Обновляем…' : 'Обновить'}
+          </button>
+        )}
+      </div>
+      {/* Кнопка вопроса Марине и её ответ — здесь, в разделе заметок */}
+      <AskMarinaBox />
+      <AssistantAnswerBlock />
+      {aiEnabled ? (
+        <NotesView notes={notes} />
+      ) : (
+        <p className="text-[13px] text-muted">ИИ-заметки отключены: не задан ключ.</p>
+      )}
+    </div>
+  )
+}
+
+export function MeetingPanel() {
+  const phase = useMeetingStore((s) => s.phase)
+  const panelOpen = useMeetingStore((s) => s.panelOpen)
+  const startedAt = useMeetingStore((s) => s.startedAt)
+  const savedMeetingId = useMeetingStore((s) => s.savedMeetingId)
+  const error = useMeetingStore((s) => s.error)
+  const start = useMeetingStore((s) => s.start)
+  const finish = useMeetingStore((s) => s.finish)
+  const closePanel = useMeetingStore((s) => s.closePanel)
+  const reset = useMeetingStore((s) => s.reset)
+
+  const recording = phase === 'recording' || phase === 'finishing'
+  const elapsed = useElapsedSeconds(startedAt, recording)
+
+  if (!panelOpen) return null
+
+  return (
+    <Drawer
+      open={panelOpen}
+      onClose={closePanel}
+      title="Совещание"
+      subtitle="Марина слушает и записывает разговор"
+      width="max-w-md"
+      bodyClassName="flex-1 overflow-y-auto px-6 py-5 space-y-5"
+    >
+      {phase === 'starting' && (
+        <div className="flex items-center gap-2 text-[13px] text-muted">
+          <Loader2 size={16} className="animate-spin" />
+          Запрашиваем доступ к микрофону…
+        </div>
+      )}
+
+      {recording && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2.5" role="status" aria-live="polite">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-pill bg-red-500" />
+            <span className="text-[14px] font-medium text-ink">Идёт запись</span>
+            <span className="ml-auto tabular-nums text-[15px] text-muted">{formatClock(elapsed)}</span>
+          </div>
+          <p className="text-[13px] text-muted">
+            Запись продолжается, даже если открыть другой раздел. «Спросить Марину голосом»
+            (в заметках) — совещание встаёт на паузу, вы задаёте вопрос голосом, дальше
+            короткий ответ голосом и развёрнутый текстом.
+          </p>
+
+          <VoicePicker />
+
+          <LiveTranscript />
+          <MeetingNotesBlock />
+
+          <Button variant="danger" onClick={() => void finish()} disabled={phase === 'finishing'}>
+            {phase === 'finishing' ? 'Сохраняем…' : 'Завершить'}
+          </Button>
+        </div>
+      )}
+
+      {phase === 'saved' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-ink">
+            <CheckCircle2 size={18} className="text-success" />
+            Совещание сохранено
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link
+              to={savedMeetingId ? `/meetings/${savedMeetingId}` : '/meetings'}
+              onClick={reset}
+              className="text-[13px] font-medium text-brand-dark hover:underline"
+            >
+              Открыть совещание
+            </Link>
+            <Link to="/meetings" onClick={reset} className="text-[13px] text-muted hover:underline">
+              Прошлые совещания
+            </Link>
+          </div>
+          <Button variant="ghost" onClick={reset}>
+            Закрыть
+          </Button>
+        </div>
+      )}
+
+      {phase === 'idle' && !error && (
+        <div className="flex items-center gap-2 text-[13px] text-muted">
+          <Mic size={16} />
+          Режим совещания не запущен.
+        </div>
+      )}
+
+      {error && (
+        <div className="space-y-3">
+          <div
+            className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2.5 text-[13px] text-danger"
+            role="alert"
+          >
+            {error}
+          </div>
+          {phase === 'idle' && (
+            <Button variant="secondary" onClick={() => void start()}>
+              Попробовать снова
+            </Button>
+          )}
+        </div>
+      )}
+    </Drawer>
+  )
+}

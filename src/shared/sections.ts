@@ -7,6 +7,7 @@ import {
   Network,
   Megaphone,
   MessagesSquare,
+  Mic,
   Repeat,
   ShieldCheck,
   Sparkles,
@@ -27,6 +28,8 @@ import {
  * 'chats' — фронтовое: все чаты мессенджера MAX (oneme). Данные MAX общие
  * для организации, бэкенд отдаёт их любому авторизованному — доступен каждому
  * вошедшему, как «Агенты».
+ * 'meetings' — фронтовое: режим «Совещание». На бэкенде это часть Module.AI,
+ * отдельного гранта нет — пункт виден тем, у кого есть доступ к «Марине».
  * 'today' доступен каждому вошедшему сотруднику; сервер отдаёт только
  * показатели разрешённых ему разделов. AI-доступ для сводки не требуется.
  */
@@ -44,6 +47,7 @@ export type SectionId =
   | 'board'
   | 'agents'
   | 'chats'
+  | 'meetings'
 
 export interface SectionMeta {
   id: SectionId
@@ -69,6 +73,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
   { id: 'chats', label: 'Все чаты', path: '/chats', icon: MessagesSquare, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
+  { id: 'meetings', label: 'Совещания', path: '/meetings', icon: Mic, notAssignable: true },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
 
