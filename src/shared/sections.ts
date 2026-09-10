@@ -1,6 +1,7 @@
 import {
+  Activity,
   Boxes,
-  CalendarDays,
+  Briefcase,
   ClipboardList,
   Factory,
   Landmark,
@@ -24,14 +25,17 @@ import {
  * 'admin' — чисто фронтовое значение для пункта меню «Доступ», бэкенд его
  * не знает: администраторская страница гейтится по role==='admin'.
  * 'agents' — тоже фронтовое: операционная команда из восьми ролей, не Module
- * на бэкенде. Доступен каждому вошедшему, как «Сегодня».
+ * на бэкенде. Доступен каждому вошедшему, как «Пульс».
  * 'chats' — фронтовое: все чаты мессенджера MAX (oneme). Данные MAX общие
  * для организации, бэкенд отдаёт их любому авторизованному — доступен каждому
- * вошедшему, как «Агенты».
+ * вошедшему, как «Агенты». В меню называется «MAX».
+ * 'work' — фронтовое: раздел-хаб «Работа», сводит операционные разделы. Не
+ * Module, в матрице доступа не назначается; доступ выводится из вложенных
+ * разделов (см. Sidebar).
  * 'meetings' — фронтовое: режим «Совещание». На бэкенде это часть Module.AI,
  * отдельного гранта нет — пункт виден тем, у кого есть доступ к «Марине».
- * 'today' доступен каждому вошедшему сотруднику; сервер отдаёт только
- * показатели разрешённых ему разделов. AI-доступ для сводки не требуется.
+ * 'today' (в меню «Пульс») доступен каждому вошедшему сотруднику; сервер
+ * отдаёт только показатели разрешённых ему разделов. AI-доступ не требуется.
  */
 export type SectionId =
   | 'clients'
@@ -44,6 +48,7 @@ export type SectionId =
   | 'admin'
   | 'ai'
   | 'today'
+  | 'work'
   | 'board'
   | 'agents'
   | 'chats'
@@ -61,7 +66,8 @@ export interface SectionMeta {
 }
 
 export const SECTIONS: SectionMeta[] = [
-  { id: 'today', label: 'Сегодня', path: '/today', icon: CalendarDays, notAssignable: true },
+  { id: 'today', label: 'Пульс', path: '/today', icon: Activity, notAssignable: true },
+  { id: 'work', label: 'Работа', path: '/work', icon: Briefcase, notAssignable: true },
   { id: 'cycle', label: 'Цикл клиента', path: '/cycles', icon: Repeat },
   { id: 'clients', label: 'Клиенты', path: '/clients', icon: Users },
   { id: 'production', label: 'Производство', path: '/production', icon: Factory },
@@ -71,10 +77,20 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
   { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
   { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
-  { id: 'chats', label: 'Все чаты', path: '/chats', icon: MessagesSquare, notAssignable: true },
+  { id: 'chats', label: 'MAX', path: '/chats', icon: MessagesSquare, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
   { id: 'meetings', label: 'Совещания', path: '/meetings', icon: Mic, notAssignable: true },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
+]
+
+/** Операционные разделы, сведённые под пункт меню «Работа». */
+export const WORK_SECTION_IDS: SectionId[] = [
+  'cycle',
+  'clients',
+  'production',
+  'warehouse',
+  'installation',
+  'marketing',
 ]
 
 export const ASSIGNABLE_SECTIONS = SECTIONS.filter((s) => !s.adminOnly && !s.notAssignable)
