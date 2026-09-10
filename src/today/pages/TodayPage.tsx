@@ -7,10 +7,11 @@ import { SECTIONS } from '@/shared/sections'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatWidget } from '@/shared/ui/StatWidget'
+import { AktualnoeCard } from '../components/AktualnoeCard'
 import { useTodayStore } from '../store'
 
 export function TodayPage() {
-  const { data, loading, error, load } = useTodayStore()
+  const { data, loading, error, load, aktualnoe, aktualnoeLoading } = useTodayStore()
   const hasAccess = useAuthStore((s) => s.hasAccess)
   const startDraft = useAiStore((s) => s.startDraft)
   const navigate = useNavigate()
@@ -32,6 +33,9 @@ export function TodayPage() {
   const today = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
   const actions = data?.actions ?? []
   const widgets = data?.widgets ?? []
+  const aktualnoeItems = aktualnoe?.items ?? []
+  const showAktualnoe = aktualnoeLoading || aktualnoeItems.length > 0
+  const rowTwoCols = showAktualnoe && hasAccess('ai')
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-7 pb-6">
@@ -56,18 +60,14 @@ export function TodayPage() {
           <span className="shrink-0 text-[11px] text-muted">Данные на {new Date(data.generated_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
 
-        <div className={`grid gap-5 ${hasAccess('ai') ? 'xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]' : ''}`}>
+        {actions.length > 0 && (
           <section className="overflow-hidden rounded-2xl border border-border bg-surface" aria-labelledby="attention-title">
             <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
               <div><h2 id="attention-title" className="text-[18px] font-semibold tracking-tight text-ink">Требует внимания</h2>
                 <p className="mt-1 text-[12px] text-muted">Откройте направление и выберите следующий шаг</p></div>
               <span className="rounded-lg bg-surface-muted px-3 py-1.5 text-[20px] font-semibold tabular text-ink">{actions.length}</span>
             </div>
-            {actions.length === 0 ? <div className="flex flex-col items-center px-6 py-12 text-center">
-              <CheckCheck size={30} className="mb-3 text-brand" />
-              <p className="text-[15px] font-medium text-ink">Очередь внимания пуста</p>
-              <p className="mt-2 max-w-sm text-[13px] text-muted">Здесь появятся просрочки, нехватка материалов и ваши ожидающие подтверждения.</p>
-            </div> : <ul className="divide-y divide-border">
+            <ul className="divide-y divide-border">
               {actions.map((action) => <li key={action.id}>
                 <button type="button" onClick={() => navigate(action.href)} className="group flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-surface-muted/60 sm:gap-4 sm:px-6">
                   <span className={`flex h-10 min-w-10 items-center justify-center rounded-xl px-2 text-[16px] font-semibold tabular ${action.tone === 'danger' ? 'bg-danger-bg text-danger' : 'bg-warning-bg text-warning'}`}>{action.count}</span>
@@ -76,8 +76,33 @@ export function TodayPage() {
                   <ArrowRight size={17} className="shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-brand" />
                 </button>
               </li>)}
-            </ul>}
+            </ul>
           </section>
+        )}
+
+        <div className={`grid gap-5 ${rowTwoCols ? 'lg:grid-cols-2' : ''}`}>
+          {showAktualnoe && (
+            <section className="flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6" aria-labelledby="aktualnoe-title">
+              <div className="mb-4">
+                <h2 id="aktualnoe-title" className="text-[18px] font-semibold tracking-tight text-ink">Актуальное</h2>
+                <p className="mt-1 text-[12px] text-muted">Циклы, над которыми активнее всего работали</p>
+              </div>
+              {aktualnoeLoading && aktualnoeItems.length === 0 ? (
+                <div className="space-y-3">
+                  {[0, 1, 2].map((i) => <div key={i} className="h-[92px] animate-pulse rounded-xl bg-surface-muted" />)}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {aktualnoeItems.map((item) => (
+                    <AktualnoeCard key={item.cycle_id} item={item} onClick={() => navigate(`/cycles/${item.cycle_id}`)} />
+                  ))}
+                </div>
+              )}
+              {aktualnoe?.degraded && aktualnoeItems.length > 0 && (
+                <p className="mt-3 text-[11px] text-muted">Подобрано по свежести работы — Марина ещё не подключена.</p>
+              )}
+            </section>
+          )}
 
           {hasAccess('ai') && <section className="flex flex-col rounded-2xl border border-ai/30 bg-ai-bg p-5 text-ink sm:p-6" aria-labelledby="marina-title">
             <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ai/15"><Sparkles size={22} className="text-ai-accent" /></div>

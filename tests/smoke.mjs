@@ -56,6 +56,13 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
     else if (url.pathname === '/api/auth/users/2/access') { status = 403; body = { detail: 'Изменение доступа отклонено сервером' } }
     else if (url.pathname === '/api/dashboard/today') body = user.role === 'admin' ? overview : { ...overview, actions: [], widgets: overview.widgets.filter(w => w.section === 'production'), summary: 'По доступным данным отклонений для очереди внимания нет.' }
     else if (url.pathname === '/api/production/') body = [{ id: 7, cycle_id: 11, cycle_status: 'production', created_at: '2026-09-05T08:00:00Z', module_count: 4 }]
+    else if (url.pathname === '/api/dashboard/aktualnoe') body = user.role === 'admin'
+      ? { generated_at: '2026-09-05T09:30:00Z', ai_configured: false, degraded: true, items: [
+          { cycle_id: 11, client_name: 'Иванов И.', stage: 'Согласование', percent: 55, phrase: 'правят планировку' },
+          { cycle_id: 12, client_name: 'Петров П.', stage: 'Производство', percent: 40, phrase: 'собирают модули' },
+          { cycle_id: 13, client_name: 'Сидоров С.', stage: 'Монтаж', percent: 85, phrase: 'финишная отделка' },
+        ] }
+      : { generated_at: '2026-09-05T09:30:00Z', ai_configured: false, degraded: false, items: [] }
     else if (url.pathname === '/api/agents/stats') body = agentStats
     else if (url.pathname === '/api/ai/chats') body = []
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }

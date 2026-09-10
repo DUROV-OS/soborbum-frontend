@@ -16,3 +16,22 @@ export interface TodayDashboard {
   source?: 'database'
   ai_configured?: boolean
 }
+
+export interface AktualnoeItem {
+  cycle_id: number
+  client_name: string
+  /** короткое (2–3 слова) название текущей стадии клиента */
+  stage: string
+  /** 0–100: насколько выполнена текущая стадия (ставит ИИ) */
+  percent: number
+  /** фраза из 2–3 слов о том, что сейчас происходит */
+  phrase: string
+}
+
+export interface AktualnoeResponse {
+  generated_at: string
+  items: AktualnoeItem[]
+  ai_configured: boolean
+  /** true — подборка собрана без ИИ (топ по свежести, проценты по стадии) */
+  degraded: boolean
+}
