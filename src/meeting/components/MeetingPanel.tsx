@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Loader2, Mic } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, Mic, Sparkles, Volume2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
+import { Markdown } from '@/shared/ui/Markdown'
 import { TranscriptLine, useMeetingStore } from '../store'
 import { NotesView } from './NotesView'
 
@@ -85,13 +86,75 @@ function LiveTranscript() {
               <span className="tabular-nums text-[11px] text-muted">
                 {formatClock(Math.floor(line.atMs / 1000))}
               </span>
+              {line.isAssistantQuery && (
+                <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-600">
+                  <Sparkles size={11} />к Марине
+                </span>
+              )}
             </div>
-            <p className="mt-0.5 text-ink">{line.text}</p>
+            <p className={`mt-0.5 ${line.isAssistantQuery ? 'text-amber-700' : 'text-ink'}`}>
+              {line.text}
+            </p>
           </div>
         ))}
 
         {interim && <p className="text-[13px] italic text-muted">{interim}</p>}
       </div>
+      )}
+    </div>
+  )
+}
+
+function AssistantAnswerBlock() {
+  const thinking = useMeetingStore((s) => s.assistantThinking)
+  const speaking = useMeetingStore((s) => s.assistantSpeaking)
+  const answer = useMeetingStore((s) => s.assistantAnswer)
+  const notice = useMeetingStore((s) => s.voiceTriggerNotice)
+  const dismiss = useMeetingStore((s) => s.dismissAssistantAnswer)
+
+  if (notice) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-border bg-surface-muted/40 px-3 py-2.5 text-[13px] text-muted">
+        <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+        <span>{notice}</span>
+      </div>
+    )
+  }
+  if (!thinking && !answer) return null
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-amber-700">
+          <Sparkles size={13} />
+          Ответ Марины
+          {speaking && (
+            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+              <Volume2 size={12} className="animate-pulse" />
+              отвечает
+            </span>
+          )}
+        </span>
+        {answer && !thinking && (
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Скрыть ответ"
+            className="text-amber-600 hover:text-amber-800"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {thinking ? (
+        <p className="flex items-center gap-2 text-[13px] text-amber-700">
+          <Loader2 size={14} className="animate-spin" />
+          Марина думает…
+        </p>
+      ) : (
+        <div className="text-[13px] text-ink">
+          <Markdown text={answer ?? ''} />
+        </div>
       )}
     </div>
   )
@@ -173,6 +236,7 @@ export function MeetingPanel() {
             следующем шаге фичи.
           </p>
 
+          <AssistantAnswerBlock />
           <LiveTranscript />
           <MeetingNotesBlock />
 
