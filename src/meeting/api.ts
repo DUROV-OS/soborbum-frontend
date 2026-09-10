@@ -1,5 +1,5 @@
-import { API_BASE, apiRequest, getToken } from '@/shared/lib/httpClient'
-import { MeetingDetailOut, MeetingOut, TranscriptLineOut } from './types'
+import { API_BASE, apiRequest, downloadFile, getToken } from '@/shared/lib/httpClient'
+import { MeetingDetailOut, MeetingNotesOut, MeetingOut, TranscriptLineOut } from './types'
 
 export interface TranscriptLineIn {
   speaker: string
@@ -70,6 +70,22 @@ export function askMeeting(id: number, question: string): Promise<{ answer_markd
     body: { question },
     timeoutMs: 180_000,
   })
+}
+
+/** POST /api/ai/meetings/:id/notes/refresh — пересчёт ИИ-заметок по транскрипту */
+export function refreshNotes(id: number, force = false): Promise<MeetingNotesOut> {
+  return apiRequest<MeetingNotesOut>({
+    section: SECTION,
+    path: `/meetings/${id}/notes/refresh`,
+    method: 'POST',
+    query: force ? { force: true } : undefined,
+    timeoutMs: 180_000,
+  })
+}
+
+/** GET /api/ai/meetings/:id/document — скачать markdown-документ совещания для базы знаний */
+export function downloadMeetingDocument(id: number, filename: string): Promise<void> {
+  return downloadFile(SECTION, `/meetings/${id}/document`, filename)
 }
 
 /**

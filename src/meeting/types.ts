@@ -17,10 +17,20 @@ export interface TranscriptLineOut {
   at_ms: number
 }
 
+export interface MeetingNotesOut {
+  summary: string
+  decisions: string[]
+  tasks: string[]
+  questions: string[]
+  source_line_count: number
+  updated_at: string
+  /** true — последний вызов модели не удался, показана прошлая версия */
+  stale: boolean
+}
+
 export interface MeetingDetailOut extends MeetingOut {
   audio_url: string | null
   transcript: TranscriptLineOut[]
-  /** Заметки Марины — 0004-c. */
-  notes: Record<string, unknown> | null
+  notes: MeetingNotesOut | null
   ai_enabled: boolean
 }
