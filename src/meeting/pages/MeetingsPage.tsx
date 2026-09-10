@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ArrowLeft, Mic } from 'lucide-react'
+import { ArrowLeft, Mic, Sparkles } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { LoadingState } from '@/shared/ui/LoadingState'
-import { fetchMeetingAudioObjectUrl, getMeeting, listMeetings } from '../api'
+import { Markdown } from '@/shared/ui/Markdown'
+import { askMeeting, fetchMeetingAudioObjectUrl, getMeeting, listMeetings } from '../api'
+import { useMeetingStore } from '../store'
 import { MeetingDetailOut, MeetingOut } from '../types'
 
 function meetingTitle(meeting: Pick<MeetingOut, 'title' | 'started_at'>): string {
@@ -37,15 +40,56 @@ function StatusChip({ status }: { status: MeetingOut['status'] }) {
   )
 }
 
+function StartMeetingCircle() {
+  const phase = useMeetingStore((s) => s.phase)
+  const start = useMeetingStore((s) => s.start)
+  const openPanel = useMeetingStore((s) => s.openPanel)
+  const busy = phase === 'starting' || phase === 'recording' || phase === 'finishing'
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-2">
+      <button
+        type="button"
+        onClick={() => (busy ? openPanel() : void start())}
+        className={`flex h-36 w-36 flex-col items-center justify-center gap-2 rounded-full border-2 text-center transition-colors ${
+          busy
+            ? 'border-amber-400 bg-amber-50 text-amber-700'
+            : 'border-amber-300 bg-amber-50/60 text-amber-700 hover:bg-amber-100'
+        }`}
+      >
+        {busy ? (
+          <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
+        ) : (
+          <Mic size={30} />
+        )}
+        <span className="px-2 text-[13px] font-medium leading-tight">
+          {busy ? 'Идёт совещание' : 'Начать совещание'}
+        </span>
+      </button>
+      {busy && (
+        <button
+          type="button"
+          onClick={openPanel}
+          className="text-[12px] text-muted hover:underline"
+        >
+          Открыть панель
+        </button>
+      )}
+    </div>
+  )
+}
+
 function MeetingList() {
   const [meetings, setMeetings] = useState<MeetingOut[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const phase = useMeetingStore((s) => s.phase)
 
   useEffect(() => {
+    // перезагружаем список, когда совещание сохранилось
     listMeetings()
       .then(setMeetings)
       .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить совещания'))
-  }, [])
+  }, [phase])
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -53,6 +97,8 @@ function MeetingList() {
         <h1 className="text-[20px] font-medium text-ink">Совещания</h1>
         <p className="mt-1 text-[13px] text-muted">Записи, транскрипты и заметки прошлых совещаний.</p>
       </div>
+
+      <StartMeetingCircle />
 
       {error && (
         <div className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2.5 text-[13px] text-danger">
@@ -66,7 +112,7 @@ function MeetingList() {
         <EmptyState
           icon={<Mic size={26} />}
           title="Пока нет совещаний"
-          description="Запустите режим «Совещание» кнопкой с микрофоном в верхней панели."
+          description="Нажмите «Начать совещание» выше — Марина запишет разговор и составит транскрипт."
         />
       )}
 
@@ -125,6 +171,68 @@ function MeetingAudio({ meetingId, hasAudio }: { meetingId: number; hasAudio: bo
   if (error) return <p className="text-[13px] text-danger">{error}</p>
   if (!src) return <p className="text-[13px] text-muted">Загружаем запись…</p>
   return <audio controls src={src} className="w-full" />
+}
+
+function AskMarina({ meetingId, aiEnabled }: { meetingId: number; aiEnabled: boolean }) {
+  const [question, setQuestion] = useState('')
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    const q = question.trim()
+    if (!q || pending) return
+    setPending(true)
+    setError(null)
+    setAnswer(null)
+    try {
+      const res = await askMeeting(meetingId, q)
+      setAnswer(res.answer_markdown)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось получить ответ')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <section className="rounded-md border border-border bg-surface p-4">
+      <h2 className="mb-1 flex items-center gap-1.5 text-[14px] font-medium text-ink">
+        <Sparkles size={15} className="text-amber-600" />
+        Спросить Марину
+      </h2>
+      <p className="mb-3 text-[12px] text-muted">
+        Ответит по транскрипту этого совещания и, если нужно, сверится с базой знаний.
+      </p>
+
+      {!aiEnabled ? (
+        <p className="text-[13px] text-muted">
+          ИИ отключён: не задан ключ. Вопросы по совещанию недоступны.
+        </p>
+      ) : (
+        <form onSubmit={submit} className="space-y-2">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={2}
+            placeholder="Например: какие решения приняли и кто ответственный?"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-ink"
+          />
+          <Button type="submit" size="sm" disabled={pending || !question.trim()}>
+            {pending ? 'Марина думает…' : 'Спросить'}
+          </Button>
+        </form>
+      )}
+
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+      {answer && (
+        <div className="mt-3 rounded-md border border-border bg-surface-muted/40 p-3 text-[13px] text-ink">
+          <Markdown text={answer} />
+        </div>
+      )}
+    </section>
+  )
 }
 
 function MeetingDetail({ id }: { id: number }) {
@@ -191,6 +299,8 @@ function MeetingDetail({ id }: { id: number }) {
               </div>
             )}
           </section>
+
+          <AskMarina meetingId={meeting.id} aiEnabled={meeting.ai_enabled} />
 
           <section className="rounded-md border border-dashed border-border bg-surface p-4 text-[13px] text-muted">
             <h2 className="mb-1 text-[14px] font-medium text-ink">Заметки Марины</h2>

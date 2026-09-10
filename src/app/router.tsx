@@ -203,7 +203,7 @@ export function AppRouter() {
         <Route
           path="/meetings"
           element={
-            <AccessGate section="ai">
+            <AccessGate section="meetings">
               <MeetingsPage />
             </AccessGate>
           }
@@ -211,7 +211,7 @@ export function AppRouter() {
         <Route
           path="/meetings/:id"
           element={
-            <AccessGate section="ai">
+            <AccessGate section="meetings">
               <MeetingsPage />
             </AccessGate>
           }

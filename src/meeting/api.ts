@@ -61,6 +61,17 @@ export function updateLineSpeaker(id: number, lineId: number, speaker: string): 
   })
 }
 
+/** POST /api/ai/meetings/:id/ask — «Спросить Марину о совещании», ответ markdown-текстом */
+export function askMeeting(id: number, question: string): Promise<{ answer_markdown: string }> {
+  return apiRequest<{ answer_markdown: string }>({
+    section: SECTION,
+    path: `/meetings/${id}/ask`,
+    method: 'POST',
+    body: { question },
+    timeoutMs: 180_000,
+  })
+}
+
 /**
  * Тянет запись совещания с авторизацией и отдаёт object URL для <audio>.
  * Плеер не умеет слать Bearer-заголовок сам, поэтому качаем блоб вручную —
