@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { ApiError } from '@/shared/lib/httpClient'
 import { speakPrincess, splitVoiceReply, stopSpeaking } from '@/shared/lib/speechReply'
-import { chimeListening, chimeReady } from './earcon'
+import { chimeReady } from './earcon'
 import { initVoiceFromStorage } from './voice'
 import {
   appendTranscript,
@@ -42,15 +42,9 @@ const SPEAKER_PAUSE_MS = 2500
 const FLUSH_INTERVAL_MS = 3000
 /** Сколько новых реплик должно накопиться, чтобы авто-пересчитать заметки. */
 const NOTES_NEW_LINES_THRESHOLD = 8
-/** Ждём продолжения вопроса после «Марина …» столько мс, если тело уже есть. */
-const ARM_GAP_WITH_BODY_MS = 1400
-/** …и столько, если сказали только «Марина» без вопроса. */
-const ARM_GAP_EMPTY_MS = 3000
-/** Предохранитель: не держим «слушаю» дольше этого. */
-const ARM_MAX_MS = 15000
 
-/** Что сейчас делает Марина по голосовому обращению. */
-export type AssistantState = 'idle' | 'armed' | 'thinking' | 'answering'
+/** Что сейчас делает Марина по вопросу из панели. */
+export type AssistantState = 'idle' | 'thinking' | 'answering'
 
 export interface TranscriptLine {
   localId: string
@@ -60,27 +54,6 @@ export interface TranscriptLine {
   text: string
   atMs: number
   synced: boolean
-  /** реплика-обращение к Марине по слову «Марина» */
-  isAssistantQuery: boolean
-}
-
-/**
- * Реплика — обращение к Марине, если начинается со слова «Марина».
- * Возвращает тело вопроса (без обращения) или null, если это не триггер.
- * Пустая строка в результате = позвали, но вопроса ещё нет.
- */
-export function detectMarinaTrigger(text: string): string | null {
-  const trimmed = text.trim()
-  // «Марина» в начале, дальше не буква (т.е. отдельное слово)
-  const m = trimmed.match(/^марина(?![а-яёa-z])/iu)
-  if (!m) return null
-  return trimmed.slice(m[0].length).replace(/^[\s,!.:;—–-]+/u, '').trim()
-}
-
-/** Убирает ведущее «Марина …» из продолжения вопроса, если оно повторилось. */
-function stripLeadMarina(text: string): string {
-  const body = detectMarinaTrigger(text)
-  return body === null ? text.trim() : body
 }
 
 function friendlyError(error: unknown): string {
@@ -123,17 +96,19 @@ interface MeetingState {
   notesAiEnabled: boolean
   notesRefreshing: boolean
 
-  /** Ответ Марины на последнее голосовое обращение «Марина, …» (markdown). */
+  /** Ответ Марины на последний вопрос из панели (markdown). */
   assistantAnswer: string | null
-  /** idle → armed (услышала имя) → thinking → answering → idle */
+  /** idle → thinking → answering → idle */
   assistantState: AssistantState
-  /** Разовая пометка, если голосовой вызов недоступен (нет ключа ИИ). */
+  /** Разовая пометка, если вопросы Марине недоступны (нет ключа ИИ). */
   voiceTriggerNotice: string | null
 
   start: () => Promise<void>
   finish: () => Promise<void>
   setLineSpeaker: (localId: string, speaker: string) => void
   requestNotesRefresh: () => void
+  /** Явный вопрос Марине из панели (кнопка). */
+  askMarina: (question: string) => Promise<void>
   dismissAssistantAnswer: () => void
   openPanel: () => void
   closePanel: () => void
@@ -145,9 +120,6 @@ let transcriber: LiveTranscription | null = null
 let flushTimer: ReturnType<typeof setInterval> | null = null
 let flushing = false
 let linesAtLastNotesRefresh = 0
-let armTimer: ReturnType<typeof setTimeout> | null = null
-let armMaxTimer: ReturnType<typeof setTimeout> | null = null
-let pendingQuestion = ''
 
 export const useMeetingStore = create<MeetingState>((set, get) => {
   function stopSideEffects() {
@@ -157,8 +129,6 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       clearInterval(flushTimer)
       flushTimer = null
     }
-    clearArmTimers()
-    pendingQuestion = ''
     stopSpeaking()
   }
 
@@ -173,12 +143,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     try {
       const created = await appendTranscript(
         meetingId,
-        pending.map((line) => ({
-          speaker: line.speaker,
-          text: line.text,
-          at_ms: line.atMs,
-          is_assistant_query: line.isAssistantQuery,
-        })),
+        pending.map((line) => ({ speaker: line.speaker, text: line.text, at_ms: line.atMs })),
       )
       // бэк возвращает строки в том же порядке — сшиваем по позиции
       set((state) => {
@@ -235,66 +200,29 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
     }
   }
 
-  function clearArmTimers() {
-    if (armTimer !== null) {
-      clearTimeout(armTimer)
-      armTimer = null
-    }
-    if (armMaxTimer !== null) {
-      clearTimeout(armMaxTimer)
-      armMaxTimer = null
-    }
-  }
+  /**
+   * Явный вопрос Марине из панели (кнопка). Логика та же: коротко голосом,
+   * развёрнуто текстом. Запись и транскрипция при этом не прерываются.
+   */
+  async function askMarina(question: string): Promise<void> {
+    const trimmed = question.trim()
+    const { meetingId, assistantState } = get()
+    if (!trimmed || meetingId === null || assistantState !== 'idle') return
 
-  function scheduleArmFire(gapMs: number) {
-    if (armTimer !== null) clearTimeout(armTimer)
-    armTimer = setTimeout(() => {
-      void fireQuestion()
-    }, gapMs)
-  }
-
-  /** Услышали «Марина …» — сигнал и режим сбора вопроса. */
-  function armQuestion(body: string) {
-    pendingQuestion = body
-    set({ assistantState: 'armed', assistantAnswer: null, error: null })
-    chimeListening()
-    scheduleArmFire(body ? ARM_GAP_WITH_BODY_MS : ARM_GAP_EMPTY_MS)
-    armMaxTimer = setTimeout(() => {
-      void fireQuestion()
-    }, ARM_MAX_MS)
-  }
-
-  async function fireQuestion(): Promise<void> {
-    clearArmTimers()
-    const question = pendingQuestion.trim()
-    pendingQuestion = ''
-    const { meetingId } = get()
-    if (meetingId === null) {
-      set({ assistantState: 'idle' })
-      return
-    }
-    if (!question) {
-      set({ assistantState: 'idle' })
-      void speakPrincess('Слушаю').catch(() => {})
-      return
-    }
-
-    // Вопрос закончился — «Уже думаю» и уходим думать. Запись/транскрипция
-    // при этом не прекращаются; новые «Марина …» игнорируются, пока не idle.
-    set({ assistantState: 'thinking', assistantAnswer: null })
+    set({ assistantState: 'thinking', assistantAnswer: null, error: null })
     void speakPrincess('Уже думаю').catch(() => {})
 
     let written: string
     let spoken: string
     try {
-      const res = await askMeeting(meetingId, question)
+      const res = await askMeeting(meetingId, trimmed)
       const parts = splitVoiceReply(res.answer_markdown)
       written = parts.written
       spoken = parts.spoken
     } catch (error) {
       set({ assistantState: 'idle' })
       if (error instanceof ApiError && error.status === 503) {
-        set({ voiceTriggerNotice: 'Голосовой вызов Марины отключён: не задан ключ ИИ.' })
+        set({ voiceTriggerNotice: 'Вопросы Марине недоступны: не задан ключ ИИ.' })
       } else {
         set({ assistantAnswer: '_Не удалось получить ответ. Попробуйте ещё раз._' })
       }
@@ -311,28 +239,6 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
   }
 
   function handleFinalSegment(segment: FinalSegment) {
-    const state = get()
-    const st = state.assistantState
-    const voiceOff = state.voiceTriggerNotice !== null
-
-    let partOfQuestion = false
-    if (!voiceOff) {
-      if (st === 'idle') {
-        const body = detectMarinaTrigger(segment.text)
-        if (body !== null) {
-          partOfQuestion = true
-          armQuestion(body)
-        }
-      } else if (st === 'armed') {
-        // продолжение вопроса в следующей реплике
-        partOfQuestion = true
-        const extra = stripLeadMarina(segment.text)
-        pendingQuestion = `${pendingQuestion} ${extra}`.trim()
-        scheduleArmFire(ARM_GAP_WITH_BODY_MS)
-      }
-      // thinking / answering — Марина занята, реплику не трогаем
-    }
-
     set((s) => {
       const prev = s.transcript[s.transcript.length - 1]
       const line: TranscriptLine = {
@@ -342,7 +248,6 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         text: segment.text,
         atMs: segment.atMs,
         synced: false,
-        isAssistantQuery: partOfQuestion,
       }
       return { transcript: [...s.transcript, line] }
     })
@@ -372,8 +277,6 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
         return
       }
       linesAtLastNotesRefresh = 0
-      clearArmTimers()
-      pendingQuestion = ''
       initVoiceFromStorage()
       set({
         phase: 'starting',
@@ -477,6 +380,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       void refreshNotesNow()
     },
 
+    askMarina: (question) => askMarina(question),
+
     dismissAssistantAnswer: () => set({ assistantAnswer: null }),
 
     openPanel: () => set({ panelOpen: true }),
@@ -488,8 +393,6 @@ export const useMeetingStore = create<MeetingState>((set, get) => {
       abortRecording()
       active = null
       linesAtLastNotesRefresh = 0
-      clearArmTimers()
-      pendingQuestion = ''
       set({
         phase: 'idle',
         panelOpen: false,

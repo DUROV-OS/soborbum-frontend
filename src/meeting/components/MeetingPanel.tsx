@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Loader2, Mic, Sparkles, Volume2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/shared/ui/Button'
@@ -87,15 +87,8 @@ function LiveTranscript() {
               <span className="tabular-nums text-[11px] text-muted">
                 {formatClock(Math.floor(line.atMs / 1000))}
               </span>
-              {line.isAssistantQuery && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-600">
-                  <Sparkles size={11} />к Марине
-                </span>
-              )}
             </div>
-            <p className={`mt-0.5 ${line.isAssistantQuery ? 'text-amber-700' : 'text-ink'}`}>
-              {line.text}
-            </p>
+            <p className="mt-0.5 text-ink">{line.text}</p>
           </div>
         ))}
 
@@ -103,6 +96,66 @@ function LiveTranscript() {
       </div>
       )}
     </div>
+  )
+}
+
+function AskMarinaBox() {
+  const st = useMeetingStore((s) => s.assistantState)
+  const notice = useMeetingStore((s) => s.voiceTriggerNotice)
+  const ask = useMeetingStore((s) => s.askMarina)
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+
+  const busy = st !== 'idle'
+  if (notice) return null
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    const text = q.trim()
+    if (!text || busy) return
+    void ask(text)
+    setQ('')
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <div className="mb-3">
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} disabled={busy}>
+          <Sparkles size={14} />
+          {busy ? 'Марина думает…' : 'Спросить Марину'}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="mb-3 space-y-2 rounded-md border border-amber-200 bg-amber-50/50 p-3">
+      <textarea
+        autoFocus
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        rows={2}
+        placeholder="Вопрос по совещанию…"
+        className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-ink"
+      />
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={busy || !q.trim()}>
+          Спросить
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setOpen(false)
+            setQ('')
+          }}
+        >
+          Отмена
+        </Button>
+      </div>
+    </form>
   )
 }
 
@@ -122,26 +175,22 @@ function AssistantAnswerBlock() {
   }
   if (st === 'idle' && !answer) return null
 
-  const label =
-    st === 'armed'
-      ? 'слушает вопрос…'
-      : st === 'thinking'
-        ? 'думает…'
-        : st === 'answering'
-          ? 'отвечает'
-          : null
-
   return (
     <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
       <div className="mb-1 flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-amber-700">
           <Sparkles size={13} />
           Ответ Марины
-          {label && (
+          {st === 'thinking' && (
             <span className="inline-flex items-center gap-1 normal-case text-amber-600">
-              {(st === 'answering' || st === 'armed') && <Volume2 size={12} className="animate-pulse" />}
-              {st === 'thinking' && <Loader2 size={12} className="animate-spin" />}
-              {label}
+              <Loader2 size={12} className="animate-spin" />
+              думает…
+            </span>
+          )}
+          {st === 'answering' && (
+            <span className="inline-flex items-center gap-1 normal-case text-amber-600">
+              <Volume2 size={12} className="animate-pulse" />
+              отвечает
             </span>
           )}
         </span>
@@ -162,9 +211,7 @@ function AssistantAnswerBlock() {
         <div className="text-[13px] text-ink">
           <Markdown text={answer} />
         </div>
-      ) : (
-        <p className="text-[13px] text-amber-700">Слушаю…</p>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -192,7 +239,8 @@ function MeetingNotesBlock() {
           </button>
         )}
       </div>
-      {/* Развёрнутый ответ Марины на голосовой вопрос — здесь, в разделе заметок */}
+      {/* Кнопка вопроса Марине и её ответ — здесь, в разделе заметок */}
+      <AskMarinaBox />
       <AssistantAnswerBlock />
       {aiEnabled ? (
         <NotesView notes={notes} />
@@ -243,8 +291,8 @@ export function MeetingPanel() {
             <span className="ml-auto tabular-nums text-[15px] text-muted">{formatClock(elapsed)}</span>
           </div>
           <p className="text-[13px] text-muted">
-            Запись продолжается, даже если открыть другой раздел. Скажите «Марина, …» —
-            она ответит голосом и текстом в заметках.
+            Запись продолжается, даже если открыть другой раздел. Кнопка «Спросить Марину»
+            ниже — короткий ответ голосом, развёрнутый текстом в заметках.
           </p>
 
           <VoicePicker />

@@ -373,15 +373,8 @@ function MeetingDetail({ id }: { id: number }) {
                       <span className="tabular-nums">
                         {formatClock(Math.floor(line.at_ms / 1000))}
                       </span>
-                      {line.is_assistant_query && (
-                        <span className="inline-flex items-center gap-0.5 text-amber-600">
-                          <Sparkles size={11} />к Марине
-                        </span>
-                      )}
                     </div>
-                    <p className={`mt-0.5 ${line.is_assistant_query ? 'text-amber-700' : 'text-ink'}`}>
-                      {line.text}
-                    </p>
+                    <p className="mt-0.5 text-ink">{line.text}</p>
                   </div>
                 ))}
               </div>
