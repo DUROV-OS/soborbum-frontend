@@ -19,6 +19,7 @@ import { MeetingsPage } from '@/meeting/pages/MeetingsPage'
 import { BoardPage } from '@/board/pages/BoardPage'
 import { AgentsPage } from '@/agents/pages/AgentsPage'
 import { AllChatsPage } from '@/max/pages/AllChatsPage'
+import { WorkPage } from '@/work/pages/WorkPage'
 import { TodayPage } from '@/today/pages/TodayPage'
 import { SECTIONS } from '@/shared/sections'
 import { AccessGate } from './AccessGate'
@@ -152,6 +153,7 @@ export function AppRouter() {
             </AccessGate>
           }
         />
+        <Route path="/work" element={<WorkPage />} />
         <Route
           path="/board"
           element={
