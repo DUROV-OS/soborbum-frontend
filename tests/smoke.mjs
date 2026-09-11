@@ -25,6 +25,17 @@ const overview = {
   ],
   widgets: [widget('production', 'Производственных заказов', '4'), widget('production', 'Модули ждут материалы', '2', 'warning'), widget('tasks', 'Открытых задач', '8'), widget('tasks', 'Просроченных задач', '3', 'warning'), widget('warehouse', 'Позиций на складе', '24'), widget('warehouse', 'Позиций требуют пополнения', '3', 'warning')],
 }
+const clientFixture = {
+  // created_at must fall within the current calendar month — the clients board
+  // defaults its date filter to "this month" (real Date.now(), not a fixture clock)
+  id: 21, cycle_id: 21, stage: 'lead', created_at: new Date().toISOString(),
+  full_name: 'Кузнецова Кузнецова', phone: '+7 900 000-00-00', email: 'client21@example.test',
+  contacts: [], max_chat_id: null, order_type: null, wishes_description: null, estimated_price: null,
+  house_area: null, layout_notes: null, project_locked_at: null, houses_count: 1, final_price: null,
+  installation_address: null, payment_plan: null, advance_amount: null, contract_file: null,
+  house_project_file: null, documents_locked_at: null, is_paid: null, payment_locked_at: null,
+  balance_paid: null, balance_paid_at: null, notes: [],
+}
 const documentsClient = {
   id: 22, cycle_id: 22, stage: 'approval', created_at: '2026-08-01T08:00:00Z',
   full_name: 'Смирнова Смирнова', phone: '+7 900 111-11-11', email: 'client22@example.test',
@@ -59,7 +70,7 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       localStorage.setItem('soborbum.auth.token', 'browser-test-token')
       sessionStorage.setItem('fixture-seeded', '1')
     }
-    for (const id of ['today', 'admin', 'production', 'ai', 'agents', 'tasks']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
+    for (const id of ['today', 'admin', 'production', 'ai', 'agents', 'tasks', 'clients']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
   })
   const page = await context.newPage()
   page.on('pageerror', error => errors.push(error.message))
@@ -92,13 +103,18 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       { id: 502, title: 'Собрать модуль №3', description: null, deadline: null, status: 'in_progress', created_at: '2026-06-02T08:00:00Z', module_id: null, link_type: null, link_id: null, link_meta: null, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
     ]
     else if (url.pathname === '/api/ai/chats') body = []
-    else if (url.pathname === '/api/clients/' && route.request().method() === 'GET') body = [aiClient, documentsClient]
     else if (url.pathname === '/api/clients/22/documents' && route.request().method() === 'PATCH') {
       lastDocumentsPatchBody = route.request().postDataJSON()
       documentsClient.payment_plan = lastDocumentsPatchBody.payment_plan
       body = documentsClient
     }
     else if (url.pathname === '/api/ai/clients/analytics') body = { section: 'clients', generated_at: '2026-09-05T09:30:00Z', summary: 'Отклонений нет.', status: 'green' }
+    else if (url.pathname === '/api/clients/' && route.request().method() === 'GET') body = [aiClient, clientFixture, documentsClient]
+    else if (url.pathname === '/api/clients/21' && route.request().method() === 'GET') body = clientFixture
+    else if (url.pathname === '/api/clients/21/transition' && route.request().method() === 'POST') {
+      clientFixture.stage = 'discussion'
+      body = clientFixture
+    }
     else if (url.pathname === '/api/ai/clients/ask/stream' && route.request().method() === 'POST') {
       lastAskStreamBody = route.request().postDataJSON()
       const sse = ': open\n\nevent: done\ndata: {"type":"done","chat_id":1}\n\nevent: end\ndata: {}\n\n'
@@ -232,6 +248,18 @@ try {
   await mobile.page.waitForFunction(() => document.querySelector('aside').getBoundingClientRect().right <= 0)
   assert((await mobile.page.getByRole('complementary', { name: 'Главное меню' }).boundingBox()).x < 0)
   checks.push('390px layout has no horizontal overflow and mobile navigation opens/closes')
+
+  await mobile.page.goto(baseURL + '/clients')
+  // Both desktop columns and the mobile accordion are always in the DOM (CSS hides one by
+  // breakpoint) — the mobile accordion markup renders last, so `.last()` targets it reliably.
+  await mobile.page.getByText('Кузнецова Кузнецова', { exact: true }).last().waitFor()
+  checks.push('Mobile clients board opens with the lead-stage accordion column expanded by default')
+  await mobile.page.getByText('Кузнецова Кузнецова', { exact: true }).last().click()
+  await mobile.page.getByRole('button', { name: 'Перевести на «Обсуждение»' }).click()
+  await mobile.page.getByRole('button', { name: 'Перевести на «Согласование»' }).waitFor()
+  await mobile.page.getByRole('link', { name: 'Все клиенты' }).click()
+  await mobile.page.getByText('Кузнецова Кузнецова', { exact: true }).last().waitFor()
+  checks.push('After a mobile stage transition the client card is visible in the new stage column without manually expanding it (regression 0019)')
   await mobile.context.close()
 
   const assets = await readdir('dist/assets')

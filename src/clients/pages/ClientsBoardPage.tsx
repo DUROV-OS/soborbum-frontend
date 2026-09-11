@@ -56,6 +56,8 @@ export function ClientsBoardPage() {
   const clients = useClientsStore((s) => s.clients)
   const loading = useClientsStore((s) => s.loading)
   const load = useClientsStore((s) => s.load)
+  const lastAdvancedId = useClientsStore((s) => s.lastAdvancedId)
+  const clearLastAdvanced = useClientsStore((s) => s.clearLastAdvanced)
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
   const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER)
@@ -64,6 +66,12 @@ export function ClientsBoardPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  const advancedStage = clients.find((c) => c.id === lastAdvancedId)?.stage ?? null
+
+  useEffect(() => {
+    if (advancedStage) clearLastAdvanced()
+  }, [advancedStage, clearLastAdvanced])
 
   const range = dateFilterRange(dateFilter)
   const filtered = clients.filter((c) => matchesDateFilter(c.created_at, range))
@@ -94,6 +102,7 @@ export function ClientsBoardPage() {
         columnOf={(c) => c.stage}
         onCardClick={(c) => navigate(`/clients/${c.id}`)}
         loading={loading}
+        focusKey={advancedStage}
         renderCard={(client) => (
           <div>
             <div className="text-[13px] font-medium text-ink">{client.full_name}</div>

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 export interface KanbanColumn<K extends string> {
@@ -15,6 +15,7 @@ export function KanbanBoard<T, K extends string>({
   renderCard,
   onCardClick,
   loading = false,
+  focusKey = null,
 }: {
   columns: KanbanColumn<K>[]
   items: T[]
@@ -23,8 +24,15 @@ export function KanbanBoard<T, K extends string>({
   renderCard: (item: T) => ReactNode
   onCardClick?: (item: T) => void
   loading?: boolean
+  /** Колонка, которую нужно раскрыть на мобильном аккордеоне (например, куда только что
+   * переехала карточка) — иначе на мобильных карточка в свёрнутой колонке визуально теряется. */
+  focusKey?: K | null
 }) {
   const [openKey, setOpenKey] = useState<K | null>(columns[0]?.key ?? null)
+
+  useEffect(() => {
+    if (focusKey !== null) setOpenKey(focusKey)
+  }, [focusKey])
 
   const columnsWithItems = columns.map((column) => ({
     column,
