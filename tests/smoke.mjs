@@ -49,7 +49,7 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       localStorage.setItem('soborbum.auth.token', 'browser-test-token')
       sessionStorage.setItem('fixture-seeded', '1')
     }
-    for (const id of ['today', 'admin', 'production', 'ai', 'agents']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
+    for (const id of ['today', 'admin', 'production', 'ai', 'agents', 'tasks']) localStorage.setItem(`soborbum.onboarding.${id}`, '1')
   })
   const page = await context.newPage()
   page.on('pageerror', error => errors.push(error.message))
@@ -78,6 +78,8 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       // задача-ссылка смены стадии клиента: без дедлайна, создана давно —
       // должна быть видна в борде задач при фильтрах по умолчанию (регрессия 0013)
       { id: 501, title: 'Клиент «Иванов И.»: перевести со стадии на следующую', description: null, deadline: null, status: 'ready', created_at: '2026-06-01T08:00:00Z', module_id: null, link_type: 'client_stage', link_id: 11, link_meta: { stage: 'contract' }, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
+      // задача без проверяющих в работе: кнопка сдачи не должна звать это «проверкой» (регрессия 0020)
+      { id: 502, title: 'Собрать модуль №3', description: null, deadline: null, status: 'in_progress', created_at: '2026-06-02T08:00:00Z', module_id: null, link_type: null, link_id: null, link_meta: null, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
     ]
     else if (url.pathname === '/api/ai/chats') body = []
     else if (url.pathname === '/api/clients/' && route.request().method() === 'GET') body = [aiClient]
@@ -151,6 +153,12 @@ try {
   await owner.page.goto(baseURL + '/tasks')
   await owner.page.getByText('Клиент «Иванов И.»: перевести со стадии на следующую', { exact: true }).waitFor()
   checks.push('Client-stage link task (no deadline) is visible on the tasks board by default')
+
+  await owner.page.getByRole('button', { name: /Собрать модуль №3/ }).click()
+  await owner.page.getByRole('button', { name: 'Сдать задачу', exact: true }).waitFor()
+  assert.equal(await owner.page.getByText('Отправить на проверку', { exact: true }).count(), 0)
+  checks.push('Task without reviewers shows "Сдать задачу" instead of "Отправить на проверку"')
+  await owner.page.getByRole('button', { name: 'Закрыть', exact: true }).click()
 
   await owner.page.goto(baseURL + '/admin')
   await owner.page.getByRole('button', { name: 'Новый сотрудник' }).click()
