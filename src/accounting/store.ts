@@ -5,6 +5,7 @@ import { DateFilter, dateFilterRange } from '@/shared/lib/dateFilter'
 import * as accountingApi from './api'
 import { MoneyMovementCreateInput } from './api'
 import {
+  EmployeeSalaryOverview,
   MoneyDirection,
   MoneyMovement,
   MoneyMovementEnums,
@@ -55,6 +56,17 @@ interface AccountingState {
     reason?: string,
   ) => Promise<ActionResult>
   remove: (id: number) => Promise<ActionResult>
+
+  // Раздел «Сотрудники» (0023): отдельный источник данных (salary-overview),
+  // но проводки заводятся/переводятся через те же create/changeStatus выше.
+  salaryOverview: EmployeeSalaryOverview[]
+  salaryLoading: boolean
+  loadSalaryOverview: () => Promise<void>
+  accrueSalary: (employeeId: number, amount: number) => Promise<ActionResult>
+  advanceSalaryStatus: (
+    movementId: number,
+    to: Exclude<MoneyMovementStatus, 'draft'>,
+  ) => Promise<ActionResult>
 }
 
 function reasonOf(error: unknown): string {
@@ -133,6 +145,35 @@ export const useAccountingStore = create<AccountingState>((set, get) => ({
     try {
       await accountingApi.deleteMovement(id)
       set({ movements: get().movements.filter((m) => m.id !== id) })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  salaryOverview: [],
+  salaryLoading: true,
+
+  loadSalaryOverview: async () => {
+    set({ salaryLoading: true })
+    const salaryOverview = await accountingApi.getSalaryOverview()
+    set({ salaryOverview, salaryLoading: false })
+  },
+
+  accrueSalary: async (employeeId, amount) => {
+    try {
+      await accountingApi.createMovement({ subkind: 'salary_payout', amount, employee_id: employeeId })
+      await get().loadSalaryOverview()
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  advanceSalaryStatus: async (movementId, to) => {
+    try {
+      await accountingApi.changeStatus(movementId, to)
+      await get().loadSalaryOverview()
       return { ok: true }
     } catch (error) {
       return { ok: false, reason: reasonOf(error) }

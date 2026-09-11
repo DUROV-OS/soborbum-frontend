@@ -6,9 +6,11 @@ import { DataTable } from '@/shared/ui/DataTable'
 import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Select } from '@/shared/ui/Field'
+import { Tabs } from '@/shared/ui/Tabs'
 import { useAccountingStore } from '../store'
 import { CreateMovementModal } from '../components/CreateMovementModal'
 import { MovementDetailDrawer } from '../components/MovementDetailDrawer'
+import { SalaryTab } from './SalaryTab'
 import {
   DIRECTION_LABEL,
   MoneyDirection,
@@ -36,6 +38,7 @@ export function AccountingPage() {
 
   const [creating, setCreating] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [tab, setTab] = useState<'register' | 'salary'>('register')
 
   useEffect(() => {
     load()
@@ -58,129 +61,148 @@ export function AccountingPage() {
             Единый реестр движения денежных средств: вид, сумма, налог, инициатор, статус.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Новая проводка
-        </Button>
-      </div>
-
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Select
-          className="w-full sm:w-44"
-          value={filters.direction}
-          onChange={(e) => setFilters({ direction: e.target.value as MoneyDirection | 'all' })}
-        >
-          <option value="all">Все направления</option>
-          {(Object.keys(DIRECTION_LABEL) as MoneyDirection[]).map((d) => (
-            <option key={d} value={d}>
-              {DIRECTION_LABEL[d]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-full sm:w-52"
-          value={filters.subkind}
-          onChange={(e) => setFilters({ subkind: e.target.value as MoneySubkind | 'all' })}
-        >
-          <option value="all">Все виды</option>
-          {(Object.keys(SUBKIND_LABEL) as MoneySubkind[]).map((s) => (
-            <option key={s} value={s}>
-              {SUBKIND_LABEL[s]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-full sm:w-44"
-          value={filters.status}
-          onChange={(e) => setFilters({ status: e.target.value as MoneyMovementStatus | 'all' })}
-        >
-          <option value="all">Все статусы</option>
-          {(Object.keys(STATUS_LABEL) as MoneyMovementStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-full sm:w-44"
-          value={filters.source_kind}
-          onChange={(e) => setFilters({ source_kind: e.target.value as MoneySourceKind | 'all' })}
-        >
-          <option value="all">Любой источник</option>
-          {(Object.keys(SOURCE_KIND_LABEL) as MoneySourceKind[]).map((s) => (
-            <option key={s} value={s}>
-              {SOURCE_KIND_LABEL[s]}
-            </option>
-          ))}
-        </Select>
-        <DateFilterSelect value={filters.period} onChange={(period) => setFilters({ period })} />
-        {filtersDirty && (
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            Сбросить
+        {tab === 'register' && (
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Новая проводка
           </Button>
         )}
       </div>
 
-      {!loading && movements.length === 0 ? (
-        <EmptyState
-          icon={<Calculator size={24} />}
-          title={filtersDirty ? 'Под фильтры ничего не подходит' : 'Проводок пока нет'}
-          description={
-            filtersDirty
-              ? 'Измените или сбросьте фильтры.'
-              : 'Создайте первую проводку кнопкой «Новая проводка».'
-          }
-        />
-      ) : (
-        <DataTable
-          columns={[
-            {
-              header: 'Дата',
-              accessor: (m) =>
-                new Date(m.posted_at ?? m.created_at).toLocaleDateString('ru-RU'),
-            },
-            {
-              header: 'Вид',
-              accessor: (m) => (
-                <div>
-                  <div className="text-ink">{SUBKIND_LABEL[m.subkind]}</div>
-                  <div className="text-[12px] text-muted">{DIRECTION_LABEL[m.direction]}</div>
-                </div>
-              ),
-            },
-            {
-              header: 'Сумма',
-              align: 'right',
-              className: 'tabular',
-              accessor: (m) => (
-                <span className={m.direction === 'expense' ? 'text-danger' : 'text-ink'}>
-                  {money(m.amount, m.direction)}
-                </span>
-              ),
-            },
-            {
-              header: 'Налог',
-              align: 'right',
-              className: 'tabular',
-              accessor: (m) => (m.tax ? `${m.tax.toLocaleString('ru-RU')} ₽` : '—'),
-            },
-            { header: 'Инициатор', accessor: (m) => m.initiator_name ?? `№${m.initiator_id}` },
-            {
-              header: 'Источник',
-              accessor: (m) =>
-                m.source_label ?? <span className="text-muted">{SOURCE_KIND_LABEL[m.source_kind]}</span>,
-            },
-            {
-              header: 'Статус',
-              accessor: (m) => <Chip tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Chip>,
-            },
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'register', label: 'Реестр' },
+            { key: 'salary', label: 'Сотрудники' },
           ]}
-          rows={movements}
-          keyOf={(m) => String(m.id)}
-          onRowClick={(m) => setSelectedId(m.id)}
-          loading={loading}
-          emptyLabel="Проводок пока нет"
+          activeKey={tab}
+          onChange={setTab}
         />
+      </div>
+
+      {tab === 'salary' ? (
+        <SalaryTab />
+      ) : (
+        <>
+          <div className="mb-3 flex flex-wrap gap-2">
+            <Select
+              className="w-full sm:w-44"
+              value={filters.direction}
+              onChange={(e) => setFilters({ direction: e.target.value as MoneyDirection | 'all' })}
+            >
+              <option value="all">Все направления</option>
+              {(Object.keys(DIRECTION_LABEL) as MoneyDirection[]).map((d) => (
+                <option key={d} value={d}>
+                  {DIRECTION_LABEL[d]}
+                </option>
+              ))}
+            </Select>
+            <Select
+              className="w-full sm:w-52"
+              value={filters.subkind}
+              onChange={(e) => setFilters({ subkind: e.target.value as MoneySubkind | 'all' })}
+            >
+              <option value="all">Все виды</option>
+              {(Object.keys(SUBKIND_LABEL) as MoneySubkind[]).map((s) => (
+                <option key={s} value={s}>
+                  {SUBKIND_LABEL[s]}
+                </option>
+              ))}
+            </Select>
+            <Select
+              className="w-full sm:w-44"
+              value={filters.status}
+              onChange={(e) => setFilters({ status: e.target.value as MoneyMovementStatus | 'all' })}
+            >
+              <option value="all">Все статусы</option>
+              {(Object.keys(STATUS_LABEL) as MoneyMovementStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
+            </Select>
+            <Select
+              className="w-full sm:w-44"
+              value={filters.source_kind}
+              onChange={(e) => setFilters({ source_kind: e.target.value as MoneySourceKind | 'all' })}
+            >
+              <option value="all">Любой источник</option>
+              {(Object.keys(SOURCE_KIND_LABEL) as MoneySourceKind[]).map((s) => (
+                <option key={s} value={s}>
+                  {SOURCE_KIND_LABEL[s]}
+                </option>
+              ))}
+            </Select>
+            <DateFilterSelect value={filters.period} onChange={(period) => setFilters({ period })} />
+            {filtersDirty && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                Сбросить
+              </Button>
+            )}
+          </div>
+
+          {!loading && movements.length === 0 ? (
+            <EmptyState
+              icon={<Calculator size={24} />}
+              title={filtersDirty ? 'Под фильтры ничего не подходит' : 'Проводок пока нет'}
+              description={
+                filtersDirty
+                  ? 'Измените или сбросьте фильтры.'
+                  : 'Создайте первую проводку кнопкой «Новая проводка».'
+              }
+            />
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  header: 'Дата',
+                  accessor: (m) =>
+                    new Date(m.posted_at ?? m.created_at).toLocaleDateString('ru-RU'),
+                },
+                {
+                  header: 'Вид',
+                  accessor: (m) => (
+                    <div>
+                      <div className="text-ink">{SUBKIND_LABEL[m.subkind]}</div>
+                      <div className="text-[12px] text-muted">{DIRECTION_LABEL[m.direction]}</div>
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Сумма',
+                  align: 'right',
+                  className: 'tabular',
+                  accessor: (m) => (
+                    <span className={m.direction === 'expense' ? 'text-danger' : 'text-ink'}>
+                      {money(m.amount, m.direction)}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Налог',
+                  align: 'right',
+                  className: 'tabular',
+                  accessor: (m) => (m.tax ? `${m.tax.toLocaleString('ru-RU')} ₽` : '—'),
+                },
+                { header: 'Инициатор', accessor: (m) => m.initiator_name ?? `№${m.initiator_id}` },
+                {
+                  header: 'Источник',
+                  accessor: (m) =>
+                    m.source_label ?? <span className="text-muted">{SOURCE_KIND_LABEL[m.source_kind]}</span>,
+                },
+                {
+                  header: 'Статус',
+                  accessor: (m) => <Chip tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Chip>,
+                },
+              ]}
+              rows={movements}
+              keyOf={(m) => String(m.id)}
+              onRowClick={(m) => setSelectedId(m.id)}
+              loading={loading}
+              emptyLabel="Проводок пока нет"
+            />
+          )}
+        </>
       )}
 
       <CreateMovementModal open={creating} onClose={() => setCreating(false)} />
