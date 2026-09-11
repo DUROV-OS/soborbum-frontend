@@ -106,3 +106,10 @@ export const STATUS_TONE: Record<MoneyMovementStatus, 'neutral' | 'info' | 'succ
   posted: 'success',
   cancelled: 'danger',
 }
+
+/** GET /api/accounting/salary-overview — строка раздела «Сотрудники» (0023). */
+export interface EmployeeSalaryOverview {
+  employee_id: number
+  full_name: string
+  open_movement: MoneyMovement | null
+}

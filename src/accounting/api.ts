@@ -1,5 +1,6 @@
 import { apiRequest } from '@/shared/lib/httpClient'
 import {
+  EmployeeSalaryOverview,
   MoneyAssessment,
   MoneyDirection,
   MoneyMovement,
@@ -48,6 +49,7 @@ export interface MoneyMovementCreateInput {
   assessment?: MoneyAssessment
   affects_profit?: boolean
   client_id?: number
+  employee_id?: number
   payment_purpose?: string
   comment?: string
   external_number?: string
@@ -75,4 +77,9 @@ export function changeStatus(
 /** DELETE /api/accounting/money-movements/:id — только для draft */
 export function deleteMovement(id: number): Promise<void> {
   return apiRequest<void>({ section: SECTION, path: `/money-movements/${id}`, method: 'DELETE' })
+}
+
+/** GET /api/accounting/salary-overview */
+export function getSalaryOverview(): Promise<EmployeeSalaryOverview[]> {
+  return apiRequest<EmployeeSalaryOverview[]>({ section: SECTION, path: '/salary-overview' })
 }
