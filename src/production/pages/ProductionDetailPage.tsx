@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Field, Input, Textarea } from '@/shared/ui/Field'
 import { Modal } from '@/shared/ui/Modal'
@@ -12,8 +13,12 @@ export function ProductionDetailPage() {
   const productionId = Number(id)
   const production = useProductionStore((s) => s.production)
   const loadProduction = useProductionStore((s) => s.loadProduction)
+  const deleteProduction = useProductionStore((s) => s.deleteProduction)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     loadProduction(productionId)
@@ -21,6 +26,19 @@ export function ProductionDetailPage() {
 
   if (!production || production.id !== productionId) {
     return <p className="text-[13px] text-muted">Загрузка…</p>
+  }
+
+  async function handleDelete() {
+    if (!production) return
+    if (!window.confirm(`Удалить производство №${production.id}? Отменить нельзя.`)) return
+    setDeleting(true)
+    const result = await deleteProduction(production.id)
+    if (result.ok) {
+      navigate('/production', { replace: true })
+      return
+    }
+    setDeleting(false)
+    setDeleteError(result.reason ?? 'Не удалось удалить производство')
   }
 
   return (
@@ -43,8 +61,15 @@ export function ProductionDetailPage() {
             <Plus size={16} />
             Модуль
           </Button>
+          {isAdmin && (
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
+              <Trash2 size={14} />
+              {deleting ? 'Удаление…' : 'Удалить производство'}
+            </Button>
+          )}
         </div>
       </div>
+      {deleteError && <p className="mb-4 text-[12px] text-danger">{deleteError}</p>}
 
       <div className="flex flex-col gap-3">
         {production.modules.map((module) => (

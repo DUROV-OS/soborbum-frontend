@@ -19,6 +19,8 @@ interface ProductionState {
   loadModule: (id: number) => Promise<void>
   createModule: (productionId: number, name: string, description?: string) => Promise<ActionResult>
   updateModule: (id: number, patch: { name?: string; description?: string }) => Promise<ActionResult>
+  deleteProduction: (id: number) => Promise<ActionResult>
+  deleteModule: (id: number) => Promise<ActionResult>
   addModuleMaterial: (moduleId: number, input: productionApi.AddModuleMaterialInput) => Promise<ActionResult>
   updateModuleMaterial: (id: number, quantityRequired: number) => Promise<ActionResult>
   requestMaterial: (moduleMaterialId: number, quantity: number) => Promise<ActionResult>
@@ -69,6 +71,27 @@ export const useProductionStore = create<ProductionState>((set, get) => ({
     try {
       const module = await productionApi.updateModule(id, patch)
       set({ module })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  deleteProduction: async (id) => {
+    try {
+      await productionApi.deleteProduction(id)
+      set({ productions: get().productions.filter((p) => p.id !== id) })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  deleteModule: async (id) => {
+    try {
+      await productionApi.deleteModule(id)
+      const current = get().production
+      if (current) set({ production: { ...current, modules: current.modules.filter((m) => m.id !== id) } })
       return { ok: true }
     } catch (error) {
       return { ok: false, reason: reasonOf(error) }
