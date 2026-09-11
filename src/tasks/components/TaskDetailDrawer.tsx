@@ -58,7 +58,7 @@ export function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose
           )}
           {task.status === 'in_progress' && (
             <Button size="sm" disabled={busy} onClick={() => act('in_review')}>
-              Отправить на проверку
+              {task.reviewers.length > 0 ? 'Отправить на проверку' : 'Сдать задачу'}
             </Button>
           )}
           {task.status === 'in_review' && (
