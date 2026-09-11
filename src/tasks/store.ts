@@ -14,6 +14,7 @@ interface TasksState {
   load: (filters?: tasksApi.TaskFilters) => Promise<void>
   create: (input: tasksApi.CreateTaskInput) => Promise<ActionResult>
   setStatus: (id: number, status: TaskStatus) => Promise<ActionResult>
+  claim: (id: number) => Promise<ActionResult>
 }
 
 function reasonOf(error: unknown): string {
@@ -42,6 +43,16 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   setStatus: async (id, status) => {
     try {
       const updated = await tasksApi.setStatus(id, status)
+      set({ tasks: get().tasks.map((t) => (t.id === id ? updated : t)) })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  claim: async (id) => {
+    try {
+      const updated = await tasksApi.claimTask(id)
       set({ tasks: get().tasks.map((t) => (t.id === id ? updated : t)) })
       return { ok: true }
     } catch (error) {

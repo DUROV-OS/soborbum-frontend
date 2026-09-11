@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { HelpButton } from '@/shared/ui/HelpButton'
@@ -9,6 +10,7 @@ import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Input, Select } from '@/shared/ui/Field'
 import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { Tabs } from '@/shared/ui/Tabs'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { DateFilter, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useTasksStore } from '../store'
@@ -16,6 +18,12 @@ import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
 import { MyTasksPanel } from '../components/MyTasksPanel'
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
+
+type SubTab = 'mine' | 'all'
+
+function isClaimable(task: Task): boolean {
+  return task.status === 'ready' && task.assignees.length === 0
+}
 
 type SourceFilter = 'all' | 'manual' | 'clients' | 'production' | 'marketing' | 'warehouse'
 
@@ -38,29 +46,29 @@ const SOURCE_LABEL: Record<SourceFilter, string> = {
 
 const ONBOARDING_PAGES: OnboardingPage[] = [
   {
-    title: 'Общий борд задач',
-    body: (
-      <p>
-        Здесь собраны задачи из всех разделов — производства, клиентов, маркетинга, склада — и задачи, созданные
-        вручную. Доска разбита по колонкам-статусам, как в остальных разделах.
-      </p>
-    ),
-  },
-  {
     title: 'Мои задачи',
     body: (
       <p>
-        Блок «Мои задачи» над доской показывает то, что назначено именно вам, — чтобы не искать среди общего
-        потока.
+        Раздел открывается на «Моих задачах» — здесь только то, что касается вас: задачи, где вы исполнитель
+        или проверяющий, плюс свободные задачи, которые можно взять в работу.
       </p>
     ),
   },
   {
-    title: 'Поиск и фильтры',
+    title: 'Взять свободную задачу',
     body: (
       <p>
-        Строка поиска ищет по названию и описанию. Рядом — фильтр по разделу-источнику задачи и по сроку
-        (день, неделя, месяц, год и другие периоды). По умолчанию показывается этот месяц.
+        На карточке свободной задачи есть кнопка «Взять задачу» — вы становитесь исполнителем, и задача
+        остаётся на борде уже как ваша.
+      </p>
+    ),
+  },
+  {
+    title: 'Все задачи',
+    body: (
+      <p>
+        Вкладка «Все задачи» (видна не всем — нужен отдельный доступ) — общий борд по всем разделам и
+        пользователям, с поиском по названию и описанию, фильтром по разделу-источнику и по сроку.
       </p>
     ),
   },
@@ -79,8 +87,13 @@ export function TasksPage() {
   const tasks = useTasksStore((s) => s.tasks)
   const loading = useTasksStore((s) => s.loading)
   const load = useTasksStore((s) => s.load)
+  const claim = useTasksStore((s) => s.claim)
+  const canSeeAll = useAuthStore((s) => s.hasAccess('tasks_all'))
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
+  const [subTab, setSubTab] = useState<SubTab>('mine')
+  const [claimingId, setClaimingId] = useState<number | null>(null)
+  const [claimError, setClaimError] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   // Борд задач по умолчанию — за всё время: авто-задачи из разделов (смена
   // стадии клиента, контента, нехватка на складе) создаются без дедлайна, и
@@ -90,8 +103,20 @@ export function TasksPage() {
   const onboarding = useSectionOnboarding('tasks')
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (!canSeeAll && subTab === 'all') setSubTab('mine')
+  }, [canSeeAll, subTab])
+
+  useEffect(() => {
+    load({ scope: subTab === 'all' && canSeeAll ? 'all' : 'mine' })
+  }, [load, subTab, canSeeAll])
+
+  async function handleClaim(taskId: number) {
+    setClaimingId(taskId)
+    setClaimError(null)
+    const result = await claim(taskId)
+    if (!result.ok) setClaimError(result.reason ?? 'Не удалось взять задачу')
+    setClaimingId(null)
+  }
 
   const range = dateFilterRange(dateFilter)
   const q = query.trim().toLowerCase()
@@ -109,7 +134,9 @@ export function TasksPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Задачи</h1>
-          <p className="mt-1 text-[13px] text-muted">Общий борд, включая задачи из других разделов</p>
+          <p className="mt-1 text-[13px] text-muted">
+            {subTab === 'mine' ? 'Назначено на вас и свободные задачи, которые можно взять' : 'Общий борд, включая задачи из других разделов'}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
           <AskAiButton domain="tasks" />
@@ -121,28 +148,45 @@ export function TasksPage() {
         </div>
       </div>
 
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск по названию и описанию…"
-          className="sm:max-w-xs"
-        />
-        <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-full sm:w-44">
-          {Object.entries(SOURCE_LABEL).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
-      </div>
+      {canSeeAll && (
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              { key: 'mine' as SubTab, label: 'Мои задачи' },
+              { key: 'all' as SubTab, label: 'Все задачи' },
+            ]}
+            activeKey={subTab}
+            onChange={setSubTab}
+          />
+        </div>
+      )}
 
-      <MyTasksPanel onOpenTask={setSelected} />
+      {subTab === 'mine' && <MyTasksPanel onOpenTask={setSelected} />}
+
+      {subTab === 'mine' && claimError && <p className="mb-3 text-[13px] text-danger">{claimError}</p>}
+
+      {subTab === 'all' && (
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Поиск по названию и описанию…"
+            className="sm:max-w-xs"
+          />
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-full sm:w-44">
+            {Object.entries(SOURCE_LABEL).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
+        </div>
+      )}
 
       <KanbanBoard
         columns={TASK_STATES}
-        items={filtered}
+        items={subTab === 'mine' ? tasks : filtered}
         keyOf={(t) => String(t.id)}
         columnOf={(t) => t.status}
         onCardClick={setSelected}
@@ -156,6 +200,19 @@ export function TasksPage() {
                 <span className="text-[11px] text-muted">{new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
               )}
             </div>
+            {subTab === 'mine' && isClaimable(task) && (
+              <Button
+                size="sm"
+                className="mt-2 h-7 px-2.5 text-[12px]"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleClaim(task.id)
+                }}
+                disabled={claimingId === task.id}
+              >
+                {claimingId === task.id ? 'Беру…' : 'Взять задачу'}
+              </Button>
+            )}
           </div>
         )}
       />

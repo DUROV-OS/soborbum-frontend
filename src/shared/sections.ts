@@ -7,6 +7,7 @@ import {
   Factory,
   Handshake,
   Landmark,
+  Layers,
   Network,
   Megaphone,
   MessagesSquare,
@@ -38,6 +39,9 @@ import {
  * отдельного гранта нет — пункт виден тем, у кого есть доступ к «Марине».
  * 'today' (в меню «Пульс») доступен каждому вошедшему сотруднику; сервер
  * отдаёт только показатели разрешённых ему разделов. AI-доступ не требуется.
+ * 'tasks_all' — псевдо-раздел: не открывает свою страницу и не появляется в
+ * меню, это только флаг доступа к под-вкладке «Все задачи» внутри «Задачи»
+ * (см. TasksPage) — назначается в матрице доступа наравне с разделами.
  */
 export type SectionId =
   | 'clients'
@@ -47,6 +51,7 @@ export type SectionId =
   | 'warehouse'
   | 'marketing'
   | 'tasks'
+  | 'tasks_all'
   | 'admin'
   | 'ai'
   | 'today'
@@ -79,6 +84,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'warehouse', label: 'Склад', path: '/warehouse', icon: Boxes },
   { id: 'marketing', label: 'Маркетинг', path: '/marketing', icon: Megaphone },
   { id: 'tasks', label: 'Задачи', path: '/tasks', icon: ClipboardList },
+  { id: 'tasks_all', label: 'Все задачи', path: '/tasks', icon: Layers },
   { id: 'board', label: 'Совет директоров', path: '/board', icon: Landmark },
   { id: 'agents', label: 'Агенты', path: '/agents', icon: Network, notAssignable: true },
   { id: 'chats', label: 'MAX', path: '/chats', icon: MessagesSquare, notAssignable: true },
