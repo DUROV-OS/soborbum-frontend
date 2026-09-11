@@ -14,6 +14,7 @@ interface WarehouseState {
   load: () => Promise<void>
   createMaterial: (input: warehouseApi.MaterialCreateInput) => Promise<ActionResult>
   updateMaterial: (id: number, patch: warehouseApi.MaterialUpdateInput) => Promise<ActionResult>
+  writeOffMaterial: (id: number, quantity: number, reason: string) => Promise<ActionResult>
   createSupply: (supplierName: string | undefined, lines: warehouseApi.SupplyLineInput[]) => Promise<ActionResult>
   importSupply: (file: File) => Promise<ActionResult>
   approveRequest: (requestId: number) => Promise<ActionResult>
@@ -46,6 +47,16 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   updateMaterial: async (id, patch) => {
     try {
       const updated = await warehouseApi.updateMaterial(id, patch)
+      set({ materials: get().materials.map((m) => (m.id === id ? updated : m)) })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  writeOffMaterial: async (id, quantity, reason) => {
+    try {
+      const updated = await warehouseApi.writeOffMaterial(id, quantity, reason)
       set({ materials: get().materials.map((m) => (m.id === id ? updated : m)) })
       return { ok: true }
     } catch (error) {

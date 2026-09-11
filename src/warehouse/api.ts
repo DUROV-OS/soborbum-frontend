@@ -55,6 +55,16 @@ export function updateMaterial(id: number, patch: MaterialUpdateInput): Promise<
   return apiRequest<Material>({ section: SECTION, path: `/materials/${id}`, method: 'PATCH', body: patch })
 }
 
+/** POST /api/warehouse/materials/:id/write-off */
+export function writeOffMaterial(id: number, quantity: number, reason: string): Promise<Material> {
+  return apiRequest<Material>({
+    section: SECTION,
+    path: `/materials/${id}/write-off`,
+    method: 'POST',
+    body: { quantity, reason },
+  })
+}
+
 /** GET /api/warehouse/materials/:id/history */
 export function materialHistory(id: number): Promise<StockMovement[]> {
   return apiRequest<StockMovement[]>({ section: SECTION, path: `/materials/${id}/history` })
