@@ -24,7 +24,7 @@ export function DocumentPanel({ client }: { client: Client }) {
 
   if (!isGroupVisible(client, 'documents')) return null
 
-  const needsAdvance = paymentPlan === 'advance'
+  const needsAdvance = paymentPlan === 'advance_then_balance'
   const finalPriceNum = finalPrice === '' ? null : Number(finalPrice)
   const advanceNum = advanceAmount === '' ? null : Number(advanceAmount)
 
@@ -65,7 +65,7 @@ export function DocumentPanel({ client }: { client: Client }) {
           value={client.final_price ? `${client.final_price.toLocaleString('ru-RU')} ₽` : undefined}
         />
         <ReadRow label="Формат расчёта" value={client.payment_plan ? paymentPlanLabel(client.payment_plan) : undefined} />
-        {client.payment_plan === 'advance' && (
+        {client.payment_plan === 'advance_then_balance' && (
           <ReadRow
             label="Сумма аванса"
             value={client.advance_amount ? `${client.advance_amount.toLocaleString('ru-RU')} ₽` : undefined}
@@ -112,7 +112,7 @@ export function DocumentPanel({ client }: { client: Client }) {
               onChange={(e) => {
                 const next = e.target.value as PaymentPlan | ''
                 setPaymentPlan(next)
-                if (next !== 'advance') setAdvanceAmount('')
+                if (next !== 'advance_then_balance') setAdvanceAmount('')
               }}
             >
               <option value="">— выберите —</option>
