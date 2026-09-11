@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Plus } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { useAuthStore } from '@/auth/store'
 import { useTasksStore } from '@/tasks/store'
 import { TaskDetailDrawer } from '@/tasks/components/TaskDetailDrawer'
 import { CreateTaskModal } from '@/tasks/components/CreateTaskModal'
@@ -21,6 +22,9 @@ export function ModuleDetailPage() {
   const moduleId = Number(id)
   const module = useProductionStore((s) => s.module)
   const loadModule = useProductionStore((s) => s.loadModule)
+  const deleteModule = useProductionStore((s) => s.deleteModule)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
+  const navigate = useNavigate()
   const tasks = useTasksStore((s) => s.tasks)
   const loadTasks = useTasksStore((s) => s.load)
 
@@ -29,6 +33,8 @@ export function ModuleDetailPage() {
   const [requestingLine, setRequestingLine] = useState<ModuleMaterial | null>(null)
   const [creatingTask, setCreatingTask] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     loadModule(moduleId)
@@ -46,6 +52,19 @@ export function ModuleDetailPage() {
 
   const moduleTasks = tasks.filter((t) => t.module_id === moduleId)
 
+  async function handleDelete() {
+    if (!module) return
+    if (!window.confirm(`Удалить модуль «${module.name}»? Отменить нельзя.`)) return
+    setDeleting(true)
+    const result = await deleteModule(module.id)
+    if (result.ok) {
+      navigate(`/production/${module.production_id}`, { replace: true })
+      return
+    }
+    setDeleting(false)
+    setDeleteError(result.reason ?? 'Не удалось удалить модуль')
+  }
+
   return (
     <div className="mx-auto max-w-3xl">
       <Link
@@ -61,12 +80,27 @@ export function ModuleDetailPage() {
           <h1 className="text-[18px] font-medium text-ink">{module.name}</h1>
           {module.description && <p className="mt-1 text-[13px] text-muted">{module.description}</p>}
         </div>
-        <AskAiButton
-          domain="production"
-          contextLabel={`Модуль: ${module.name}`}
-          contextNote={`[module_id=${module.id}, production_id=${module.production_id}, ${module.name}] `}
-        />
+        <div className="flex items-center gap-2">
+          <AskAiButton
+            domain="production"
+            contextLabel={`Модуль: ${module.name}`}
+            contextNote={`[module_id=${module.id}, production_id=${module.production_id}, ${module.name}] `}
+          />
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              aria-label="Удалить модуль"
+              title="Удалить модуль"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
+      {deleteError && <p className="mb-4 text-[12px] text-danger">{deleteError}</p>}
 
       <section className="mb-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

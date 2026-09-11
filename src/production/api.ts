@@ -13,6 +13,11 @@ export function getProduction(id: number): Promise<Production> {
   return apiRequest<Production>({ section: SECTION, path: `/${id}` })
 }
 
+/** DELETE /api/production/:id — только администратор */
+export function deleteProduction(id: number): Promise<void> {
+  return apiRequest<void>({ section: SECTION, path: `/${id}`, method: 'DELETE' })
+}
+
 /** POST /api/production/:id/modules */
 export function createModule(productionId: number, name: string, description?: string): Promise<Module> {
   return apiRequest<Module>({
@@ -31,6 +36,11 @@ export function getModule(id: number): Promise<Module> {
 /** PATCH /api/production/modules/:id */
 export function updateModule(id: number, patch: { name?: string; description?: string }): Promise<Module> {
   return apiRequest<Module>({ section: SECTION, path: `/modules/${id}`, method: 'PATCH', body: patch })
+}
+
+/** DELETE /api/production/modules/:id — только администратор */
+export function deleteModule(id: number): Promise<void> {
+  return apiRequest<void>({ section: SECTION, path: `/modules/${id}`, method: 'DELETE' })
 }
 
 export interface AddModuleMaterialInput {
