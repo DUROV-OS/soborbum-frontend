@@ -30,6 +30,7 @@ export type MovementReason =
   | 'required_adjusted_up'
   | 'request_rejected_return'
   | 'manual_adjust'
+  | 'write_off'
 
 export interface StockMovement {
   id: number
@@ -37,6 +38,7 @@ export interface StockMovement {
   delta: number
   reason: MovementReason
   reference_id: number | null
+  note: string | null
   created_by_id: number
   created_at: string
 }
@@ -61,4 +63,5 @@ export const MOVEMENT_REASON_LABEL: Record<MovementReason, string> = {
   required_adjusted_up: 'Увеличена потребность',
   request_rejected_return: 'Возврат по отклонённой заявке',
   manual_adjust: 'Ручная корректировка',
+  write_off: 'Списание',
 }

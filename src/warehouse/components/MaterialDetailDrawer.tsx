@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Chip } from '@/shared/ui/Chip'
 import { Button } from '@/shared/ui/Button'
 import { Drawer } from '@/shared/ui/Drawer'
-import { Field, Input } from '@/shared/ui/Field'
+import { Field, Input, Textarea } from '@/shared/ui/Field'
 import { DataTable } from '@/shared/ui/DataTable'
 import * as warehouseApi from '../api'
 import { useWarehouseStore } from '../store'
@@ -10,15 +10,25 @@ import { Material, MOVEMENT_REASON_LABEL, StockMovement } from '../types'
 
 export function MaterialDetailDrawer({ material, onClose }: { material: Material | null; onClose: () => void }) {
   const updateMaterial = useWarehouseStore((s) => s.updateMaterial)
+  const writeOffMaterial = useWarehouseStore((s) => s.writeOffMaterial)
   const [threshold, setThreshold] = useState<number | ''>('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<StockMovement[]>([])
+  const [writingOff, setWritingOff] = useState(false)
+  const [writeOffQuantity, setWriteOffQuantity] = useState<number | ''>('')
+  const [writeOffReason, setWriteOffReason] = useState('')
+  const [writeOffBusy, setWriteOffBusy] = useState(false)
+  const [writeOffError, setWriteOffError] = useState<string | null>(null)
 
   useEffect(() => {
     if (material) {
       setThreshold(material.threshold)
       warehouseApi.materialHistory(material.id).then(setHistory)
+      setWritingOff(false)
+      setWriteOffQuantity('')
+      setWriteOffReason('')
+      setWriteOffError(null)
     }
   }, [material])
 
@@ -32,6 +42,22 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
     const result = await updateMaterial(materialId, { threshold })
     setSaving(false)
     setError(result.ok ? null : result.reason ?? 'Не удалось сохранить')
+  }
+
+  async function submitWriteOff() {
+    if (writeOffQuantity === '' || writeOffQuantity <= 0 || !writeOffReason.trim()) return
+    setWriteOffBusy(true)
+    const result = await writeOffMaterial(materialId, writeOffQuantity, writeOffReason.trim())
+    setWriteOffBusy(false)
+    if (result.ok) {
+      setWritingOff(false)
+      setWriteOffQuantity('')
+      setWriteOffReason('')
+      setWriteOffError(null)
+      warehouseApi.materialHistory(materialId).then(setHistory)
+    } else {
+      setWriteOffError(result.reason ?? 'Не удалось списать материал')
+    }
   }
 
   return (
@@ -68,6 +94,50 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
           {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
         </div>
 
+        <div>
+          {!writingOff ? (
+            <Button size="sm" variant="danger" onClick={() => setWritingOff(true)}>
+              Списать
+            </Button>
+          ) : (
+            <div className="rounded-md border border-border bg-surface-muted/40 p-3">
+              <div className="mb-2 text-[13px] font-medium text-ink">Списание материала</div>
+              <div className="flex flex-col gap-3">
+                <Field label="Количество" required>
+                  <Input
+                    type="number"
+                    value={writeOffQuantity}
+                    onChange={(e) => setWriteOffQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder={`макс. ${material.quantity_in_stock} ${material.unit}`}
+                  />
+                </Field>
+                <Field label="Причина" required>
+                  <Textarea
+                    rows={2}
+                    value={writeOffReason}
+                    onChange={(e) => setWriteOffReason(e.target.value)}
+                    placeholder="Напр.: брак, недостача при инвентаризации, истёк срок годности"
+                  />
+                </Field>
+                {writeOffError && <p className="text-[12px] text-danger">{writeOffError}</p>}
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setWritingOff(false)} disabled={writeOffBusy}>
+                    Отмена
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={submitWriteOff}
+                    disabled={writeOffBusy || writeOffQuantity === '' || writeOffQuantity <= 0 || !writeOffReason.trim()}
+                  >
+                    {writeOffBusy ? 'Списание…' : 'Списать'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {material.request_breakdown.length > 0 && (
           <div>
             <div className="mb-2 text-[13px] font-medium text-ink">Запрошено по модулям</div>
@@ -87,7 +157,10 @@ export function MaterialDetailDrawer({ material, onClose }: { material: Material
           <DataTable
             columns={[
               { header: 'Дата', accessor: (m) => new Date(m.created_at).toLocaleString('ru-RU') },
-              { header: 'Причина', accessor: (m) => MOVEMENT_REASON_LABEL[m.reason] },
+              {
+                header: 'Причина',
+                accessor: (m) => (m.note ? `${MOVEMENT_REASON_LABEL[m.reason]} — ${m.note}` : MOVEMENT_REASON_LABEL[m.reason]),
+              },
               {
                 header: 'Изменение',
                 align: 'right',
