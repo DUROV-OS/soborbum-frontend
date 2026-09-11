@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
@@ -27,6 +29,7 @@ export function MovementDetailDrawer({
 }) {
   const changeStatus = useAccountingStore((s) => s.changeStatus)
   const remove = useAccountingStore((s) => s.remove)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
@@ -151,15 +154,19 @@ export function MovementDetailDrawer({
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => setCancelling(true)}>
                   Отменить
                 </Button>
-                {movement.status === 'draft' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                {movement.status === 'draft' && isAdmin && (
+                  <button
+                    type="button"
                     disabled={busy}
-                    onClick={() => run(() => remove(id), true)}
+                    onClick={() => {
+                      if (window.confirm('Удалить черновик проводки? Отменить нельзя.')) run(() => remove(id), true)
+                    }}
+                    aria-label="Удалить черновик проводки"
+                    title="Удалить черновик проводки"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
                   >
-                    Удалить черновик
-                  </Button>
+                    <Trash2 size={14} />
+                  </button>
                 )}
               </div>
             )}
