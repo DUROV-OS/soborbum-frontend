@@ -14,14 +14,18 @@ export function orderTypeLabel(type: OrderType | null): string {
 }
 
 /** Формат расчёта клиента — фиксируется в документных данных на «Согласовании».
- * `advance` требует `advance_amount`; `advance` и `postpay` подразумевают приём
- * остатка на «Постоплате» (см. balance_paid). */
-export type PaymentPlan = 'full' | 'advance' | 'postpay'
+ * Значения совпадают с backend enum `app.clients.models.PaymentPlan` дословно
+ * (регрессия 0018 — раньше фронт слал свои короткие ключи `full`/`advance`/
+ * `postpay`, бэк ждал `full_prepayment`/`advance_then_balance`/`post_payment`,
+ * запрос падал 422). `advance_then_balance` требует `advance_amount`;
+ * `advance_then_balance` и `post_payment` подразумевают приём остатка на
+ * «Постоплате» (см. balance_paid). */
+export type PaymentPlan = 'full_prepayment' | 'advance_then_balance' | 'post_payment'
 
 export const PAYMENT_PLANS: { key: PaymentPlan; label: string }[] = [
-  { key: 'full', label: 'Полная предоплата' },
-  { key: 'advance', label: 'Аванс + оплата после получения' },
-  { key: 'postpay', label: 'Оплата после получения' },
+  { key: 'full_prepayment', label: 'Полная предоплата' },
+  { key: 'advance_then_balance', label: 'Аванс + оплата после получения' },
+  { key: 'post_payment', label: 'Оплата после получения' },
 ]
 
 export function paymentPlanLabel(plan: PaymentPlan | null): string {
@@ -30,7 +34,7 @@ export function paymentPlanLabel(plan: PaymentPlan | null): string {
 
 /** true — по плану есть остаток, который принимают уже после получения дома. */
 export function planHasBalance(plan: PaymentPlan | null): boolean {
-  return plan === 'advance' || plan === 'postpay'
+  return plan === 'advance_then_balance' || plan === 'post_payment'
 }
 
 export const CLIENT_STAGES: { key: ClientStage; label: string }[] = [
@@ -90,7 +94,7 @@ export interface Client {
   final_price: number | null
   installation_address: string | null
   payment_plan: PaymentPlan | null
-  /** Сумма аванса — только для payment_plan === 'advance', меньше final_price. */
+  /** Сумма аванса — только для payment_plan === 'advance_then_balance', меньше final_price. */
   advance_amount: number | null
   contract_file: FileAsset | null
   house_project_file: FileAsset | null

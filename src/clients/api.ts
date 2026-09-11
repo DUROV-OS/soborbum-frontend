@@ -36,7 +36,7 @@ export interface DocumentsUpdateInput {
   installation_address?: string
   houses_count?: number
   payment_plan?: PaymentPlan
-  /** Обязателен для payment_plan === 'advance', меньше final_price. */
+  /** Обязателен для payment_plan === 'advance_then_balance', меньше final_price. */
   advance_amount?: number
 }
 
