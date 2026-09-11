@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Calculator, Plus, Upload } from 'lucide-react'
+import { Calculator, Plus, Trash2, Upload } from 'lucide-react'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { DataTable } from '@/shared/ui/DataTable'
@@ -36,11 +37,23 @@ export function AccountingPage() {
   const load = useAccountingStore((s) => s.load)
   const setFilters = useAccountingStore((s) => s.setFilters)
   const resetFilters = useAccountingStore((s) => s.resetFilters)
+  const remove = useAccountingStore((s) => s.remove)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
 
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [tab, setTab] = useState<'register' | 'salary'>('register')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [listError, setListError] = useState<string | null>(null)
+
+  async function handleDeleteRow(id: number) {
+    if (!window.confirm('Удалить проводку? Отменить нельзя.')) return
+    setDeletingId(id)
+    const result = await remove(id)
+    setDeletingId(null)
+    setListError(result.ok ? null : result.reason ?? 'Не удалось удалить проводку')
+  }
 
   useEffect(() => {
     load()
@@ -202,6 +215,28 @@ export function AccountingPage() {
                   header: 'Статус',
                   accessor: (m) => <Chip tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Chip>,
                 },
+                ...(isAdmin
+                  ? [
+                      {
+                        header: '',
+                        accessor: (m: (typeof movements)[number]) =>
+                          m.status === 'draft' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteRow(m.id)
+                              }}
+                              disabled={deletingId === m.id}
+                              aria-label="Удалить проводку"
+                              className="rounded-pill p-1 text-muted hover:bg-surface-muted hover:text-danger"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : null,
+                      },
+                    ]
+                  : []),
               ]}
               rows={movements}
               keyOf={(m) => String(m.id)}
@@ -210,6 +245,7 @@ export function AccountingPage() {
               emptyLabel="Проводок пока нет"
             />
           )}
+          {listError && <p className="mt-2 text-[12px] text-danger">{listError}</p>}
         </>
       )}
 
