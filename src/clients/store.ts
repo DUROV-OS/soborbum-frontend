@@ -28,6 +28,7 @@ interface ClientsState {
   updateNote: (id: number, noteId: number, text: string) => Promise<ActionResult>
   deleteNote: (id: number, noteId: number) => Promise<ActionResult>
   advance: (id: number) => Promise<ActionResult>
+  deleteClient: (id: number) => Promise<ActionResult>
 }
 
 function reasonOf(error: unknown): string {
@@ -92,5 +93,15 @@ export const useClientsStore = create<ClientsState>((set, get) => {
     addNote: (id, text) => applyNoteMutation(id, () => clientsApi.addNote(id, text)),
     updateNote: (id, noteId, text) => applyNoteMutation(id, () => clientsApi.updateNote(id, noteId, text)),
     deleteNote: (id, noteId) => applyNoteMutation(id, () => clientsApi.deleteNote(id, noteId)),
+
+    deleteClient: async (id) => {
+      try {
+        await clientsApi.deleteClient(id)
+        set({ clients: get().clients.filter((c) => c.id !== id) })
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: reasonOf(error) }
+      }
+    },
   }
 })
