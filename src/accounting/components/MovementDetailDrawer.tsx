@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
@@ -27,6 +28,7 @@ export function MovementDetailDrawer({
 }) {
   const changeStatus = useAccountingStore((s) => s.changeStatus)
   const remove = useAccountingStore((s) => s.remove)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
@@ -151,12 +153,14 @@ export function MovementDetailDrawer({
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => setCancelling(true)}>
                   Отменить
                 </Button>
-                {movement.status === 'draft' && (
+                {movement.status === 'draft' && isAdmin && (
                   <Button
                     variant="ghost"
                     size="sm"
                     disabled={busy}
-                    onClick={() => run(() => remove(id), true)}
+                    onClick={() => {
+                      if (window.confirm('Удалить черновик проводки? Отменить нельзя.')) run(() => remove(id), true)
+                    }}
                   >
                     Удалить черновик
                   </Button>
