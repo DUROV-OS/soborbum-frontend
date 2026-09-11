@@ -25,6 +25,16 @@ const overview = {
   ],
   widgets: [widget('production', 'Производственных заказов', '4'), widget('production', 'Модули ждут материалы', '2', 'warning'), widget('tasks', 'Открытых задач', '8'), widget('tasks', 'Просроченных задач', '3', 'warning'), widget('warehouse', 'Позиций на складе', '24'), widget('warehouse', 'Позиций требуют пополнения', '3', 'warning')],
 }
+const aiClient = {
+  id: 23, cycle_id: 23, stage: 'lead', created_at: '2026-08-01T08:00:00Z',
+  full_name: 'Волкова Волкова', phone: '+7 900 222-22-22', email: 'client23@example.test',
+  contacts: [], max_chat_id: null, order_type: null, wishes_description: null, estimated_price: null,
+  house_area: null, layout_notes: null, project_locked_at: null, houses_count: 1, final_price: null,
+  installation_address: null, payment_plan: null, advance_amount: null, contract_file: null,
+  house_project_file: null, documents_locked_at: null, is_paid: null, payment_locked_at: null,
+  balance_paid: null, balance_paid_at: null, notes: [],
+}
+let lastAskStreamBody = null
 const agentStats = {
   week: [], routing: [], traces: [],
   legal: { allow: 0, allow_with_conditions: 0, escalate_human: 0, block: 0 },
@@ -70,6 +80,31 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       { id: 501, title: 'Клиент «Иванов И.»: перевести со стадии на следующую', description: null, deadline: null, status: 'ready', created_at: '2026-06-01T08:00:00Z', module_id: null, link_type: 'client_stage', link_id: 11, link_meta: { stage: 'contract' }, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
     ]
     else if (url.pathname === '/api/ai/chats') body = []
+    else if (url.pathname === '/api/clients/' && route.request().method() === 'GET') body = [aiClient]
+    else if (url.pathname === '/api/ai/clients/analytics') body = { section: 'clients', generated_at: '2026-09-05T09:30:00Z', summary: 'Отклонений нет.', status: 'green' }
+    else if (url.pathname === '/api/ai/clients/ask/stream' && route.request().method() === 'POST') {
+      lastAskStreamBody = route.request().postDataJSON()
+      const sse = ': open\n\nevent: done\ndata: {"type":"done","chat_id":1}\n\nevent: end\ndata: {}\n\n'
+      await route.fulfill({ status: 200, contentType: 'text/event-stream', body: sse })
+      return
+    }
+    else if (url.pathname === '/api/ai/chats/1') body = {
+      id: 1, domain: 'clients', mode: 'require_approval', title: null, created_at: '2026-09-05T09:30:00Z',
+      messages: [
+        {
+          id: 1, role: 'user', created_at: '2026-09-05T09:30:00Z', tool_resolutions: null,
+          content: [
+            { type: 'context_note', note: '[client_id=23, Волкова Волкова] ' },
+            { type: 'text', text: 'Какая стадия у клиента?' },
+          ],
+        },
+        {
+          id: 2, role: 'assistant', created_at: '2026-09-05T09:30:05Z', tool_resolutions: null,
+          content: [{ type: 'text', text: 'Клиент на стадии «Лид».' }],
+        },
+      ],
+    }
+    else if (url.pathname === '/api/ai/pending-actions') body = []
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   })
@@ -143,6 +178,18 @@ try {
   assert.equal(await owner.page.getByText('Быстрый вход (демо)', { exact: true }).count(), 0)
   checks.push('Logout clears token and screen state; no demo account switch is exposed')
   await owner.context.close()
+
+  const clientAi = await openAs(admin, '/clients/23')
+  await clientAi.page.getByRole('heading', { name: 'Волкова Волкова' }).waitFor()
+  await clientAi.page.getByRole('button', { name: 'Спросить ИИ' }).click()
+  await clientAi.page.getByLabel('Сообщение Марине', { exact: true }).fill('Какая стадия у клиента?')
+  await clientAi.page.getByRole('button', { name: 'Отправить сообщение' }).click()
+  await clientAi.page.getByText('Клиент на стадии «Лид».', { exact: true }).waitFor()
+  assert.equal(lastAskStreamBody?.message, 'Какая стадия у клиента?')
+  assert(lastAskStreamBody?.context_note?.includes('client_id=23'))
+  assert.equal(await clientAi.page.getByText(/client_id=/).count(), 0)
+  checks.push('Client context reaches Marina as a separate field, never as visible chat text (regression 0017)')
+  await clientAi.context.close()
 
   const mobile = await openAs(admin, '/today', { width: 390, height: 844 })
   await mobile.page.getByText('Проверить просроченные задачи', { exact: true }).waitFor()
