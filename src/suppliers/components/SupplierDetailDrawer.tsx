@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
@@ -31,6 +32,8 @@ export function SupplierDetailDrawer({
   const removePriceItem = useSuppliersStore((s) => s.removePriceItem)
   const addNote = useSuppliersStore((s) => s.addNote)
   const removeNote = useSuppliersStore((s) => s.removeNote)
+  const removeSupplier = useSuppliersStore((s) => s.remove)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
@@ -45,6 +48,7 @@ export function SupplierDetailDrawer({
   const [adding, setAdding] = useState(false)
   const [noteDraft, setNoteDraft] = useState('')
   const [noteBusy, setNoteBusy] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!supplier) return
@@ -104,6 +108,19 @@ export function SupplierDetailDrawer({
     const result = await addNote(supplierId_, noteDraft.trim())
     setNoteBusy(false)
     if (result.ok) setNoteDraft('')
+  }
+
+  async function handleDeleteSupplier() {
+    if (!supplier) return
+    if (!window.confirm(`Удалить поставщика «${supplier.name}»? Отменить нельзя.`)) return
+    setDeleting(true)
+    const result = await removeSupplier(supplierId_)
+    if (result.ok) {
+      onClose()
+      return
+    }
+    setDeleting(false)
+    setProfileError(result.reason ?? 'Не удалось удалить поставщика')
   }
 
   return (
@@ -198,6 +215,18 @@ export function SupplierDetailDrawer({
             <Button size="sm" onClick={saveProfile} disabled={!profileDirty || savingProfile || !name.trim()}>
               {savingProfile ? 'Сохранение…' : 'Сохранить'}
             </Button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleDeleteSupplier}
+                disabled={deleting}
+                aria-label="Удалить поставщика"
+                title="Удалить поставщика"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
             {profileError && <span className="text-[12px] text-danger">{profileError}</span>}
           </div>
         </section>
