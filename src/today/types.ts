@@ -8,13 +8,31 @@ export interface DashboardWidget {
   tone: WidgetTone
 }
 
+export interface DashboardAction {
+  id: string
+  section: string
+  title: string
+  description: string
+  href: string
+  count: number
+  tone: WidgetTone
+}
+
 export interface TodayDashboard {
   generated_at: string
   summary: string
   widgets: DashboardWidget[]
-  actions?: { id: string; section: string; title: string; description: string; href: string; count: number; tone: WidgetTone }[]
+  actions?: DashboardAction[]
   source?: 'database'
   ai_configured?: boolean
+}
+
+/** GET /api/dashboard/today/section/{section} — один раздел «Работы» отдельным
+ * кэшируемым (6ч) запросом, вместо общего /today на всю страницу. */
+export interface SectionSignal {
+  section: string
+  action: DashboardAction | null
+  generated_at: string
 }
 
 export interface AktualnoeItem {
