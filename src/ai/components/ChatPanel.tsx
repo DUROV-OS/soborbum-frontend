@@ -13,14 +13,16 @@ import { PendingActionModal } from './PendingActionModal'
 
 export function ChatPanel({
   contextLabel,
-  contextPrefix,
+  contextNote,
   onDeleted,
   onChatCreated,
   onBack,
   initialMessage,
 }: {
   contextLabel?: string
-  contextPrefix?: string
+  /** Что обсуждается («[client_id=6, Иванов И.]») — едет Марине отдельным полем
+   * запроса, не приклеивается к тексту сообщения (иначе видно в чате, регрессия 0017). */
+  contextNote?: string
   onDeleted?: () => void
   /** Зовётся, когда первое сообщение только что создало чат — нужно, чтобы страница отразила id в URL. */
   onChatCreated?: (chatId: number) => void
@@ -67,8 +69,7 @@ export function ChatPanel({
 
   async function handleSend(message: string) {
     const isFirstMessage = !chat
-    const finalMessage = isFirstMessage && contextPrefix ? contextPrefix + message : message
-    const response = await send(finalMessage)
+    const response = await send(message, isFirstMessage ? contextNote : undefined)
     if (response && isFirstMessage) onChatCreated?.(response.chat_id)
     if (response && response.status === 'pending_approval' && response.pending_actions.length > 0) {
       setModalActions(response.pending_actions)

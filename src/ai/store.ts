@@ -34,7 +34,7 @@ interface AiState {
   loadChats: (domain?: ChatDomain) => Promise<void>
   openChat: (id: number) => Promise<void>
   startDraft: (domain: ChatDomain, mode?: ChatMode) => void
-  send: (message: string) => Promise<AskResponse | null>
+  send: (message: string, contextNote?: string) => Promise<AskResponse | null>
   addAttachment: (file: File) => Promise<void>
   removeAttachment: (id: number) => void
   setMode: (mode: ChatMode) => Promise<void>
@@ -104,7 +104,7 @@ export const useAiStore = create<AiState>((set, get) => {
       })
     },
 
-    send: async (message) => {
+    send: async (message, contextNote) => {
       const { activeChat, draftDomain, draftMode, attachments } = get()
       const domain = activeChat?.domain ?? draftDomain
       if (!domain) return null
@@ -115,6 +115,7 @@ export const useAiStore = create<AiState>((set, get) => {
         message,
         file_ids: attachments.map((a) => a.id),
         mode,
+        context_note: contextNote,
       }
       set({
         sending: true,
