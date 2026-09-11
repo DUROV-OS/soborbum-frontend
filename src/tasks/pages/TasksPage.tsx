@@ -20,6 +20,10 @@ import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
 
 type SubTab = 'mine' | 'all'
 
+function isClaimable(task: Task): boolean {
+  return task.status === 'ready' && task.assignees.length === 0
+}
+
 type SourceFilter = 'all' | 'manual' | 'clients' | 'production' | 'marketing' | 'warehouse'
 
 function sourceOf(task: Task): SourceFilter {
@@ -82,9 +86,12 @@ export function TasksPage() {
   const tasks = useTasksStore((s) => s.tasks)
   const loading = useTasksStore((s) => s.loading)
   const load = useTasksStore((s) => s.load)
+  const claim = useTasksStore((s) => s.claim)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
   const [subTab, setSubTab] = useState<SubTab>('mine')
+  const [claimingId, setClaimingId] = useState<number | null>(null)
+  const [claimError, setClaimError] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   // Борд задач по умолчанию — за всё время: авто-задачи из разделов (смена
   // стадии клиента, контента, нехватка на складе) создаются без дедлайна, и
@@ -94,8 +101,16 @@ export function TasksPage() {
   const onboarding = useSectionOnboarding('tasks')
 
   useEffect(() => {
-    load()
-  }, [load])
+    load({ scope: subTab === 'all' ? 'all' : 'mine' })
+  }, [load, subTab])
+
+  async function handleClaim(taskId: number) {
+    setClaimingId(taskId)
+    setClaimError(null)
+    const result = await claim(taskId)
+    if (!result.ok) setClaimError(result.reason ?? 'Не удалось взять задачу')
+    setClaimingId(null)
+  }
 
   const range = dateFilterRange(dateFilter)
   const q = query.trim().toLowerCase()
@@ -140,6 +155,8 @@ export function TasksPage() {
 
       {subTab === 'mine' && <MyTasksPanel onOpenTask={setSelected} />}
 
+      {subTab === 'mine' && claimError && <p className="mb-3 text-[13px] text-danger">{claimError}</p>}
+
       {subTab === 'all' && (
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
@@ -175,6 +192,19 @@ export function TasksPage() {
                 <span className="text-[11px] text-muted">{new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
               )}
             </div>
+            {subTab === 'mine' && isClaimable(task) && (
+              <Button
+                size="sm"
+                className="mt-2 h-7 px-2.5 text-[12px]"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleClaim(task.id)
+                }}
+                disabled={claimingId === task.id}
+              >
+                {claimingId === task.id ? 'Беру…' : 'Взять задачу'}
+              </Button>
+            )}
           </div>
         )}
       />

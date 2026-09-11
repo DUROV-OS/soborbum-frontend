@@ -42,14 +42,21 @@ export function KanbanBoard<T, K extends string>({
   const renderCards = (columnItems: T[]) => (
     <>
       {columnItems.map((item) => (
-        <button
+        <div
           key={keyOf(item)}
-          type="button"
+          role="button"
+          tabIndex={0}
           onClick={() => onCardClick?.(item)}
-          className="rounded-md border border-border bg-surface p-3 text-left transition-colors hover:border-brand/40"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onCardClick?.(item)
+            }
+          }}
+          className="cursor-pointer rounded-md border border-border bg-surface p-3 text-left transition-colors hover:border-brand/40"
         >
           {renderCard(item)}
-        </button>
+        </div>
       ))}
       {columnItems.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-3 text-center text-[12px] text-muted">

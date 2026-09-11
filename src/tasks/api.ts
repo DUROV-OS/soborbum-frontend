@@ -3,7 +3,10 @@ import { Task, TaskLinkType, TaskStatus } from './types'
 
 const SECTION = 'tasks'
 
+export type TaskScope = 'mine' | 'claimable' | 'all'
+
 export interface TaskFilters {
+  scope?: TaskScope
   assignee_id?: number
   reviewer_id?: number
   module_id?: number
@@ -47,4 +50,9 @@ export function setStatus(id: number, status: TaskStatus): Promise<Task> {
 /** DELETE /api/tasks/:id */
 export function deleteTask(id: number): Promise<void> {
   return apiRequest<void>({ section: SECTION, path: `/${id}`, method: 'DELETE' })
+}
+
+/** POST /api/tasks/:id/claim */
+export function claimTask(id: number): Promise<Task> {
+  return apiRequest<Task>({ section: SECTION, path: `/${id}/claim`, method: 'POST' })
 }
