@@ -91,7 +91,7 @@ export function ChatPanel({
   }
 
   return (
-    <div className="flex h-full min-w-0 min-h-0 flex-col">
+    <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {onBack && (

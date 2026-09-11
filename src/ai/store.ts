@@ -2,7 +2,17 @@ import { create } from 'zustand'
 import { ApiError, StreamEvent } from '@/shared/lib/httpClient'
 import * as aiApi from './api'
 import { applyStreamEvent, StreamBubble } from './stream'
-import { AskRequest, AskResponse, ChatDetailOut, ChatDomain, ChatMode, ChatOut, FileAssetOut, PendingActionOut } from './types'
+import {
+  AgentActivityOut,
+  AskRequest,
+  AskResponse,
+  ChatDetailOut,
+  ChatDomain,
+  ChatMode,
+  ChatOut,
+  FileAssetOut,
+  PendingActionOut,
+} from './types'
 
 function reasonOf(error: unknown): string {
   if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
@@ -30,8 +40,12 @@ interface AiState {
   attachments: FileAssetOut[]
   uploadingAttachment: boolean
   error: string | null
+  /** Панель «Действия агента» справа от чата — общий лог, не зависит от activeChat. */
+  agentActivity: AgentActivityOut[]
+  agentActivityLoading: boolean
 
   loadChats: (domain?: ChatDomain) => Promise<void>
+  loadAgentActivity: () => Promise<void>
   openChat: (id: number) => Promise<void>
   startDraft: (domain: ChatDomain, mode?: ChatMode) => void
   send: (message: string, contextNote?: string) => Promise<AskResponse | null>
@@ -72,6 +86,18 @@ export const useAiStore = create<AiState>((set, get) => {
     attachments: [],
     uploadingAttachment: false,
     error: null,
+    agentActivity: [],
+    agentActivityLoading: false,
+
+    loadAgentActivity: async () => {
+      set({ agentActivityLoading: true })
+      try {
+        const agentActivity = await aiApi.listAgentActivity()
+        set({ agentActivity, agentActivityLoading: false })
+      } catch (error) {
+        set({ agentActivityLoading: false, error: reasonOf(error) })
+      }
+    },
 
     loadChats: async (domain) => {
       set({ chatsLoading: true })
