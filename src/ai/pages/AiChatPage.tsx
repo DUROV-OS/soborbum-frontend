@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/Button'
 import { HelpButton } from '@/shared/ui/HelpButton'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
+import { AgentActivityPanel } from '../components/AgentActivityPanel'
 import { ChatPanel } from '../components/ChatPanel'
 import { useAiStore } from '../store'
 import { ChatDomain, DOMAIN_LABEL, DOMAIN_TO_SECTION } from '../types'
@@ -175,6 +176,8 @@ export function AiChatPage() {
           }}
         />
       </div>
+
+      <AgentActivityPanel />
 
       <OnboardingDialog
         open={onboarding.open}
