@@ -32,6 +32,15 @@ export interface PriceItem {
   updated_at: string
 }
 
+export interface SupplierNote {
+  id: number
+  supplier_id: number
+  author_id: number
+  author_name: string | null
+  text: string
+  created_at: string
+}
+
 export interface Supplier {
   id: number
   name: string
@@ -43,6 +52,8 @@ export interface Supplier {
   created_at: string
   price_items: PriceItem[]
   price_items_count: number
+  /** Свободные заметки, новые сверху. */
+  notes: SupplierNote[]
 }
 
 /** Ответ POST /api/warehouse/suppliers/:id/price-items/import (задача 0011-g). */
@@ -62,8 +73,20 @@ export interface PriceListImportResult {
   }
   /** Необязательные поля, для которых в файле не нашлось колонки. */
   missing_fields: string[]
-  /** id созданной задачи «дозаполнить прайс», если понадобилась. */
-  task_id: number | null
+  /** Есть смысл предложить задачу «дозаполнить» (не хватает полей / есть пропуски). */
+  backfill_suggested: boolean
+}
+
+export interface AiFillCategoryResult {
+  supplier: Supplier
+  filled: number
+  skipped: number
+}
+
+export interface LeadTimeQuestionDraft {
+  message: string
+  materials: string[]
+  chat_id: number
 }
 
 export const IMPORT_FIELD_LABEL: Record<string, string> = {
