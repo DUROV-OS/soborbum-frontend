@@ -1,4 +1,4 @@
-import { apiRequest } from '@/shared/lib/httpClient'
+import { apiRequest, downloadFile } from '@/shared/lib/httpClient'
 import {
   MoneyAssessment,
   MoneyDirection,
@@ -7,6 +7,7 @@ import {
   MoneyMovementStatus,
   MoneySourceKind,
   MoneySubkind,
+  PaymentImportResult,
 } from './types'
 
 const SECTION = 'accounting'
@@ -75,4 +76,46 @@ export function changeStatus(
 /** DELETE /api/accounting/money-movements/:id — только для draft */
 export function deleteMovement(id: number): Promise<void> {
   return apiRequest<void>({ section: SECTION, path: `/money-movements/${id}`, method: 'DELETE' })
+}
+
+// --- Импорт платежей таблицей (задача 0011-k) ---
+
+/** POST /api/accounting/money-movements/import (multipart) */
+export function importPayments(file: File): Promise<PaymentImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiRequest<PaymentImportResult>({
+    section: SECTION,
+    path: '/money-movements/import',
+    method: 'POST',
+    form,
+  })
+}
+
+/** POST /api/accounting/money-movements/import/ai-fill-subkind */
+export function aiFillSubkind(movement_ids: number[]): Promise<{ updated: number; skipped: number }> {
+  return apiRequest({
+    section: SECTION,
+    path: '/money-movements/import/ai-fill-subkind',
+    method: 'POST',
+    body: { movement_ids },
+  })
+}
+
+/** POST /api/accounting/money-movements/import/backfill-task */
+export function createImportBackfillTask(
+  movement_ids: number[],
+  missing_fields: string[],
+): Promise<{ task_id: number }> {
+  return apiRequest({
+    section: SECTION,
+    path: '/money-movements/import/backfill-task',
+    method: 'POST',
+    body: { movement_ids, missing_fields },
+  })
+}
+
+/** GET /api/accounting/money-movements/import/template */
+export function downloadImportTemplate(): Promise<void> {
+  return downloadFile(SECTION, '/money-movements/import/template', 'shablon_platezhey.xlsx')
 }
