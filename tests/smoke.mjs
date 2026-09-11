@@ -25,6 +25,16 @@ const overview = {
   ],
   widgets: [widget('production', 'Производственных заказов', '4'), widget('production', 'Модули ждут материалы', '2', 'warning'), widget('tasks', 'Открытых задач', '8'), widget('tasks', 'Просроченных задач', '3', 'warning'), widget('warehouse', 'Позиций на складе', '24'), widget('warehouse', 'Позиций требуют пополнения', '3', 'warning')],
 }
+const documentsClient = {
+  id: 22, cycle_id: 22, stage: 'approval', created_at: '2026-08-01T08:00:00Z',
+  full_name: 'Смирнова Смирнова', phone: '+7 900 111-11-11', email: 'client22@example.test',
+  contacts: [], max_chat_id: null, order_type: null, wishes_description: null, estimated_price: null,
+  house_area: null, layout_notes: null, project_locked_at: '2026-08-05T08:00:00Z', houses_count: 1,
+  final_price: null, installation_address: null, payment_plan: null, advance_amount: null,
+  contract_file: null, house_project_file: null, documents_locked_at: null, is_paid: null,
+  payment_locked_at: null, balance_paid: null, balance_paid_at: null, notes: [],
+}
+let lastDocumentsPatchBody = null
 const agentStats = {
   week: [], routing: [], traces: [],
   legal: { allow: 0, allow_with_conditions: 0, escalate_human: 0, block: 0 },
@@ -70,6 +80,12 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       { id: 501, title: 'Клиент «Иванов И.»: перевести со стадии на следующую', description: null, deadline: null, status: 'ready', created_at: '2026-06-01T08:00:00Z', module_id: null, link_type: 'client_stage', link_id: 11, link_meta: { stage: 'contract' }, assignees: [], reviewers: [], images: [], depends_on_ids: [] },
     ]
     else if (url.pathname === '/api/ai/chats') body = []
+    else if (url.pathname === '/api/clients/' && route.request().method() === 'GET') body = [documentsClient]
+    else if (url.pathname === '/api/clients/22/documents' && route.request().method() === 'PATCH') {
+      lastDocumentsPatchBody = route.request().postDataJSON()
+      documentsClient.payment_plan = lastDocumentsPatchBody.payment_plan
+      body = documentsClient
+    }
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   })
@@ -143,6 +159,15 @@ try {
   assert.equal(await owner.page.getByText('Быстрый вход (демо)', { exact: true }).count(), 0)
   checks.push('Logout clears token and screen state; no demo account switch is exposed')
   await owner.context.close()
+
+  const documents = await openAs(admin, '/clients/22')
+  await documents.page.getByRole('heading', { name: 'Смирнова Смирнова' }).waitFor()
+  await documents.page.getByLabel('Формат расчёта').selectOption({ label: 'Полная предоплата' })
+  await documents.page.getByRole('button', { name: 'Сохранить' }).click()
+  await documents.page.getByRole('button', { name: 'Сохранить' }).waitFor()
+  assert.equal(lastDocumentsPatchBody?.payment_plan, 'full_prepayment')
+  checks.push('Client documents panel sends the backend payment_plan value, not the old frontend-only key (regression 0018)')
+  await documents.context.close()
 
   const mobile = await openAs(admin, '/today', { width: 390, height: 844 })
   await mobile.page.getByText('Проверить просроченные задачи', { exact: true }).waitFor()
