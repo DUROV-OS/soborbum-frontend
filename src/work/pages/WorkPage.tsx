@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { ArrowUpRight, Briefcase, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
+import { useTodayStore } from '@/today/store'
+import { WidgetTone } from '@/today/types'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { SECTIONS, SectionId } from '@/shared/sections'
 
@@ -8,32 +11,32 @@ type Heat = 'red' | 'amber' | 'green'
 
 /**
  * Раздел «Работа» — хаб. Плоская сетка крупных виджетов, каждый ведёт в свой
- * раздел. Внутри виджета — блок с ответом Марины «стоит заняться: …» и
- * подсветкой по тому, насколько «горит» раздел (красный / жёлтый / зелёный).
+ * раздел. Внутри виджета — блок «стоит заняться», если по разделу есть
+ * реальный сигнал внимания из `GET /api/dashboard/today` (та же детерминированная
+ * сводка, что и на «Пульсе», см. `app.dashboard.overview` — никаких выдуманных
+ * ИИ-советов: если для раздела нет посчитанного по базе действия, блок не
+ * показывается вовсе, а не заполняется общей фразой).
  *
- * heat/advice сейчас замоканы. `badge` — ярлык на плитке ('dev' у «Бухгалтерии»:
- * реестр готов, импорт/интеграции в работе). `public` — плитка видна всем, минуя
- * `hasAccess` (у «Поставщиков» — доступ к разделу отдельным грантом пока не
- * заведён).
+ * `badge` — ярлык на плитке ('dev' у «Бухгалтерии»: реестр готов, интеграции
+ * ещё в работе). `public` — плитка видна всем, минуя `hasAccess` (у
+ * «Поставщиков» доступ отдельным грантом пока не заведён).
  */
 const TILES: {
   id: SectionId
   note: string
-  heat: Heat
-  advice: string
-  badge?: 'мок' | 'dev'
+  badge?: 'dev'
   public?: boolean
 }[] = [
-  { id: 'cycle', note: 'Все клиенты по этапам сделки', heat: 'green', advice: 'всё движется по плану, ручного вмешательства не требуется' },
-  { id: 'clients', note: 'Карточки клиентов, оплаты и документы', heat: 'amber', advice: '2 клиента на этапе оплаты без подтверждённого поступления' },
-  { id: 'production', note: 'Заказы в цехе и потребность в материалах', heat: 'red', advice: 'модули DH-83 ждут материалы — линия простаивает второй день' },
-  { id: 'warehouse', note: 'Остатки, приход и именованный резерв', heat: 'red', advice: 'по 3 позициям свободный остаток 0 при открытой потребности' },
-  { id: 'installation', note: 'Доставка и монтаж на объектах клиентов', heat: 'amber', advice: 'бригада освободится завтра — подтвердите дату выезда к Самофалову' },
-  { id: 'marketing', note: 'Заявки, каналы и рекламные кампании', heat: 'green', advice: 'план публикаций на неделю согласован, лиды в норме' },
-  { id: 'meetings', note: 'Прошедшие совещания, заметки и решения', heat: 'amber', advice: 'по совещанию от 9 сентября 4 задачи без исполнителя' },
-  { id: 'chats', note: 'Все переписки с клиентами и командой в MAX', heat: 'amber', advice: '5 диалогов с клиентами без ответа более суток' },
-  { id: 'accounting', note: 'Реестр движения денег: приход, расход, статьи и статусы', heat: 'amber', advice: 'проверьте черновики проводок, ожидающие согласования', badge: 'dev' },
-  { id: 'suppliers', note: 'Контакты, прайс-листы и оплаты поставщикам', heat: 'green', advice: 'прайсы актуальны, просроченных оплат нет', public: true },
+  { id: 'cycle', note: 'Все клиенты по этапам сделки' },
+  { id: 'clients', note: 'Карточки клиентов, оплаты и документы' },
+  { id: 'production', note: 'Заказы в цехе и потребность в материалах' },
+  { id: 'warehouse', note: 'Остатки, приход и именованный резерв' },
+  { id: 'installation', note: 'Доставка и монтаж на объектах клиентов' },
+  { id: 'marketing', note: 'Заявки, каналы и рекламные кампании' },
+  { id: 'meetings', note: 'Прошедшие совещания, заметки и решения' },
+  { id: 'chats', note: 'Все переписки с клиентами и командой в MAX' },
+  { id: 'accounting', note: 'Реестр движения денег: приход, расход, статьи и статусы', badge: 'dev' },
+  { id: 'suppliers', note: 'Контакты, прайс-листы и оплаты поставщикам', public: true },
 ]
 
 const HEAT_BLOCK: Record<Heat, string> = {
@@ -47,20 +50,36 @@ const HEAT_TEXT: Record<Heat, string> = {
   green: 'text-success',
 }
 
+function heatOf(tone: WidgetTone): Heat {
+  if (tone === 'danger') return 'red'
+  if (tone === 'warning') return 'amber'
+  return 'green'
+}
+
 export function WorkPage() {
   const hasAccess = useAuthStore((s) => s.hasAccess)
+  const data = useTodayStore((s) => s.data)
+  const load = useTodayStore((s) => s.load)
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const actions = data?.actions ?? []
   const tiles = TILES.flatMap((tile) => {
     const section = SECTIONS.find((s) => s.id === tile.id)
     if (!section) return []
     // public-плитки видят все; остальные — по доступу
-    return tile.public || hasAccess(tile.id) ? [{ ...tile, section }] : []
+    if (!(tile.public || hasAccess(tile.id))) return []
+    const action = actions.find((a) => a.section === tile.id)
+    return [{ ...tile, section, action }]
   })
 
   return (
     <div>
       <div className="mb-5">
         <h1 className="text-[22px] font-medium text-ink">Работа</h1>
-        <p className="mt-1 text-[13px] text-muted">Разделы компании — процессы, исполнение и контроль. У каждого — короткая сводка от Марины.</p>
+        <p className="mt-1 text-[13px] text-muted">Разделы компании — процессы, исполнение и контроль. Сигналы внимания — по реальным данным.</p>
       </div>
 
       {tiles.length === 0 ? (
@@ -71,8 +90,9 @@ export function WorkPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {tiles.map(({ section, note, heat, advice, badge }) => {
+          {tiles.map(({ section, note, badge, action }) => {
             const Icon = section.icon
+            const heat = action ? heatOf(action.tone) : null
             return (
               <NavLink
                 key={section.id}
@@ -93,13 +113,15 @@ export function WorkPage() {
                   </div>
                 </div>
 
-                <div className={`mt-4 flex-1 rounded-lg border-l-[3px] p-3.5 ${HEAT_BLOCK[heat]}`}>
-                  <div className={`mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold ${HEAT_TEXT[heat]}`}>
-                    <Sparkles size={14} className="text-ai-accent" />
-                    стоит заняться:
+                {action && heat && (
+                  <div className={`mt-4 flex-1 rounded-lg border-l-[3px] p-3.5 ${HEAT_BLOCK[heat]}`}>
+                    <div className={`mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold ${HEAT_TEXT[heat]}`}>
+                      <Sparkles size={14} className="text-ai-accent" />
+                      стоит заняться:
+                    </div>
+                    <p className="text-[15px] leading-relaxed text-ink">{action.description} ({action.count})</p>
                   </div>
-                  <p className="text-[15px] leading-relaxed text-ink">{advice}</p>
-                </div>
+                )}
               </NavLink>
             )
           })}
