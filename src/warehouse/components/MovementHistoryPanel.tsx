@@ -34,7 +34,10 @@ export function MovementHistoryPanel() {
         columns={[
           { header: 'Дата', accessor: (m) => new Date(m.created_at).toLocaleString('ru-RU') },
           { header: 'Материал', accessor: (m) => materialTitle(m.warehouse_material_id) },
-          { header: 'Причина', accessor: (m) => MOVEMENT_REASON_LABEL[m.reason] },
+          {
+            header: 'Причина',
+            accessor: (m) => (m.note ? `${MOVEMENT_REASON_LABEL[m.reason]} — ${m.note}` : MOVEMENT_REASON_LABEL[m.reason]),
+          },
           {
             header: 'Изменение',
             align: 'right',
