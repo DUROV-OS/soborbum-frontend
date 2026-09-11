@@ -12,6 +12,7 @@ import {
   MoneyMovementStatus,
   MoneySourceKind,
   MoneySubkind,
+  PaymentImportResult,
 } from './types'
 
 export interface ActionResult {
@@ -56,6 +57,13 @@ interface AccountingState {
     reason?: string,
   ) => Promise<ActionResult>
   remove: (id: number) => Promise<ActionResult>
+  importPayments: (file: File) => Promise<ActionResult & { result?: PaymentImportResult }>
+  aiFillSubkind: (ids: number[]) => Promise<ActionResult & { updated?: number; skipped?: number }>
+  createImportBackfillTask: (
+    ids: number[],
+    missingFields: string[],
+  ) => Promise<ActionResult & { taskId?: number }>
+  downloadImportTemplate: () => Promise<ActionResult>
 
   // Раздел «Сотрудники» (0023): отдельный источник данных (salary-overview),
   // но проводки заводятся/переводятся через те же create/changeStatus выше.
@@ -145,6 +153,44 @@ export const useAccountingStore = create<AccountingState>((set, get) => ({
     try {
       await accountingApi.deleteMovement(id)
       set({ movements: get().movements.filter((m) => m.id !== id) })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  importPayments: async (file) => {
+    try {
+      const result = await accountingApi.importPayments(file)
+      await get().load()
+      return { ok: true, result }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  aiFillSubkind: async (ids) => {
+    try {
+      const res = await accountingApi.aiFillSubkind(ids)
+      await get().load()
+      return { ok: true, updated: res.updated, skipped: res.skipped }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  createImportBackfillTask: async (ids, missingFields) => {
+    try {
+      const res = await accountingApi.createImportBackfillTask(ids, missingFields)
+      return { ok: true, taskId: res.task_id }
+    } catch (error) {
+      return { ok: false, reason: reasonOf(error) }
+    }
+  },
+
+  downloadImportTemplate: async () => {
+    try {
+      await accountingApi.downloadImportTemplate()
       return { ok: true }
     } catch (error) {
       return { ok: false, reason: reasonOf(error) }

@@ -113,3 +113,45 @@ export interface EmployeeSalaryOverview {
   full_name: string
   open_movement: MoneyMovement | null
 }
+
+// --- Импорт платежей таблицей (задача 0011-k) ---
+
+export interface PaymentColumnMapping {
+  amount: string | null
+  amount_debit: string | null
+  amount_credit: string | null
+  direction_col: string | null
+  doc_date: string | null
+  counterparty: string | null
+  tax: string | null
+  external_number: string | null
+  subkind: string | null
+  payment_purpose: string | null
+}
+
+export interface PaymentImportResult {
+  imported: number
+  skipped: number
+  ai_used: boolean
+  note: string
+  column_mapping: PaymentColumnMapping
+  missing_fields: string[]
+  unmatched_source: number
+  preliminary_subkind: number
+  created_ids: number[]
+  backfill_suggested: boolean
+}
+
+export const IMPORT_FIELD_LABEL: Record<string, string> = {
+  amount: 'Сумма',
+  amount_debit: 'Расход',
+  amount_credit: 'Приход',
+  direction_col: 'Тип операции',
+  doc_date: 'Дата документа',
+  counterparty: 'Контрагент',
+  tax: 'НДС',
+  external_number: 'Номер документа',
+  subkind: 'Вид',
+  payment_purpose: 'Назначение платежа',
+  source: 'Источник (контрагент)',
+}
