@@ -9,13 +9,13 @@ export function AskAiDrawer({
   onClose,
   domain,
   contextLabel,
-  contextPrefix,
+  contextNote,
 }: {
   open: boolean
   onClose: () => void
   domain: ChatDomain
   contextLabel?: string
-  contextPrefix?: string
+  contextNote?: string
 }) {
   const startDraft = useAiStore((s) => s.startDraft)
 
@@ -30,7 +30,7 @@ export function AskAiDrawer({
       title={`Спросить ИИ · ${DOMAIN_LABEL[domain]}`}
       bodyClassName="flex-1 overflow-hidden"
     >
-      <ChatPanel contextLabel={contextLabel} contextPrefix={contextPrefix} onDeleted={onClose} />
+      <ChatPanel contextLabel={contextLabel} contextNote={contextNote} onDeleted={onClose} />
     </Drawer>
   )
 }

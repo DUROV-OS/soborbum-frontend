@@ -33,7 +33,7 @@ export function CycleDetailPage() {
           <AskAiButton
             domain="cycle"
             contextLabel={cycle.client ? `Клиент: ${cycle.client.full_name}` : `Цикл №${cycle.id}`}
-            contextPrefix={`[cycle_id=${cycle.id}${cycle.client ? `, client_id=${cycle.client.id}` : ''}] `}
+            contextNote={`[cycle_id=${cycle.id}${cycle.client ? `, client_id=${cycle.client.id}` : ''}] `}
           />
         </div>
         <Stepper steps={CYCLE_STAGES} currentKey={cycle.status} />

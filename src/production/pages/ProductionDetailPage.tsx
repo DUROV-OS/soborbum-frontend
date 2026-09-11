@@ -38,7 +38,7 @@ export function ProductionDetailPage() {
           )}
         </h1>
         <div className="flex gap-2 self-start">
-          <AskAiButton domain="production" contextLabel={`Производство №${production.id}`} contextPrefix={`[production_id=${production.id}] `} />
+          <AskAiButton domain="production" contextLabel={`Производство №${production.id}`} contextNote={`[production_id=${production.id}] `} />
           <Button size="sm" onClick={() => setCreating(true)}>
             <Plus size={16} />
             Модуль
