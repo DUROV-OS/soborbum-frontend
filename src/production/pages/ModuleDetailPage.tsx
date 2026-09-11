@@ -64,7 +64,7 @@ export function ModuleDetailPage() {
         <AskAiButton
           domain="production"
           contextLabel={`Модуль: ${module.name}`}
-          contextPrefix={`[module_id=${module.id}, production_id=${module.production_id}, ${module.name}] `}
+          contextNote={`[module_id=${module.id}, production_id=${module.production_id}, ${module.name}] `}
         />
       </div>
 

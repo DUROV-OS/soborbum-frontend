@@ -12,6 +12,9 @@ export interface AskRequest {
   message: string
   file_ids?: number[]
   mode?: ChatMode
+  /** Что обсуждается (например «[client_id=6, Иванов И.]») — отдельно от `message`,
+   * чтобы никогда не попасть в видимый текст сообщения (регрессия 0017). */
+  context_note?: string
 }
 
 /** Файл, прикреплённый к сообщению чата — см. POST /api/ai/files. */

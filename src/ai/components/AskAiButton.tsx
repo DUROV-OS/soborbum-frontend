@@ -8,11 +8,11 @@ import { AskAiDrawer } from './AskAiDrawer'
 export function AskAiButton({
   domain,
   contextLabel,
-  contextPrefix,
+  contextNote,
 }: {
   domain: ChatDomain
   contextLabel?: string
-  contextPrefix?: string
+  contextNote?: string
 }) {
   const hasAccess = useAuthStore((s) => s.hasAccess)
   const [open, setOpen] = useState(false)
@@ -30,7 +30,7 @@ export function AskAiButton({
         onClose={() => setOpen(false)}
         domain={domain}
         contextLabel={contextLabel}
-        contextPrefix={contextPrefix}
+        contextNote={contextNote}
       />
     </>
   )

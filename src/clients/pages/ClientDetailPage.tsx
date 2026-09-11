@@ -62,7 +62,7 @@ export function ClientDetailPage() {
             <AskAiButton
               domain="clients"
               contextLabel={`Клиент: ${client.full_name}`}
-              contextPrefix={`[client_id=${client.id}, ${client.full_name}] `}
+              contextNote={`[client_id=${client.id}, ${client.full_name}] `}
             />
             {next && (
               <Button size="sm" onClick={handleAdvance} disabled={advancing}>
