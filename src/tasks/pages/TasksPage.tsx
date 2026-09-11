@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { AskAiButton } from '@/ai/components/AskAiButton'
 import { SectionAnalyticsCard } from '@/ai/components/SectionAnalyticsCard'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { HelpButton } from '@/shared/ui/HelpButton'
@@ -87,6 +88,7 @@ export function TasksPage() {
   const loading = useTasksStore((s) => s.loading)
   const load = useTasksStore((s) => s.load)
   const claim = useTasksStore((s) => s.claim)
+  const canSeeAll = useAuthStore((s) => s.hasAccess('tasks_all'))
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
   const [subTab, setSubTab] = useState<SubTab>('mine')
@@ -101,8 +103,12 @@ export function TasksPage() {
   const onboarding = useSectionOnboarding('tasks')
 
   useEffect(() => {
-    load({ scope: subTab === 'all' ? 'all' : 'mine' })
-  }, [load, subTab])
+    if (!canSeeAll && subTab === 'all') setSubTab('mine')
+  }, [canSeeAll, subTab])
+
+  useEffect(() => {
+    load({ scope: subTab === 'all' && canSeeAll ? 'all' : 'mine' })
+  }, [load, subTab, canSeeAll])
 
   async function handleClaim(taskId: number) {
     setClaimingId(taskId)
@@ -142,16 +148,18 @@ export function TasksPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <Tabs
-          tabs={[
-            { key: 'mine' as SubTab, label: 'Мои задачи' },
-            { key: 'all' as SubTab, label: 'Все задачи' },
-          ]}
-          activeKey={subTab}
-          onChange={setSubTab}
-        />
-      </div>
+      {canSeeAll && (
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              { key: 'mine' as SubTab, label: 'Мои задачи' },
+              { key: 'all' as SubTab, label: 'Все задачи' },
+            ]}
+            activeKey={subTab}
+            onChange={setSubTab}
+          />
+        </div>
+      )}
 
       {subTab === 'mine' && <MyTasksPanel onOpenTask={setSelected} />}
 
