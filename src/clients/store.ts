@@ -11,6 +11,10 @@ export interface ActionResult {
 interface ClientsState {
   clients: Client[]
   loading: boolean
+  /** id клиента, чья стадия только что изменилась переходом — используется доской,
+   * чтобы раскрыть на мобильном аккордеоне колонку новой стадии, а не терять карточку. */
+  lastAdvancedId: number | null
+  clearLastAdvanced: () => void
   load: () => Promise<void>
   create: (input: ClientCreateInput) => Promise<Client>
   updateProject: (id: number, patch: clientsApi.ProjectUpdateInput) => Promise<ActionResult>
@@ -58,6 +62,8 @@ export const useClientsStore = create<ClientsState>((set, get) => {
   return {
     clients: [],
     loading: true,
+    lastAdvancedId: null,
+    clearLastAdvanced: () => set({ lastAdvancedId: null }),
 
     load: async () => {
       const clients = await clientsApi.listClients()
@@ -77,7 +83,11 @@ export const useClientsStore = create<ClientsState>((set, get) => {
     markBalancePayment: (id) => applyClientMutation(() => clientsApi.markBalancePayment(id)),
     uploadContractFile: (id, file) => applyClientMutation(() => clientsApi.uploadContractFile(id, file)),
     uploadHouseProjectFile: (id, file) => applyClientMutation(() => clientsApi.uploadHouseProjectFile(id, file)),
-    advance: (id) => applyClientMutation(() => clientsApi.advanceStage(id)),
+    advance: async (id) => {
+      const result = await applyClientMutation(() => clientsApi.advanceStage(id))
+      if (result.ok) set({ lastAdvancedId: id })
+      return result
+    },
 
     addNote: (id, text) => applyNoteMutation(id, () => clientsApi.addNote(id, text)),
     updateNote: (id, noteId, text) => applyNoteMutation(id, () => clientsApi.updateNote(id, noteId, text)),
