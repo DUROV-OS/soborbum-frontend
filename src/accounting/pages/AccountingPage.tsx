@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Calculator, Plus } from 'lucide-react'
+import { Calculator, Plus, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { DataTable } from '@/shared/ui/DataTable'
@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { Select } from '@/shared/ui/Field'
 import { useAccountingStore } from '../store'
 import { CreateMovementModal } from '../components/CreateMovementModal'
+import { ImportPaymentsModal } from '../components/ImportPaymentsModal'
 import { MovementDetailDrawer } from '../components/MovementDetailDrawer'
 import {
   DIRECTION_LABEL,
@@ -35,6 +36,7 @@ export function AccountingPage() {
   const resetFilters = useAccountingStore((s) => s.resetFilters)
 
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -58,10 +60,16 @@ export function AccountingPage() {
             Единый реестр движения денежных средств: вид, сумма, налог, инициатор, статус.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Новая проводка
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setImporting(true)}>
+            <Upload size={16} />
+            Импорт платежей
+          </Button>
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Новая проводка
+          </Button>
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -184,6 +192,7 @@ export function AccountingPage() {
       )}
 
       <CreateMovementModal open={creating} onClose={() => setCreating(false)} />
+      <ImportPaymentsModal open={importing} onClose={() => setImporting(false)} />
       <MovementDetailDrawer movement={selected} onClose={() => setSelectedId(null)} />
     </div>
   )
