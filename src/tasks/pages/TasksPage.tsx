@@ -9,6 +9,7 @@ import { KanbanBoard } from '@/shared/ui/KanbanBoard'
 import { Input, Select } from '@/shared/ui/Field'
 import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { OnboardingDialog, OnboardingPage } from '@/shared/ui/OnboardingDialog'
+import { Tabs } from '@/shared/ui/Tabs'
 import { useSectionOnboarding } from '@/shared/lib/useSectionOnboarding'
 import { DateFilter, dateFilterRange, matchesDateFilter } from '@/shared/lib/dateFilter'
 import { useTasksStore } from '../store'
@@ -16,6 +17,8 @@ import { TASK_STATES, Task } from '../types'
 import { CreateTaskModal } from '../components/CreateTaskModal'
 import { MyTasksPanel } from '../components/MyTasksPanel'
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
+
+type SubTab = 'mine' | 'all'
 
 type SourceFilter = 'all' | 'manual' | 'clients' | 'production' | 'marketing' | 'warehouse'
 
@@ -81,6 +84,7 @@ export function TasksPage() {
   const load = useTasksStore((s) => s.load)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
+  const [subTab, setSubTab] = useState<SubTab>('mine')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   // Борд задач по умолчанию — за всё время: авто-задачи из разделов (смена
   // стадии клиента, контента, нехватка на складе) создаются без дедлайна, и
@@ -109,7 +113,9 @@ export function TasksPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[20px] font-medium text-ink">Задачи</h1>
-          <p className="mt-1 text-[13px] text-muted">Общий борд, включая задачи из других разделов</p>
+          <p className="mt-1 text-[13px] text-muted">
+            {subTab === 'mine' ? 'Назначено на вас и свободные задачи, которые можно взять' : 'Общий борд, включая задачи из других разделов'}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
           <AskAiButton domain="tasks" />
@@ -121,28 +127,41 @@ export function TasksPage() {
         </div>
       </div>
 
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск по названию и описанию…"
-          className="sm:max-w-xs"
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'mine' as SubTab, label: 'Мои задачи' },
+            { key: 'all' as SubTab, label: 'Все задачи' },
+          ]}
+          activeKey={subTab}
+          onChange={setSubTab}
         />
-        <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-full sm:w-44">
-          {Object.entries(SOURCE_LABEL).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
       </div>
 
-      <MyTasksPanel onOpenTask={setSelected} />
+      {subTab === 'mine' && <MyTasksPanel onOpenTask={setSelected} />}
+
+      {subTab === 'all' && (
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Поиск по названию и описанию…"
+            className="sm:max-w-xs"
+          />
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)} className="w-full sm:w-44">
+            {Object.entries(SOURCE_LABEL).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <DateFilterSelect value={dateFilter} onChange={setDateFilter} />
+        </div>
+      )}
 
       <KanbanBoard
         columns={TASK_STATES}
-        items={filtered}
+        items={subTab === 'mine' ? tasks : filtered}
         keyOf={(t) => String(t.id)}
         columnOf={(t) => t.status}
         onCardClick={setSelected}
