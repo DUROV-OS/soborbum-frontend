@@ -156,7 +156,14 @@ export function AppRouter() {
           }
         />
         <Route path="/work" element={<WorkPage />} />
-        <Route path="/accounting" element={<AccountingPage />} />
+        <Route
+          path="/accounting"
+          element={
+            <AccessGate section="accounting">
+              <AccountingPage />
+            </AccessGate>
+          }
+        />
         <Route path="/suppliers" element={<SuppliersPage />} />
         <Route
           path="/board"

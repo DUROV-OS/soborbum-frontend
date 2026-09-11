@@ -84,7 +84,7 @@ export const SECTIONS: SectionMeta[] = [
   { id: 'chats', label: 'MAX', path: '/chats', icon: MessagesSquare, notAssignable: true },
   { id: 'ai', label: 'Марина', path: '/ai', icon: Sparkles },
   { id: 'meetings', label: 'Совещание', path: '/meetings', icon: Mic, notAssignable: true },
-  { id: 'accounting', label: 'Бухгалтерия', path: '/accounting', icon: Calculator, notAssignable: true },
+  { id: 'accounting', label: 'Бухгалтерия', path: '/accounting', icon: Calculator },
   { id: 'suppliers', label: 'Поставщики', path: '/suppliers', icon: Handshake, notAssignable: true },
   { id: 'admin', label: 'Доступ', path: '/admin', icon: ShieldCheck, adminOnly: true },
 ]
