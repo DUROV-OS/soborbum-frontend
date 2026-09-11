@@ -57,7 +57,7 @@ export interface PaymentStageRule {
 }
 
 export function paymentStageRule(plan: PaymentPlan | null): PaymentStageRule {
-  if (plan === 'advance') {
+  if (plan === 'advance_then_balance') {
     return {
       requiresConfirmation: true,
       paidLabel: 'Аванс поступил',
@@ -65,7 +65,7 @@ export function paymentStageRule(plan: PaymentPlan | null): PaymentStageRule {
       note: 'Формат «аванс + оплата после получения»: на этой стадии подтверждается поступление аванса. Остаток принимается на «Постоплате».',
     }
   }
-  if (plan === 'postpay') {
+  if (plan === 'post_payment') {
     return {
       requiresConfirmation: false,
       paidLabel: 'Оплата после получения',

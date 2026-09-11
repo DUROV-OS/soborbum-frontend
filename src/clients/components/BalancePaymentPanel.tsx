@@ -20,7 +20,7 @@ export function BalancePaymentPanel({ client }: { client: Client }) {
   if (client.stage !== 'postpayment' || !planHasBalance(client.payment_plan)) return null
 
   const balanceDue =
-    client.payment_plan === 'advance' && client.final_price != null && client.advance_amount != null
+    client.payment_plan === 'advance_then_balance' && client.final_price != null && client.advance_amount != null
       ? client.final_price - client.advance_amount
       : client.final_price
 
