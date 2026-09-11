@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { ArrowUpRight, Briefcase, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
-import { useTodayStore } from '@/today/store'
-import { WidgetTone } from '@/today/types'
+import { getToday } from '@/today/api'
+import { TodayDashboard, WidgetTone } from '@/today/types'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { SECTIONS, SectionId } from '@/shared/sections'
 
@@ -58,14 +58,25 @@ function heatOf(tone: WidgetTone): Heat {
 
 export function WorkPage() {
   const hasAccess = useAuthStore((s) => s.hasAccess)
-  const data = useTodayStore((s) => s.data)
-  const load = useTodayStore((s) => s.load)
+  const [actions, setActions] = useState<NonNullable<TodayDashboard['actions']>>([])
 
   useEffect(() => {
-    load()
-  }, [load])
+    let cancelled = false
+    // Не переиспользуем useTodayStore («Пульс»): его load() заодно дёргает
+    // GET /api/dashboard/aktualnoe (ИИ-вызов, может быть медленным и «Работе»
+    // не нужен вовсе) — здесь нужны только реальные действия из /today.
+    getToday()
+      .then((data) => {
+        if (!cancelled) setActions(data.actions ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setActions([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const actions = data?.actions ?? []
   const tiles = TILES.flatMap((tile) => {
     const section = SECTIONS.find((s) => s.id === tile.id)
     if (!section) return []
