@@ -106,6 +106,11 @@ export function deleteNote(id: number, noteId: number): Promise<void> {
   return apiRequest<void>({ section: SECTION, path: `/${id}/notes/${noteId}`, method: 'DELETE' })
 }
 
+/** DELETE /api/clients/:id — только администратор */
+export function deleteClient(id: number): Promise<void> {
+  return apiRequest<void>({ section: SECTION, path: `/${id}`, method: 'DELETE' })
+}
+
 /** POST /api/clients/:id/transition */
 export function advanceStage(id: number): Promise<Client> {
   return apiRequest<Client>({ section: SECTION, path: `/${id}/transition`, method: 'POST' })

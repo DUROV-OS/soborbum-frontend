@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Trash2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AskAiButton } from '@/ai/components/AskAiButton'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Stepper } from '@/shared/ui/Stepper'
 import { useClientsStore } from '../store'
@@ -18,11 +19,15 @@ import { ProjectPanel } from '../components/ProjectPanel'
 export function ClientDetailPage() {
   const { id = '' } = useParams()
   const clientId = Number(id)
+  const navigate = useNavigate()
   const clients = useClientsStore((s) => s.clients)
   const load = useClientsStore((s) => s.load)
   const advance = useClientsStore((s) => s.advance)
+  const deleteClient = useClientsStore((s) => s.deleteClient)
+  const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const [error, setError] = useState<string | null>(null)
   const [advancing, setAdvancing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (clients.length === 0) load()
@@ -41,6 +46,19 @@ export function ClientDetailPage() {
     const result = await advance(clientId)
     setAdvancing(false)
     setError(result.ok ? null : result.reason ?? 'Не удалось перевести на следующую стадию')
+  }
+
+  async function handleDelete() {
+    if (!client) return
+    if (!window.confirm(`Удалить клиента «${client.full_name}»? Отменить нельзя.`)) return
+    setDeleting(true)
+    const result = await deleteClient(clientId)
+    if (result.ok) {
+      navigate('/clients', { replace: true })
+      return
+    }
+    setDeleting(false)
+    setError(result.reason ?? 'Не удалось удалить клиента')
   }
 
   return (
@@ -68,6 +86,18 @@ export function ClientDetailPage() {
               <Button size="sm" onClick={handleAdvance} disabled={advancing}>
                 {advancing ? 'Переход…' : `Перевести на «${stageLabel(next)}»`}
               </Button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                aria-label="Удалить клиента"
+                title="Удалить клиента"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
+              >
+                <Trash2 size={14} />
+              </button>
             )}
           </div>
         </div>
