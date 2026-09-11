@@ -11,11 +11,19 @@ type Heat = 'red' | 'amber' | 'green'
  * раздел. Внутри виджета — блок с ответом Марины «стоит заняться: …» и
  * подсветкой по тому, насколько «горит» раздел (красный / жёлтый / зелёный).
  *
- * heat/advice сейчас замоканы. Раздел «Поставщики» — тоже мок (страница-
- * заглушка), показывается всем. «Бухгалтерия» — уже рабочий раздел, гейтится
- * доступом как остальные.
+ * heat/advice сейчас замоканы. `badge` — ярлык на плитке ('dev' у «Бухгалтерии»:
+ * реестр готов, импорт/интеграции в работе). `public` — плитка видна всем, минуя
+ * `hasAccess` (у «Поставщиков» — доступ к разделу отдельным грантом пока не
+ * заведён).
  */
-const TILES: { id: SectionId; note: string; heat: Heat; advice: string; mock?: boolean }[] = [
+const TILES: {
+  id: SectionId
+  note: string
+  heat: Heat
+  advice: string
+  badge?: 'мок' | 'dev'
+  public?: boolean
+}[] = [
   { id: 'cycle', note: 'Все клиенты по этапам сделки', heat: 'green', advice: 'всё движется по плану, ручного вмешательства не требуется' },
   { id: 'clients', note: 'Карточки клиентов, оплаты и документы', heat: 'amber', advice: '2 клиента на этапе оплаты без подтверждённого поступления' },
   { id: 'production', note: 'Заказы в цехе и потребность в материалах', heat: 'red', advice: 'модули DH-83 ждут материалы — линия простаивает второй день' },
@@ -24,8 +32,8 @@ const TILES: { id: SectionId; note: string; heat: Heat; advice: string; mock?: b
   { id: 'marketing', note: 'Заявки, каналы и рекламные кампании', heat: 'green', advice: 'план публикаций на неделю согласован, лиды в норме' },
   { id: 'meetings', note: 'Прошедшие совещания, заметки и решения', heat: 'amber', advice: 'по совещанию от 9 сентября 4 задачи без исполнителя' },
   { id: 'chats', note: 'Все переписки с клиентами и командой в MAX', heat: 'amber', advice: '5 диалогов с клиентами без ответа более суток' },
-  { id: 'accounting', note: 'Реестр движения денег: приход, расход, статьи и статусы', heat: 'amber', advice: 'проверьте черновики проводок, ожидающие согласования' },
-  { id: 'suppliers', note: 'Контакты, прайс-листы и оплаты поставщикам', heat: 'green', advice: 'прайсы актуальны, просроченных оплат нет', mock: true },
+  { id: 'accounting', note: 'Реестр движения денег: приход, расход, статьи и статусы', heat: 'amber', advice: 'проверьте черновики проводок, ожидающие согласования', badge: 'dev' },
+  { id: 'suppliers', note: 'Контакты, прайс-листы и оплаты поставщикам', heat: 'green', advice: 'прайсы актуальны, просроченных оплат нет', public: true },
 ]
 
 const HEAT_BLOCK: Record<Heat, string> = {
@@ -44,8 +52,8 @@ export function WorkPage() {
   const tiles = TILES.flatMap((tile) => {
     const section = SECTIONS.find((s) => s.id === tile.id)
     if (!section) return []
-    // мок-разделы видят все; остальные — по доступу
-    return tile.mock || hasAccess(tile.id) ? [{ ...tile, section }] : []
+    // public-плитки видят все; остальные — по доступу
+    return tile.public || hasAccess(tile.id) ? [{ ...tile, section }] : []
   })
 
   return (
@@ -63,7 +71,7 @@ export function WorkPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {tiles.map(({ section, note, heat, advice, mock }) => {
+          {tiles.map(({ section, note, heat, advice, badge }) => {
             const Icon = section.icon
             return (
               <NavLink
@@ -78,7 +86,7 @@ export function WorkPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
                       {section.label}
-                      {mock && <span className="rounded-pill bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">мок</span>}
+                      {badge && <span className="rounded-pill bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">{badge}</span>}
                       <ArrowUpRight size={15} className="ml-auto text-muted transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand" />
                     </div>
                     <p className="mt-1 text-[12px] leading-relaxed text-muted">{note}</p>
