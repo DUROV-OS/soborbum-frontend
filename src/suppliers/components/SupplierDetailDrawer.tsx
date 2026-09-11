@@ -216,10 +216,16 @@ export function SupplierDetailDrawer({
               {savingProfile ? 'Сохранение…' : 'Сохранить'}
             </Button>
             {isAdmin && (
-              <Button size="sm" variant="danger" onClick={handleDeleteSupplier} disabled={deleting}>
+              <button
+                type="button"
+                onClick={handleDeleteSupplier}
+                disabled={deleting}
+                aria-label="Удалить поставщика"
+                title="Удалить поставщика"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
+              >
                 <Trash2 size={14} />
-                {deleting ? 'Удаление…' : 'Удалить поставщика'}
-              </Button>
+              </button>
             )}
             {profileError && <span className="text-[12px] text-danger">{profileError}</span>}
           </div>
