@@ -1,19 +1,190 @@
-import { Calculator } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calculator, Plus } from 'lucide-react'
+import { Button } from '@/shared/ui/Button'
+import { Chip } from '@/shared/ui/Chip'
+import { DataTable } from '@/shared/ui/DataTable'
+import { DateFilterSelect } from '@/shared/ui/DateFilterSelect'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { Select } from '@/shared/ui/Field'
+import { useAccountingStore } from '../store'
+import { CreateMovementModal } from '../components/CreateMovementModal'
+import { MovementDetailDrawer } from '../components/MovementDetailDrawer'
+import {
+  DIRECTION_LABEL,
+  MoneyDirection,
+  MoneyMovementStatus,
+  MoneySourceKind,
+  MoneySubkind,
+  SOURCE_KIND_LABEL,
+  STATUS_LABEL,
+  STATUS_TONE,
+  SUBKIND_LABEL,
+} from '../types'
 
-/** Мок-раздел «Бухгалтерия» — заглушка до отдельной задачи. */
+function money(amount: number, direction: MoneyDirection): string {
+  const sign = direction === 'expense' ? '−' : ''
+  return `${sign}${amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`
+}
+
 export function AccountingPage() {
+  const movements = useAccountingStore((s) => s.movements)
+  const loading = useAccountingStore((s) => s.loading)
+  const filters = useAccountingStore((s) => s.filters)
+  const load = useAccountingStore((s) => s.load)
+  const setFilters = useAccountingStore((s) => s.setFilters)
+  const resetFilters = useAccountingStore((s) => s.resetFilters)
+
+  const [creating, setCreating] = useState(false)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const selected = movements.find((m) => m.id === selectedId) ?? null
+  const filtersDirty =
+    filters.direction !== 'all' ||
+    filters.subkind !== 'all' ||
+    filters.status !== 'all' ||
+    filters.source_kind !== 'all' ||
+    filters.period !== 'all'
+
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-[22px] font-medium text-ink">Бухгалтерия</h1>
-        <p className="mt-1 text-[13px] text-muted">Акты, счета, сверки и закрытие периода.</p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-medium text-ink">Бухгалтерия</h1>
+          <p className="mt-1 text-[13px] text-muted">
+            Единый реестр движения денежных средств: вид, сумма, налог, инициатор, статус.
+          </p>
+        </div>
+        <Button onClick={() => setCreating(true)}>
+          <Plus size={16} />
+          Новая проводка
+        </Button>
       </div>
-      <EmptyState
-        icon={<Calculator size={24} />}
-        title="Раздел в разработке"
-        description="Здесь появятся проведённые документы, статус закрытия периода и задачи бухгалтерии. Пока раздел мок."
-      />
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Select
+          className="w-full sm:w-44"
+          value={filters.direction}
+          onChange={(e) => setFilters({ direction: e.target.value as MoneyDirection | 'all' })}
+        >
+          <option value="all">Все направления</option>
+          {(Object.keys(DIRECTION_LABEL) as MoneyDirection[]).map((d) => (
+            <option key={d} value={d}>
+              {DIRECTION_LABEL[d]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-full sm:w-52"
+          value={filters.subkind}
+          onChange={(e) => setFilters({ subkind: e.target.value as MoneySubkind | 'all' })}
+        >
+          <option value="all">Все виды</option>
+          {(Object.keys(SUBKIND_LABEL) as MoneySubkind[]).map((s) => (
+            <option key={s} value={s}>
+              {SUBKIND_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-full sm:w-44"
+          value={filters.status}
+          onChange={(e) => setFilters({ status: e.target.value as MoneyMovementStatus | 'all' })}
+        >
+          <option value="all">Все статусы</option>
+          {(Object.keys(STATUS_LABEL) as MoneyMovementStatus[]).map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-full sm:w-44"
+          value={filters.source_kind}
+          onChange={(e) => setFilters({ source_kind: e.target.value as MoneySourceKind | 'all' })}
+        >
+          <option value="all">Любой источник</option>
+          {(Object.keys(SOURCE_KIND_LABEL) as MoneySourceKind[]).map((s) => (
+            <option key={s} value={s}>
+              {SOURCE_KIND_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <DateFilterSelect value={filters.period} onChange={(period) => setFilters({ period })} />
+        {filtersDirty && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            Сбросить
+          </Button>
+        )}
+      </div>
+
+      {!loading && movements.length === 0 ? (
+        <EmptyState
+          icon={<Calculator size={24} />}
+          title={filtersDirty ? 'Под фильтры ничего не подходит' : 'Проводок пока нет'}
+          description={
+            filtersDirty
+              ? 'Измените или сбросьте фильтры.'
+              : 'Создайте первую проводку кнопкой «Новая проводка».'
+          }
+        />
+      ) : (
+        <DataTable
+          columns={[
+            {
+              header: 'Дата',
+              accessor: (m) =>
+                new Date(m.posted_at ?? m.created_at).toLocaleDateString('ru-RU'),
+            },
+            {
+              header: 'Вид',
+              accessor: (m) => (
+                <div>
+                  <div className="text-ink">{SUBKIND_LABEL[m.subkind]}</div>
+                  <div className="text-[12px] text-muted">{DIRECTION_LABEL[m.direction]}</div>
+                </div>
+              ),
+            },
+            {
+              header: 'Сумма',
+              align: 'right',
+              className: 'tabular',
+              accessor: (m) => (
+                <span className={m.direction === 'expense' ? 'text-danger' : 'text-ink'}>
+                  {money(m.amount, m.direction)}
+                </span>
+              ),
+            },
+            {
+              header: 'Налог',
+              align: 'right',
+              className: 'tabular',
+              accessor: (m) => (m.tax ? `${m.tax.toLocaleString('ru-RU')} ₽` : '—'),
+            },
+            { header: 'Инициатор', accessor: (m) => m.initiator_name ?? `№${m.initiator_id}` },
+            {
+              header: 'Источник',
+              accessor: (m) =>
+                m.source_label ?? <span className="text-muted">{SOURCE_KIND_LABEL[m.source_kind]}</span>,
+            },
+            {
+              header: 'Статус',
+              accessor: (m) => <Chip tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Chip>,
+            },
+          ]}
+          rows={movements}
+          keyOf={(m) => String(m.id)}
+          onRowClick={(m) => setSelectedId(m.id)}
+          loading={loading}
+          emptyLabel="Проводок пока нет"
+        />
+      )}
+
+      <CreateMovementModal open={creating} onClose={() => setCreating(false)} />
+      <MovementDetailDrawer movement={selected} onClose={() => setSelectedId(null)} />
     </div>
   )
 }
