@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
@@ -154,16 +155,18 @@ export function MovementDetailDrawer({
                   Отменить
                 </Button>
                 {movement.status === 'draft' && isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
+                    type="button"
                     disabled={busy}
                     onClick={() => {
                       if (window.confirm('Удалить черновик проводки? Отменить нельзя.')) run(() => remove(id), true)
                     }}
+                    aria-label="Удалить черновик проводки"
+                    title="Удалить черновик проводки"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
                   >
-                    Удалить черновик
-                  </Button>
+                    <Trash2 size={14} />
+                  </button>
                 )}
               </div>
             )}

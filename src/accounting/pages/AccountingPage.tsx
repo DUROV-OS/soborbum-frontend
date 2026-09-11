@@ -229,7 +229,8 @@ export function AccountingPage() {
                               }}
                               disabled={deletingId === m.id}
                               aria-label="Удалить проводку"
-                              className="rounded-pill p-1 text-muted hover:bg-surface-muted hover:text-danger"
+                              title="Удалить проводку"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
                             >
                               <Trash2 size={14} />
                             </button>
