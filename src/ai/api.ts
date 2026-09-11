@@ -1,5 +1,6 @@
 import { apiRequest, streamRequest, StreamEvent } from '@/shared/lib/httpClient'
 import {
+  AgentActivityOut,
   AnalyticsSection,
   AskRequest,
   AskResponse,
@@ -124,4 +125,9 @@ export function approvePendingAction(id: number): Promise<AskResponse> {
 /** POST /api/ai/pending-actions/:id/reject */
 export function rejectPendingAction(id: number): Promise<AskResponse> {
   return apiRequest<AskResponse>({ section: SECTION, path: `/pending-actions/${id}/reject`, method: 'POST' })
+}
+
+/** GET /api/ai/agent-actions — лог «Действия агента» (панель справа от чата) */
+export function listAgentActivity(limit = 30): Promise<AgentActivityOut[]> {
+  return apiRequest<AgentActivityOut[]>({ section: SECTION, path: '/agent-actions', query: { limit } })
 }

@@ -86,6 +86,23 @@ export interface ChatDetailOut extends ChatOut {
   messages: MessageOut[]
 }
 
+/** GET /api/ai/agent-actions — панель «Действия агента» справа от чата. Общий
+ * лог, не привязан к открытому чату; сейчас наполняется только демо-сидом на
+ * localhost (0033), реальные события пока не пишутся. */
+export interface AgentActivityOut {
+  id: number
+  title: string
+  detail: string
+  /** true — агент сделал сам, без подтверждения; false — решение уже
+   * потребовало или потребует подтверждения человеком (деньги, внешняя
+   * коммуникация, необратимое действие). */
+  autonomous: boolean
+  related_section: string | null
+  related_path: string | null
+  related_label: string | null
+  created_at: string
+}
+
 /** Разделы, у которых есть свой домен ИИ на бэкенде — у «Монтажа» такого домена нет. */
 export const DOMAIN_TO_SECTION: Record<Exclude<ChatDomain, 'general'>, SectionId> = {
   clients: 'clients',
