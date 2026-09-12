@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { Drawer } from '@/shared/ui/Drawer'
 import { Field, Input, Select, Textarea } from '@/shared/ui/Field'
+import { Tabs } from '@/shared/ui/Tabs'
 import { useSuppliersStore } from '../store'
 import {
   CONTACT_KIND_LABEL,
@@ -20,6 +21,16 @@ import {
 import { LinkMaxChatModal } from './LinkMaxChatModal'
 import { PriceListImportModal } from './PriceListImportModal'
 import { SupplierOrdersSection } from './SupplierOrdersSection'
+
+// Инициалы для аватара-плашки — по образцу карточки контрагента из
+// gpt_prototype/design-history/counterparty-card.html (референс 0011-l):
+// первые буквы первых двух слов названия.
+function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return (words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')
+}
+
+type TabKey = 'overview' | 'prices' | 'orders' | 'notes'
 
 export function SupplierDetailDrawer({
   supplierId,
@@ -37,6 +48,7 @@ export function SupplierDetailDrawer({
   const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
   const navigate = useNavigate()
 
+  const [tab, setTab] = useState<TabKey>('overview')
   const [name, setName] = useState('')
   const [status, setStatus] = useState<SupplierStatus>('active')
   const [categories, setCategories] = useState('')
@@ -53,6 +65,7 @@ export function SupplierDetailDrawer({
 
   useEffect(() => {
     if (!supplier) return
+    setTab('overview')
     setName(supplier.name)
     setStatus(supplier.status)
     setCategories(supplier.categories.join(', '))
@@ -61,7 +74,7 @@ export function SupplierDetailDrawer({
     setPriceError(null)
     setAdding(false)
     setNoteDraft('')
-  }, [supplier])
+  }, [supplier?.id])
 
   const profileDirty = useMemo(() => {
     if (!supplier) return false
@@ -142,174 +155,152 @@ export function SupplierDetailDrawer({
         </div>
       }
     >
-      <div className="flex flex-col gap-6">
-        {/* Профиль */}
-        <section className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Название" required>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+      {/* Плашка-аватар + категории — общая шапка над вкладками, по образцу
+          identity-блока в gpt_prototype/design-history/counterparty-card.html */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-brand/10 text-[15px] font-medium text-brand-dark">
+          {initialsOf(supplier.name) || '—'}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {supplier.categories.length === 0 && <span className="text-[12px] text-muted">Без категорий</span>}
+          {supplier.categories.map((c) => (
+            <Chip key={c} tone="neutral">
+              {c}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <Tabs<TabKey>
+          tabs={[
+            { key: 'overview', label: 'Обзор' },
+            { key: 'prices', label: 'Прайс-лист' },
+            { key: 'orders', label: 'Заказы и оплата' },
+            { key: 'notes', label: 'Заметки' },
+          ]}
+          activeKey={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === 'overview' && (
+        <div className="flex flex-col gap-6">
+          {/* Профиль */}
+          <section className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Название" required>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </Field>
+              <Field label="Статус">
+                <Select value={status} onChange={(e) => setStatus(e.target.value as SupplierStatus)}>
+                  {Object.entries(SUPPLIER_STATUS_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <Field label="Категории" hint="Через запятую">
+              <Input value={categories} onChange={(e) => setCategories(e.target.value)} />
             </Field>
-            <Field label="Статус">
-              <Select value={status} onChange={(e) => setStatus(e.target.value as SupplierStatus)}>
-                {Object.entries(SUPPLIER_STATUS_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <Field label="Категории" hint="Через запятую">
-            <Input value={categories} onChange={(e) => setCategories(e.target.value)} />
-          </Field>
 
-          {/* Контакты */}
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-ink">Контакты</div>
-            <div className="flex flex-col gap-2">
-              {contacts.map((contact, index) => (
-                <div key={index} className="flex flex-wrap items-center gap-2">
-                  <Select
-                    value={contact.kind}
-                    onChange={(e) => patchContact(index, { kind: e.target.value as ContactKind })}
-                    className="w-36"
-                  >
-                    {CONTACT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {CONTACT_KIND_LABEL[kind]}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    value={contact.value}
-                    onChange={(e) => patchContact(index, { value: e.target.value })}
-                    placeholder="Значение"
-                    className="min-w-[10rem] flex-1"
-                  />
-                  <Input
-                    value={contact.person ?? ''}
-                    onChange={(e) => patchContact(index, { person: e.target.value })}
-                    placeholder="Контактное лицо"
-                    className="min-w-[9rem] flex-1"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setContacts(contacts.filter((_, i) => i !== index))}
-                    aria-label="Удалить контакт"
-                    className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setContacts([...contacts, { kind: 'phone', value: '', person: '' }])}
-                className="inline-flex w-fit items-center gap-1.5 text-[13px] text-brand hover:text-brand-dark"
-              >
-                <Plus size={14} /> Добавить контакт
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button size="sm" onClick={saveProfile} disabled={!profileDirty || savingProfile || !name.trim()}>
-              {savingProfile ? 'Сохранение…' : 'Сохранить'}
-            </Button>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleDeleteSupplier}
-                disabled={deleting}
-                aria-label="Удалить поставщика"
-                title="Удалить поставщика"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-            {profileError && <span className="text-[12px] text-danger">{profileError}</span>}
-          </div>
-        </section>
-
-        {/* Чат MAX */}
-        <section className="rounded-md border border-border p-4">
-          <div className="mb-2 text-[13px] font-medium text-ink">Чат в MAX</div>
-          {supplier.max_chat_id != null ? (
-            <div className="flex flex-wrap items-center gap-2 text-[13px]">
-              <Chip tone="info">Чат #{supplier.max_chat_id}</Chip>
-              <Button size="sm" variant="secondary" onClick={() => navigate(`/chats/${supplier.max_chat_id}`)}>
-                <ExternalLink size={14} /> Открыть чат
-              </Button>
-              <Button size="sm" variant="ghost" onClick={unlinkChat}>
-                Открепить
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] text-muted">Чат не привязан.</span>
-              <Button size="sm" variant="secondary" onClick={() => setLinkOpen(true)}>
-                Привязать чат
-              </Button>
-            </div>
-          )}
-        </section>
-
-        {/* Заказы у поставщика (0011-d/0011-f) */}
-        <section className="rounded-md border border-border p-4">
-          <SupplierOrdersSection
-            supplierId={supplierId_}
-            totalOrdered={supplier.total_ordered}
-            totalPaid={supplier.total_paid}
-            balance={supplier.balance}
-          />
-        </section>
-
-        {/* Заметки */}
-        <section>
-          <div className="mb-2 text-[13px] font-medium text-ink">Заметки</div>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Textarea
-                rows={2}
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="Напр.: завышает цены на метизы; долго отвечает; сменился менеджер"
-              />
-              <Button
-                size="sm"
-                className="self-start"
-                disabled={!noteDraft.trim() || noteBusy}
-                onClick={saveNote}
-              >
-                {noteBusy ? '…' : 'Добавить'}
-              </Button>
-            </div>
-            {supplier.notes.length === 0 && (
-              <p className="text-[12px] text-muted">Заметок пока нет.</p>
-            )}
-            {supplier.notes.map((note) => (
-              <div key={note.id} className="flex items-start justify-between gap-2 rounded-md border border-border px-3 py-2">
-                <div className="min-w-0">
-                  <div className="whitespace-pre-wrap text-[13px] text-ink">{note.text}</div>
-                  <div className="mt-0.5 text-[11px] text-muted">
-                    {note.author_name ?? 'сотрудник'} · {new Date(note.created_at).toLocaleString('ru-RU')}
+            {/* Контакты */}
+            <div>
+              <div className="mb-2 text-[13px] font-medium text-ink">Контакты</div>
+              <div className="flex flex-col gap-2">
+                {contacts.map((contact, index) => (
+                  <div key={index} className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={contact.kind}
+                      onChange={(e) => patchContact(index, { kind: e.target.value as ContactKind })}
+                      className="w-36"
+                    >
+                      {CONTACT_KINDS.map((kind) => (
+                        <option key={kind} value={kind}>
+                          {CONTACT_KIND_LABEL[kind]}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      value={contact.value}
+                      onChange={(e) => patchContact(index, { value: e.target.value })}
+                      placeholder="Значение"
+                      className="min-w-[10rem] flex-1"
+                    />
+                    <Input
+                      value={contact.person ?? ''}
+                      onChange={(e) => patchContact(index, { person: e.target.value })}
+                      placeholder="Контактное лицо"
+                      className="min-w-[9rem] flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setContacts(contacts.filter((_, i) => i !== index))}
+                      aria-label="Удалить контакт"
+                      className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-                </div>
+                ))}
                 <button
                   type="button"
-                  onClick={() => removeNote(supplierId_, note.id)}
-                  aria-label="Удалить заметку"
-                  className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                  onClick={() => setContacts([...contacts, { kind: 'phone', value: '', person: '' }])}
+                  className="inline-flex w-fit items-center gap-1.5 text-[13px] text-brand hover:text-brand-dark"
                 >
-                  <Trash2 size={15} />
+                  <Plus size={14} /> Добавить контакт
                 </button>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
 
-        {/* Прайс-лист */}
+            <div className="flex items-center gap-3">
+              <Button size="sm" onClick={saveProfile} disabled={!profileDirty || savingProfile || !name.trim()}>
+                {savingProfile ? 'Сохранение…' : 'Сохранить'}
+              </Button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleDeleteSupplier}
+                  disabled={deleting}
+                  aria-label="Удалить поставщика"
+                  title="Удалить поставщика"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:bg-danger/40"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+              {profileError && <span className="text-[12px] text-danger">{profileError}</span>}
+            </div>
+          </section>
+
+          {/* Чат MAX */}
+          <section className="rounded-md border border-border p-4">
+            <div className="mb-2 text-[13px] font-medium text-ink">Чат в MAX</div>
+            {supplier.max_chat_id != null ? (
+              <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                <Chip tone="info">Чат #{supplier.max_chat_id}</Chip>
+                <Button size="sm" variant="secondary" onClick={() => navigate(`/chats/${supplier.max_chat_id}`)}>
+                  <ExternalLink size={14} /> Открыть чат
+                </Button>
+                <Button size="sm" variant="ghost" onClick={unlinkChat}>
+                  Открепить
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-muted">Чат не привязан.</span>
+                <Button size="sm" variant="secondary" onClick={() => setLinkOpen(true)}>
+                  Привязать чат
+                </Button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {tab === 'prices' && (
         <section>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="text-[13px] font-medium text-ink">Прайс-лист</div>
@@ -376,7 +367,61 @@ export function SupplierDetailDrawer({
             ))}
           </div>
         </section>
-      </div>
+      )}
+
+      {tab === 'orders' && (
+        <SupplierOrdersSection
+          supplierId={supplierId_}
+          totalOrdered={supplier.total_ordered}
+          totalPaid={supplier.total_paid}
+          balance={supplier.balance}
+        />
+      )}
+
+      {tab === 'notes' && (
+        <section>
+          <div className="mb-2 text-[13px] font-medium text-ink">Заметки</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Textarea
+                rows={2}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Напр.: завышает цены на метизы; долго отвечает; сменился менеджер"
+              />
+              <Button
+                size="sm"
+                className="self-start"
+                disabled={!noteDraft.trim() || noteBusy}
+                onClick={saveNote}
+              >
+                {noteBusy ? '…' : 'Добавить'}
+              </Button>
+            </div>
+            {supplier.notes.length === 0 && (
+              <p className="text-[12px] text-muted">Заметок пока нет.</p>
+            )}
+            {supplier.notes.map((note) => (
+              <div key={note.id} className="flex items-start justify-between gap-2 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                  <div className="whitespace-pre-wrap text-[13px] text-ink">{note.text}</div>
+                  <div className="mt-0.5 text-[11px] text-muted">
+                    {note.author_name ?? 'сотрудник'} · {new Date(note.created_at).toLocaleString('ru-RU')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeNote(supplierId_, note.id)}
+                  aria-label="Удалить заметку"
+                  className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <LinkMaxChatModal supplierId={supplierId_} open={linkOpen} onClose={() => setLinkOpen(false)} />
       <PriceListImportModal
