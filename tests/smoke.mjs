@@ -55,6 +55,25 @@ const aiClient = {
   house_project_file: null, documents_locked_at: null, is_paid: null, payment_locked_at: null,
   balance_paid: null, balance_paid_at: null, notes: [],
 }
+const supplierFixture = {
+  id: 41, name: 'ЛесТорг', categories: ['брусы/доска'], status: 'active',
+  contacts: [{ kind: 'phone', value: '+79261110001', person: 'Андрей' }],
+  max_chat_id: null, created_at: '2026-08-01T08:00:00Z',
+  price_items: [{
+    id: 1, supplier_id: 41, material: 'Брус профилированный 150x150', category: 'брусы/доска',
+    tiers: [{ min_qty: 0, max_qty: null, price: 18200 }], lead_time: '7-10 дней', round: null,
+    created_at: '2026-08-01T08:00:00Z', updated_at: '2026-08-01T08:00:00Z',
+  }],
+  price_items_count: 1,
+  notes: [{ id: 1, supplier_id: 41, author_id: 1, author_name: 'Administrator', text: 'Даёт скидку от 10 кубов', created_at: '2026-08-01T08:00:00Z' }],
+  total_ordered: 50000, total_paid: 20000, balance: 30000,
+}
+const supplierOrderFixture = {
+  id: 9, supplier_id: 41, supplier_name: 'ЛесТорг',
+  items: [{ material: 'Брус профилированный 150x150', category: 'брусы/доска', quantity: 10, unit_price: 5000 }],
+  total_cost: 50000, currency: 'RUB', expected_at: null, status: 'ordered', received_at: null, comment: null,
+  created_at: '2026-08-02T08:00:00Z', updated_at: '2026-08-02T08:00:00Z',
+}
 let lastAskStreamBody = null
 const agentStats = {
   week: [], routing: [], traces: [],
@@ -138,6 +157,9 @@ async function openAs(user, route = '/today', viewport = { width: 1440, height: 
       ],
     }
     else if (url.pathname === '/api/ai/pending-actions') body = []
+    else if (url.pathname === '/api/warehouse/suppliers' && route.request().method() === 'GET') body = [supplierFixture]
+    else if (url.pathname === '/api/accounting/supplier-orders' && route.request().method() === 'GET') body = [supplierOrderFixture]
+    else if (url.pathname === '/api/accounting/money-movements' && route.request().method() === 'GET') body = []
     else { status = 404; body = { detail: `Unmocked request: ${url.pathname}` } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   })
@@ -238,6 +260,28 @@ try {
   assert.equal(await clientAi.page.getByText(/client_id=/).count(), 0)
   checks.push('Client context reaches Marina as a separate field, never as visible chat text (regression 0017)')
   await clientAi.context.close()
+
+  const suppliers = await openAs(admin, '/suppliers')
+  await suppliers.page.getByText('ЛесТорг', { exact: true }).first().waitFor()
+  await suppliers.page.getByText('ЛесТорг', { exact: true }).first().click()
+  await suppliers.page.getByRole('tab', { name: 'Обзор' }).waitFor()
+  await suppliers.page.getByLabel('Название').waitFor()
+  await suppliers.page.getByRole('tab', { name: 'Прайс-лист' }).click()
+  await suppliers.page.getByText('Брус профилированный 150x150', { exact: true }).waitFor()
+  await suppliers.page.getByRole('tab', { name: 'Заказы и оплата' }).click()
+  await suppliers.page.getByText('Заказано', { exact: true }).waitFor()
+  await suppliers.page.getByRole('button', { name: 'Оплатить поставку' }).waitFor()
+  await suppliers.page.getByRole('tab', { name: 'Заметки' }).click()
+  await suppliers.page.getByText('Даёт скидку от 10 кубов', { exact: true }).waitFor()
+  // Регрессия 0011-l: до фикса эффект инициализации формы был завязан на весь
+  // объект supplier (новая ссылка при каждом обновлении стора) и на любое
+  // обновление сбрасывал активную вкладку на «Обзор» — здесь просто повторный
+  // проход по вкладкам без промежуточных действий проверяет, что переключение
+  // само по себе стабильно.
+  await suppliers.page.getByRole('tab', { name: 'Обзор' }).click()
+  await suppliers.page.locator('input[value="Андрей"]').waitFor()
+  checks.push('Supplier card tabs (Обзор/Прайс-лист/Заказы и оплата/Заметки) render their content in the new layout (0011-l)')
+  await suppliers.context.close()
 
   const mobile = await openAs(admin, '/today', { width: 390, height: 844 })
   await mobile.page.getByText('Проверить просроченные задачи', { exact: true }).waitFor()
