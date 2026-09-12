@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import * as accountingApi from '@/accounting/api'
+import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
 import { useClientsStore } from '../store'
@@ -14,8 +17,11 @@ import { Section } from './ProjectPanel'
  */
 export function BalancePaymentPanel({ client }: { client: Client }) {
   const markBalancePayment = useClientsStore((s) => s.markBalancePayment)
+  const hasAccounting = useAuthStore((s) => s.hasAccess('accounting'))
+  const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [movementId, setMovementId] = useState<number | null>(null)
 
   if (client.stage !== 'postpayment' || !planHasBalance(client.payment_plan)) return null
 
@@ -29,6 +35,13 @@ export function BalancePaymentPanel({ client }: { client: Client }) {
     const result = await markBalancePayment(client.id)
     setSaving(false)
     setError(result.ok ? null : result.reason ?? 'Не удалось отметить приём остатка')
+    // 0011-f: balance_paid -> true может породить проводку «доход от продажи».
+    if (result.ok && hasAccounting) {
+      accountingApi
+        .listMovements({ client_id: client.id, subkind: 'sale_income' })
+        .then((movements) => movements[0] && setMovementId(movements[0].id))
+        .catch(() => {})
+    }
   }
 
   return (
@@ -60,6 +73,15 @@ export function BalancePaymentPanel({ client }: { client: Client }) {
         </>
       )}
       {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+      {movementId && (
+        <button
+          type="button"
+          onClick={() => navigate(`/accounting?movement=${movementId}`)}
+          className="mt-2 text-[12px] text-brand hover:text-brand-dark"
+        >
+          Создана проводка в «Бухгалтерии» →
+        </button>
+      )}
     </Section>
   )
 }
