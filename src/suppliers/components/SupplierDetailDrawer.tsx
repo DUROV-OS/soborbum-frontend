@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
+import { ExternalLink, Package, Plus, StickyNote, Trash2, Upload } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
 import { Chip } from '@/shared/ui/Chip'
@@ -334,34 +334,39 @@ export function SupplierDetailDrawer({
               </p>
             )}
             {supplier.price_items.map((item) => (
-              <div key={item.id} className="rounded-md border border-border px-3 py-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-ink">{item.material}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-1.5 text-[12px] text-muted">
-                      {item.category && <Chip tone="neutral">{item.category}</Chip>}
-                      {item.lead_time && <span>срок: {item.lead_time}</span>}
-                      {item.round != null && <span>раунд: {item.round}</span>}
+              <div key={item.id} className="flex gap-3 rounded-md border border-border px-3 py-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-muted text-muted">
+                  <Package size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-ink">{item.material}</div>
+                      <div className="mt-0.5 flex flex-wrap gap-1.5 text-[12px] text-muted">
+                        {item.category && <Chip tone="neutral">{item.category}</Chip>}
+                        {item.lead_time && <span>срок: {item.lead_time}</span>}
+                        {item.round != null && <span>раунд: {item.round}</span>}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => deletePrice(item.id)}
+                      aria-label="Удалить строку прайса"
+                      className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => deletePrice(item.id)}
-                    aria-label="Удалить строку прайса"
-                    className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {item.tiers.map((tier, i) => (
-                    <Chip key={i} tone="brand">
-                      {tierLabel(tier)}
-                    </Chip>
-                  ))}
-                </div>
-                <div className="mt-1 text-[11px] text-muted">
-                  обновлено {new Date(item.updated_at).toLocaleDateString('ru-RU')}
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {item.tiers.map((tier, i) => (
+                      <Chip key={i} tone="brand">
+                        {tierLabel(tier)}
+                      </Chip>
+                    ))}
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted">
+                    обновлено {new Date(item.updated_at).toLocaleDateString('ru-RU')}
+                  </div>
                 </div>
               </div>
             ))}
@@ -402,8 +407,11 @@ export function SupplierDetailDrawer({
               <p className="text-[12px] text-muted">Заметок пока нет.</p>
             )}
             {supplier.notes.map((note) => (
-              <div key={note.id} className="flex items-start justify-between gap-2 rounded-md border border-border px-3 py-2">
-                <div className="min-w-0">
+              <div key={note.id} className="flex items-start gap-3 rounded-md border border-border px-3 py-2">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-muted text-muted">
+                  <StickyNote size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
                   <div className="whitespace-pre-wrap text-[13px] text-ink">{note.text}</div>
                   <div className="mt-0.5 text-[11px] text-muted">
                     {note.author_name ?? 'сотрудник'} · {new Date(note.created_at).toLocaleString('ru-RU')}
