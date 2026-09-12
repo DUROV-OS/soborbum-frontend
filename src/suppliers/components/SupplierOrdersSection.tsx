@@ -46,7 +46,22 @@ export function SupplierOrdersSection({
   async function load() {
     setLoading(true)
     try {
-      setOrders(await accountingApi.listSupplierOrders(supplierId))
+      const [fetchedOrders, payments] = await Promise.all([
+        accountingApi.listSupplierOrders(supplierId),
+        // Уже существующая (не отменённая) оплата заказа — иначе после
+        // перезагрузки страницы кнопка «Оплатить» снова предлагается для уже
+        // оплаченного заказа и повторный клик получает 409 от бэка.
+        accountingApi.listMovements({ subkind: 'supply_payment' }),
+      ])
+      setOrders(fetchedOrders)
+      const orderIds = new Set(fetchedOrders.map((o) => o.id))
+      const existing: Record<number, { movementId: number }> = {}
+      for (const m of payments) {
+        if (m.supply_id != null && orderIds.has(m.supply_id) && m.status !== 'cancelled' && !(m.supply_id in existing)) {
+          existing[m.supply_id] = { movementId: m.id }
+        }
+      }
+      setPayResult(existing)
       setError(null)
     } catch (e) {
       setError(reasonOf(e))
@@ -57,7 +72,6 @@ export function SupplierOrdersSection({
 
   useEffect(() => {
     load()
-    setPayResult({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplierId])
 
