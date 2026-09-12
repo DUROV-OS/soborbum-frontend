@@ -114,6 +114,44 @@ export interface EmployeeSalaryOverview {
   open_movement: MoneyMovement | null
 }
 
+// --- Заказы у поставщика (задача 0011-d, UI — 0011-f) ---
+
+export type SupplierOrderStatus = 'ordered' | 'in_transit' | 'received'
+
+export interface SupplierOrderItem {
+  material: string
+  category: string | null
+  quantity: number
+  unit_price: number
+}
+
+export interface SupplierOrder {
+  id: number
+  supplier_id: number
+  supplier_name: string | null
+  items: SupplierOrderItem[]
+  total_cost: number
+  currency: string
+  expected_at: string | null
+  status: SupplierOrderStatus
+  received_at: string | null
+  comment: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const SUPPLIER_ORDER_STATUS_LABEL: Record<SupplierOrderStatus, string> = {
+  ordered: 'Заказана',
+  in_transit: 'В пути',
+  received: 'Принята',
+}
+
+export const SUPPLIER_ORDER_STATUS_TONE: Record<SupplierOrderStatus, 'neutral' | 'info' | 'success'> = {
+  ordered: 'neutral',
+  in_transit: 'info',
+  received: 'success',
+}
+
 // --- Импорт платежей таблицей (задача 0011-k) ---
 
 export interface PaymentColumnMapping {

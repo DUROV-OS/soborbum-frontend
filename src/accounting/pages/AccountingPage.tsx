@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Calculator, Plus, Trash2, Upload } from 'lucide-react'
 import { useAuthStore } from '@/auth/store'
 import { Button } from '@/shared/ui/Button'
@@ -40,12 +41,23 @@ export function AccountingPage() {
   const remove = useAccountingStore((s) => s.remove)
   const isAdmin = useAuthStore((s) => s.current?.role === 'admin')
 
+  const [searchParams, setSearchParams] = useSearchParams()
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const requested = searchParams.get('movement')
+    return requested ? Number(requested) : null
+  })
   const [tab, setTab] = useState<'register' | 'salary'>('register')
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Переход по ссылке «создана проводка» (0011-f) — открываем карточку и
+    // убираем параметр из адреса, чтобы обновление страницы не переоткрывало её.
+    if (searchParams.get('movement')) setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleDeleteRow(id: number) {
     if (!window.confirm('Удалить проводку? Отменить нельзя.')) return

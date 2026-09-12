@@ -19,6 +19,7 @@ import {
 } from '../types'
 import { LinkMaxChatModal } from './LinkMaxChatModal'
 import { PriceListImportModal } from './PriceListImportModal'
+import { SupplierOrdersSection } from './SupplierOrdersSection'
 
 export function SupplierDetailDrawer({
   supplierId,
@@ -252,6 +253,16 @@ export function SupplierDetailDrawer({
               </Button>
             </div>
           )}
+        </section>
+
+        {/* Заказы у поставщика (0011-d/0011-f) */}
+        <section className="rounded-md border border-border p-4">
+          <SupplierOrdersSection
+            supplierId={supplierId_}
+            totalOrdered={supplier.total_ordered}
+            totalPaid={supplier.total_paid}
+            balance={supplier.balance}
+          />
         </section>
 
         {/* Заметки */}

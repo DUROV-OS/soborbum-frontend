@@ -9,6 +9,9 @@ import {
   MoneySourceKind,
   MoneySubkind,
   PaymentImportResult,
+  SupplierOrder,
+  SupplierOrderItem,
+  SupplierOrderStatus,
 } from './types'
 
 const SECTION = 'accounting'
@@ -125,4 +128,47 @@ export function createImportBackfillTask(
 /** GET /api/accounting/money-movements/import/template */
 export function downloadImportTemplate(): Promise<void> {
   return downloadFile(SECTION, '/money-movements/import/template', 'shablon_platezhey.xlsx')
+}
+
+// --- Заказы у поставщика (задача 0011-d, UI — 0011-f) ---
+
+/** GET /api/accounting/supplier-orders */
+export function listSupplierOrders(supplierId: number): Promise<SupplierOrder[]> {
+  return apiRequest<SupplierOrder[]>({
+    section: SECTION,
+    path: '/supplier-orders',
+    query: { supplier_id: supplierId },
+  })
+}
+
+export interface SupplierOrderCreateInput {
+  supplier_id: number
+  items: SupplierOrderItem[]
+  expected_at?: string | null
+  comment?: string | null
+}
+
+/** POST /api/accounting/supplier-orders */
+export function createSupplierOrder(input: SupplierOrderCreateInput): Promise<SupplierOrder> {
+  return apiRequest<SupplierOrder>({ section: SECTION, path: '/supplier-orders', method: 'POST', body: input })
+}
+
+/** DELETE /api/accounting/supplier-orders/:id — только для статуса «заказана» */
+export function deleteSupplierOrder(id: number): Promise<void> {
+  return apiRequest<void>({ section: SECTION, path: `/supplier-orders/${id}`, method: 'DELETE' })
+}
+
+/** POST /api/accounting/supplier-orders/:id/status */
+export function changeSupplierOrderStatus(id: number, to: SupplierOrderStatus): Promise<SupplierOrder> {
+  return apiRequest<SupplierOrder>({
+    section: SECTION,
+    path: `/supplier-orders/${id}/status`,
+    method: 'POST',
+    body: { to },
+  })
+}
+
+/** POST /api/accounting/supplier-orders/:id/pay — создаёт проводку supply_payment (0011-f) */
+export function paySupplierOrder(id: number): Promise<MoneyMovement> {
+  return apiRequest<MoneyMovement>({ section: SECTION, path: `/supplier-orders/${id}/pay`, method: 'POST' })
 }
