@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Truck } from 'lucide-react'
 import * as accountingApi from '@/accounting/api'
 import { SUPPLIER_ORDER_STATUS_LABEL, SUPPLIER_ORDER_STATUS_TONE, SupplierOrder, SupplierOrderItem } from '@/accounting/types'
 import { ApiError } from '@/shared/lib/httpClient'
@@ -99,17 +99,28 @@ export function SupplierOrdersSection({
 
   return (
     <section>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[13px] font-medium text-ink">Заказы у поставщика</div>
         <Button size="sm" variant="secondary" onClick={() => setCreating((v) => !v)}>
           <Plus size={14} /> Заказ
         </Button>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-3 text-[12px] text-muted">
-        <span>Заказано: {money(totalOrdered)}</span>
-        <span>Оплачено: {money(totalPaid)}</span>
-        <span className={balance > 0 ? 'font-medium text-ink' : ''}>Баланс: {money(balance)}</span>
+      <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <div className="rounded-md bg-surface-muted p-3.5">
+          <div className="text-[12px] text-muted">Заказано</div>
+          <div className="mt-1 text-[18px] font-medium tabular text-ink">{money(totalOrdered)}</div>
+        </div>
+        <div className="rounded-md bg-surface-muted p-3.5">
+          <div className="text-[12px] text-muted">Оплачено</div>
+          <div className="mt-1 text-[18px] font-medium tabular text-ink">{money(totalPaid)}</div>
+        </div>
+        <div className="rounded-md bg-surface-muted p-3.5">
+          <div className="text-[12px] text-muted">Баланс</div>
+          <div className={`mt-1 text-[18px] font-medium tabular ${balance > 0 ? 'text-danger' : 'text-ink'}`}>
+            {money(balance)}
+          </div>
+        </div>
       </div>
 
       {creating && (
@@ -134,53 +145,58 @@ export function SupplierOrdersSection({
         {orders.map((order) => {
           const result = payResult[order.id]
           return (
-            <div key={order.id} className="rounded-md border border-border px-3 py-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Chip tone={SUPPLIER_ORDER_STATUS_TONE[order.status]}>
-                      {SUPPLIER_ORDER_STATUS_LABEL[order.status]}
-                    </Chip>
-                    {order.expected_at && (
-                      <span className="text-[12px] text-muted">
-                        срок: {new Date(order.expected_at).toLocaleDateString('ru-RU')}
-                      </span>
+            <div key={order.id} className="flex gap-3 rounded-md border border-border px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-muted text-muted">
+                <Truck size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Chip tone={SUPPLIER_ORDER_STATUS_TONE[order.status]}>
+                        {SUPPLIER_ORDER_STATUS_LABEL[order.status]}
+                      </Chip>
+                      {order.expected_at && (
+                        <span className="text-[12px] text-muted">
+                          срок: {new Date(order.expected_at).toLocaleDateString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-[12px] text-muted">
+                      {order.items.map((it) => `${it.material} × ${it.quantity}`).join(', ')}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-[13px] font-medium text-ink tabular">{money(order.total_cost)}</span>
+                    {order.status === 'ordered' && (
+                      <button
+                        type="button"
+                        onClick={() => remove(order)}
+                        aria-label="Удалить заказ"
+                        className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     )}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted">
-                    {order.items.map((it) => `${it.material} × ${it.quantity}`).join(', ')}
-                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-[13px] font-medium text-ink tabular">{money(order.total_cost)}</span>
-                  {order.status === 'ordered' && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {!result && (
+                    <Button size="sm" disabled={payingId === order.id} onClick={() => pay(order)}>
+                      {payingId === order.id ? 'Оплата…' : 'Оплатить поставку'}
+                    </Button>
+                  )}
+                  {result && 'movementId' in result && (
                     <button
                       type="button"
-                      onClick={() => remove(order)}
-                      aria-label="Удалить заказ"
-                      className="rounded-md p-2 text-muted hover:bg-surface-muted hover:text-danger"
+                      onClick={() => navigate(`/accounting?movement=${result.movementId}`)}
+                      className="text-[12px] text-brand hover:text-brand-dark"
                     >
-                      <Trash2 size={15} />
+                      Проводка создана в «Бухгалтерии» →
                     </button>
                   )}
+                  {result && 'error' in result && <span className="text-[12px] text-danger">{result.error}</span>}
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {!result && (
-                  <Button size="sm" disabled={payingId === order.id} onClick={() => pay(order)}>
-                    {payingId === order.id ? 'Оплата…' : 'Оплатить поставку'}
-                  </Button>
-                )}
-                {result && 'movementId' in result && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/accounting?movement=${result.movementId}`)}
-                    className="text-[12px] text-brand hover:text-brand-dark"
-                  >
-                    Проводка создана в «Бухгалтерии» →
-                  </button>
-                )}
-                {result && 'error' in result && <span className="text-[12px] text-danger">{result.error}</span>}
               </div>
             </div>
           )
