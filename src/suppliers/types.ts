@@ -54,6 +54,10 @@ export interface Supplier {
   price_items_count: number
   /** Свободные заметки, новые сверху. */
   notes: SupplierNote[]
+  /** Взаиморасчёты (0011-d/0011-f): сумма заказов, оплаченная сумма, разница. */
+  total_ordered: number
+  total_paid: number
+  balance: number
 }
 
 /** Ответ POST /api/warehouse/suppliers/:id/price-items/import (задача 0011-g). */
